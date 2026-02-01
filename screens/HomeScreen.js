@@ -6,7 +6,7 @@ import {
   FlatList,
   ScrollView,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import HeaderText from '../components/headerText';
 import { getLocalGreeting } from '../utils/helpers';
@@ -16,6 +16,7 @@ import {
   MagnifyingGlassIcon,
   AdjustmentsVerticalIcon,
 } from 'react-native-heroicons/outline';
+import { UserCircleIcon } from 'react-native-heroicons/solid';
 import { themeColors } from '../theme';
 import TeacherItem from '../components/home/teacherItem';
 import {
@@ -28,10 +29,21 @@ import InstitutionItem from '../components/home/institutionItem';
 import SectionHeader from '../components/home/sectionHeader';
 import AreaFilter from '../components/home/areaFilter';
 import SubjectFilter from '../components/home/subjectFilter';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
+import { useRole } from '../context/RoleContext';
 
-const { avatar } = images;
+const AVATAR_KEY_PREFIX = 'EDUMAP_AVATAR_URI';
 
 export default function HomeScreen() {
+  const { account } = useAuth();
+  const { isGuest } = useRole();
+  const avatarStorageKey = useMemo(() => {
+    const identity = account?.id || account?.email || (isGuest ? 'guest' : 'guest');
+    return `${AVATAR_KEY_PREFIX}_${identity}`;
+  }, [account?.id, account?.email, isGuest]);
+  const [avatarUri, setAvatarUri] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState(teacherData);
   const [institutions, setInstitutions] = useState(institutionData);
@@ -39,6 +51,21 @@ export default function HomeScreen() {
   const [teachersFilterVisible, setTeachersFilterVisible] = useState(false);
   const [institutionsFilterVisible, setInstitutionsFilterVisible] =
     useState(false);
+
+  const loadAvatar = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(avatarStorageKey);
+      setAvatarUri(stored || null);
+    } catch (error) {
+      console.warn('[HomeScreen] Failed to load avatar', error);
+    }
+  }, [avatarStorageKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAvatar();
+    }, [loadAvatar])
+  );
 
   /**
    * @description Function to toggle the teachers filter visibility
@@ -109,8 +136,15 @@ export default function HomeScreen() {
           <Text className="font-exo font-semibold text-lg">Hardline Scott</Text>
         </View>
         {/** ============= Profile image/avatar ============ */}
-        <View className="bg-bgWhite shadow-xl rounded-xl">
-          <Image source={avatar} style={{ height: 62, width: 62 }} />
+        <View className="bg-bgWhite shadow-xl rounded-xl items-center justify-center">
+          {avatarUri ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={{ height: 62, width: 62, borderRadius: 12 }}
+            />
+          ) : (
+            <UserCircleIcon size={48} color="#CBD5E1" />
+          )}
         </View>
       </View>
       {/** ================ Search Input  ========================= */}

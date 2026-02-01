@@ -5,6 +5,9 @@ import ruler from './images/ruler.png';
 import signin from './images/signin.png';
 import signup from './images/signup.png';
 import welcome from './images/welcome.png';
+import authHero from './images/authHero.png';
+import roleStudent from './images/role/student.png';
+import roleAdmin from './images/role/admin.png';
 import school1 from './images/school1.png';
 import school2 from './images/school2.png';
 import school3 from './images/school3.png';
@@ -26,6 +29,9 @@ export const images = {
   signin,
   signup,
   welcome,
+  authHero,
+  roleStudent,
+  roleAdmin,
   school1,
   school2,
   school3,

@@ -1,30 +1,49 @@
 {
   "expo": {
-    "name": "app-ui",
-    "slug": "app-ui",
+    "name": "Edumap",
+    "scheme": "edumap",
+    "slug": "edumap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "resizeMode": "cover",
+      "backgroundColor": "#4FCCFF"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ssanbaybe.edumap",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Позвольте Edumap выбирать логотип школы из вашей фотогалереи.",
+        "NSPhotoLibraryAddUsageDescription": "Edumap может сохранять выбранные изображения логотипов в библиотеке.",
+        "NSCameraUsageDescription": "Edumap использует камеру, чтобы делать фото для логотипов (по желанию).",
+        "NSMicrophoneUsageDescription": "Edumap может использовать микрофон при записи видео для профиля."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.ssanbaybe.edumap"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "apiBaseUrl": "https://edumap-backend-nkr6.onrender.com/api",
+      "mapTileUrl": "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=OgpGCgtItasOMvAnoObf",
+      "mapStyleUrl": "https://api.maptiler.com/maps/streets-v2/style.json?key=OgpGCgtItasOMvAnoObf",
+      "supabaseUrl": "https://jjjgagtqjvewqjczkbrg.supabase.co",
+      "supabaseAnonKey": "sb_publishable_0s65ODf_HF1arkzA8BTY0g_GdKKwjM0"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

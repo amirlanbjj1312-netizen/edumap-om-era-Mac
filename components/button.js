@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import React from 'react';
 
 const Button = ({
@@ -8,9 +8,15 @@ const Button = ({
   secondaryBtnText1,
   secondaryBtnText2,
   onSecondaryBtnPress,
+  showTertiaryBtn = false,
+  tertiaryBtnText,
+  onTertiaryBtnPress,
+  secondaryTextColorClass = 'text-darkGrayText',
+  secondaryHighlightColorClass = 'text-bgPurple',
+  tertiaryTextColorClass = 'text-darkGrayText',
 }) => {
   return (
-    <View className="flex flex-col items-center gap-8">
+    <View className="flex flex-col items-center gap-6">
       {/** ====================== Main Button ============================= */}
       <Pressable
         onPress={onPrimaryBtnPress}
@@ -23,15 +29,27 @@ const Button = ({
       {/** ====================== Secondary pressable ============================= */}
       {showSecondaryBtn ? (
         <View className="flex-row justify-center">
-          <Text className="text-darkGrayText font-exo text-lg">
+          <Text className={`font-exo text-lg ${secondaryTextColorClass}`}>
             {secondaryBtnText1}{' '}
           </Text>
           <Pressable onPress={onSecondaryBtnPress}>
-            <Text className="font-exo text-bgPurple text-lg">
+            <Text
+              className={`font-exo text-lg ${secondaryHighlightColorClass}`}
+            >
               {secondaryBtnText2}
             </Text>
           </Pressable>
         </View>
+      ) : null}
+      {/** ====================== Tertiary pressable ============================= */}
+      {showTertiaryBtn ? (
+        <Pressable onPress={onTertiaryBtnPress}>
+          <Text
+            className={`font-exo text-lg underline ${tertiaryTextColorClass}`}
+          >
+            {tertiaryBtnText}
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );

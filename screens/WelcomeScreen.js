@@ -1,41 +1,41 @@
-import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
+import { View } from 'react-native';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { welcomeScreenData } from '../assets/data/data';
-import { images } from '../assets';
 import Button from '../components/button';
-
-const { welcome } = images;
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   return (
-    <SafeAreaView className="flex-1 bg-bgWhite">
-      <View className="flex-1 flex justify-around my-4">
-        {/** ====================== Image =================================== */}
-        <View className="flex-row justify-center">
-          <Image source={welcome} style={{ width: 324, height: 324 }} />
+    <LinearGradient
+      colors={['#786AFF', '#4FCCFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView className="flex-1 justify-center items-center px-6">
+        <View className="w-full items-center gap-8">
+          <Button
+            primaryBtnText={'Sign Up'}
+            onPrimaryBtnPress={() => navigation.navigate('SignUp')}
+            secondaryBtnText1={'Already have an account?'}
+            secondaryBtnText2={'Sign In'}
+            onSecondaryBtnPress={() => navigation.navigate('SignIn')}
+            showTertiaryBtn
+            tertiaryBtnText={'Continue as Guest'}
+            secondaryTextColorClass="text-bgWhite opacity-80"
+            secondaryHighlightColorClass="text-bgWhite font-exoSemibold"
+            tertiaryTextColorClass="text-bgWhite opacity-90"
+            onTertiaryBtnPress={() =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+              })
+            }
+          />
         </View>
-
-        {/** ====================== Welcome Text ============================= */}
-        <View className="flex flex-col gap-2 mt-[-25%]">
-          <Text className="text-darkGrayText text-xl text-center font-exoSemibold">
-            {welcomeScreenData.title}
-          </Text>
-          <Text className="text-darkGrayText text-lg text-center font-exo">
-            {welcomeScreenData.subtitle}
-          </Text>
-        </View>
-
-        {/** ====================== Action button ============================= */}
-        <Button
-          primaryBtnText={'Sign Up'}
-          onPrimaryBtnPress={() => navigation.navigate('SignUp')}
-          secondaryBtnText2={'Skip'}
-          onSecondaryBtnPress={() => navigation.navigate('SignIn')}
-        />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
