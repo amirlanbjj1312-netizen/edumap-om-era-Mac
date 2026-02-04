@@ -50,6 +50,7 @@ const buildConfig = () => {
       url: sanitize(process.env.SUPABASE_URL),
       serviceRoleKey: sanitize(process.env.SUPABASE_SERVICE_ROLE_KEY),
     },
+    databaseUrl: sanitize(process.env.DATABASE_URL),
   };
 };
 
