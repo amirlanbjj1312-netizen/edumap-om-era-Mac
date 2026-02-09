@@ -219,8 +219,10 @@ export default function SchoolInfoPage() {
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
-  const [contentLocale, setContentLocale] = useState<'ru' | 'en'>('ru');
-  const [activeTab, setActiveTab] = useState<'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media' | 'location'>('basic');
+  const [contentLocale, setContentLocale] = useState<'ru' | 'en' | 'kk'>('ru');
+  const [activeTab, setActiveTab] = useState<
+    'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media' | 'location'
+  >('basic');
 
   const schoolId = useMemo(() => {
     if (!profile?.school_id) return '';
@@ -364,14 +366,14 @@ export default function SchoolInfoPage() {
   return (
     <div className="page">
       <div className="locale-toggle">
-        {(['ru', 'en'] as const).map((lang) => (
+        {(['ru', 'en', 'kk'] as const).map((lang) => (
           <button
             key={lang}
             type="button"
             className={`locale-chip${contentLocale === lang ? ' active' : ''}`}
             onClick={() => setContentLocale(lang)}
           >
-            {lang.toUpperCase()}
+            {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
           </button>
         ))}
       </div>

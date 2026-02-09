@@ -156,7 +156,7 @@ export default function RoleSelectScreen() {
                 className="font-exoSemibold text-xs"
                 style={{ color: locale === 'kk' ? '#2870FF' : '#FFFFFF' }}
               >
-                KK
+                KZ
               </Text>
             </Pressable>
           </View>

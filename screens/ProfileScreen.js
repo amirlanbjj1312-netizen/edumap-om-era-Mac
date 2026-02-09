@@ -279,7 +279,7 @@ export default function ProfileScreen() {
                         locale === 'kk' && styles.guestLangTextActive,
                       ]}
                     >
-                      KK
+                      KZ
                     </Text>
                   </Pressable>
                 </View>

@@ -3,6 +3,8 @@ export const createFinanceDefaults = () => ({
   payment_system: '',
   grants_discounts: '',
   free_places: false,
+  funding_state: false,
+  funding_self: false,
 });
 
 const deepMerge = (target, overrides) => {
@@ -30,13 +32,13 @@ export const createEmptySchoolProfile = (overrides = {}) => {
   const base = {
     school_id: '',
     basic_info: {
-      name: { ru: '', en: '' },
-      display_name: { ru: '', en: '' },
+      name: { ru: '', en: '', kk: '' },
+      display_name: { ru: '', en: '', kk: '' },
       type: '',
       city: '',
       district: '',
-      address: { ru: '', en: '' },
-      description: { ru: '', en: '' },
+      address: { ru: '', en: '', kk: '' },
+      description: { ru: '', en: '', kk: '' },
       coordinates: {
         latitude: '',
         longitude: '',
@@ -55,31 +57,40 @@ export const createEmptySchoolProfile = (overrides = {}) => {
     },
     education: {
       languages: '',
-      languages_other: { ru: '', en: '' },
+      languages_other: { ru: '', en: '', kk: '' },
       grades: '',
-      programs: { ru: '', en: '' },
+      programs: { ru: '', en: '', kk: '' },
       curricula: {
         national: [],
         international: [],
         additional: [],
-        other: { ru: '', en: '' },
+        other: { ru: '', en: '', kk: '' },
       },
       advanced_subjects: '',
-      advanced_subjects_other: { ru: '', en: '' },
+      advanced_subjects_other: { ru: '', en: '', kk: '' },
       average_class_size: '',
       entrance_exam: {
         required: false,
-        type: '',
         format: '',
+        format_other: { ru: '', en: '', kk: '' },
+        subjects: '',
+        subjects_other: { ru: '', en: '', kk: '' },
+        stages: { ru: '', en: '', kk: '' },
       },
     },
     services: {
       after_school: false,
       meals: '',
+      meals_status: '',
+      meals_times_per_day: '',
+      meals_free_until_grade: '',
+      meals_notes: { ru: '', en: '', kk: '' },
+      foreign_teachers: false,
+      foreign_teachers_notes: { ru: '', en: '', kk: '' },
       transport: false,
       inclusive_education: false,
       specialists: '',
-      specialists_other: { ru: '', en: '' },
+      specialists_other: { ru: '', en: '', kk: '' },
       clubs: '',
       clubs_other: {
         ru: {
@@ -91,6 +102,14 @@ export const createEmptySchoolProfile = (overrides = {}) => {
           other: '',
         },
         en: {
+          sports: '',
+          arts: '',
+          stem: '',
+          language: '',
+          leadership: '',
+          other: '',
+        },
+        kk: {
           sports: '',
           arts: '',
           stem: '',
@@ -113,12 +132,20 @@ export const createEmptySchoolProfile = (overrides = {}) => {
       logo: '',
       logo_local_uri: '',
       certificates: '',
+      social_links: {
+        instagram: '',
+        tiktok: '',
+        youtube: '',
+        facebook: '',
+        vk: '',
+        telegram: '',
+      },
     },
     location: {
-      nearest_metro_stop: '',
-      nearest_bus_stop: '',
+      nearest_metro_stop: { ru: '', en: '', kk: '' },
+      nearest_bus_stop: { ru: '', en: '', kk: '' },
       distance_to_metro_km: '',
-      service_area: '',
+      service_area: { ru: '', en: '', kk: '' },
     },
     system: {
       created_at: '',
