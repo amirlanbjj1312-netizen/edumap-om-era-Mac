@@ -125,8 +125,7 @@ export default function SchoolInfoPage() {
       }
 
       const fallbackId = buildFallbackSchoolId(
-        session.user.email || '',
-        session.user.user_metadata?.full_name || ''
+        `${session.user.email || ''} ${session.user.user_metadata?.full_name || ''}`.trim()
       );
 
       try {
