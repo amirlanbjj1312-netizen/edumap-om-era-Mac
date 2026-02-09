@@ -324,7 +324,19 @@ export default function SchoolInfoPage() {
         const existing = result.data.find((item: any) => item.school_id === fallbackId);
         const base = createEmptySchoolProfile({ school_id: fallbackId });
         if (!ignore) {
-          setProfile(existing ? createEmptySchoolProfile(existing) : base);
+          const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
+          const ruName = getDeep(nextProfile, 'basic_info.name.ru', '');
+          const enName = getDeep(nextProfile, 'basic_info.name.en', '');
+          const kkName = getDeep(nextProfile, 'basic_info.name.kk', '');
+          if (ruName && (!enName || !kkName)) {
+            if (!enName) {
+              nextProfile.basic_info.name.en = ruName;
+            }
+            if (!kkName) {
+              nextProfile.basic_info.name.kk = ruName;
+            }
+          }
+          setProfile(nextProfile);
           setState('idle');
         }
       } catch (error) {
