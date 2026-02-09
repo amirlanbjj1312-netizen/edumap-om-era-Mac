@@ -251,6 +251,42 @@ export default function SchoolInfoPage() {
 
   const localePath = (path: string) => `${path}.${contentLocale}`;
 
+  const [mediaMessage, setMediaMessage] = useState('');
+
+  const uploadMediaFiles = async (files: File[], folder: string) => {
+    if (!files.length) return [];
+    const bucket = process.env.NEXT_PUBLIC_MEDIA_BUCKET || 'school-media';
+    const baseId = schoolId || 'school';
+    const results: string[] = [];
+
+    for (const file of files) {
+      const safeName = file.name.replace(/\s+/g, '-').toLowerCase();
+      const dotIndex = safeName.lastIndexOf('.');
+      const baseName = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
+      const ext = dotIndex > 0 ? safeName.slice(dotIndex + 1) : 'bin';
+      const path = `schools/${baseId}/${folder}/${Date.now()}-${baseName}.${ext}`;
+      const { error } = await supabase.storage.from(bucket).upload(path, file, {
+        upsert: true,
+        contentType: file.type || undefined,
+      });
+      if (error) {
+        throw error;
+      }
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+      if (data?.publicUrl) {
+        results.push(data.publicUrl);
+      }
+    }
+    return results;
+  };
+
+  const appendMediaUrls = (field: string, urls: string[]) => {
+    if (!urls.length) return;
+    const existing = normalizeListValue(getDeep(profile, field, ''));
+    const next = [...existing, ...urls].filter(Boolean);
+    updateField(field, next.join(', '));
+  };
+
   useEffect(() => {
     let ignore = false;
     const load = async () => {
@@ -734,11 +770,62 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'media.logo')}
             onChange={(value: string) => updateField('media.logo', value)}
           />
+          <label className="field">
+            <span>Логотип (файл)</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                try {
+                  setMediaMessage('');
+                  const urls = await uploadMediaFiles([file], 'logo');
+                  if (urls[0]) {
+                    updateField('media.logo', urls[0]);
+                  }
+                } catch (error: any) {
+                  setMediaMessage(
+                    error?.message ||
+                      'Не удалось загрузить логотип. Проверьте bucket в Supabase.'
+                  );
+                } finally {
+                  event.currentTarget.value = '';
+                }
+              }}
+            />
+          </label>
           <Input
             label="Фото (URL, через запятую)"
             value={getDeep(profile, 'media.photos')}
             onChange={(value: string) => updateField('media.photos', value)}
           />
+        </FieldRow>
+        <FieldRow>
+          <label className="field">
+            <span>Фото (файлы)</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={async (event) => {
+                const files = Array.from(event.target.files || []);
+                if (!files.length) return;
+                try {
+                  setMediaMessage('');
+                  const urls = await uploadMediaFiles(files, 'photos');
+                  appendMediaUrls('media.photos', urls);
+                } catch (error: any) {
+                  setMediaMessage(
+                    error?.message ||
+                      'Не удалось загрузить фото. Проверьте bucket в Supabase.'
+                  );
+                } finally {
+                  event.currentTarget.value = '';
+                }
+              }}
+            />
+          </label>
         </FieldRow>
         <FieldRow>
           <Input
@@ -752,6 +839,33 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.certificates', value)}
           />
         </FieldRow>
+        <FieldRow>
+          <label className="field">
+            <span>Видео (файлы)</span>
+            <input
+              type="file"
+              accept="video/*"
+              multiple
+              onChange={async (event) => {
+                const files = Array.from(event.target.files || []);
+                if (!files.length) return;
+                try {
+                  setMediaMessage('');
+                  const urls = await uploadMediaFiles(files, 'videos');
+                  appendMediaUrls('media.videos', urls);
+                } catch (error: any) {
+                  setMediaMessage(
+                    error?.message ||
+                      'Не удалось загрузить видео. Проверьте bucket в Supabase.'
+                  );
+                } finally {
+                  event.currentTarget.value = '';
+                }
+              }}
+            />
+          </label>
+        </FieldRow>
+        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <FieldRow>
           <Input
             label="Instagram"
