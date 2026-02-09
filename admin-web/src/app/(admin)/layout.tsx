@@ -52,10 +52,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="page">
-      <div className="container layout">
-        <aside>
-          <div style={{ color: '#fff', fontWeight: 700, marginBottom: 14 }}>EDUMAP Admin</div>
-          <nav className="nav">
+      <div className="container">
+        <header className="topbar">
+          <div className="brand">EDUMAP Admin</div>
+          <nav className="topnav">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </Link>
             ))}
           </nav>
-        </aside>
+        </header>
         <main>{children}</main>
       </div>
     </div>

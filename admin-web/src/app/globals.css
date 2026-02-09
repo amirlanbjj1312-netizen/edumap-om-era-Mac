@@ -187,27 +187,64 @@ a {
   color: #dc2626;
 }
 
-.nav {
-  display: grid;
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.brand {
+  color: #fff;
+  font-weight: 700;
+}
+
+.topnav {
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-.nav a {
-  padding: 12px 14px;
+.topnav a {
+  padding: 10px 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-weight: 500;
+  white-space: nowrap;
 }
 
-.nav a.active {
+.topnav a.active {
   background: rgba(255, 255, 255, 0.35);
 }
 
-.layout {
+.tabs-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 24px;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.side-tabs {
+  display: grid;
+  gap: 10px;
+}
+
+.side-tabs button {
+  appearance: none;
+  border: none;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.side-tabs button.active {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .locale-toggle {
@@ -235,12 +272,18 @@ a {
 }
 
 @media (max-width: 960px) {
-  .layout {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tabs-layout {
     grid-template-columns: 1fr;
   }
-  .nav {
+
+  .side-tabs {
     grid-auto-flow: column;
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
     overflow-x: auto;
   }
 }

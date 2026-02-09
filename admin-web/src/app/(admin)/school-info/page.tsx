@@ -220,6 +220,7 @@ export default function SchoolInfoPage() {
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
   const [contentLocale, setContentLocale] = useState<'ru' | 'en'>('ru');
+  const [activeTab, setActiveTab] = useState<'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media' | 'location'>('basic');
 
   const schoolId = useMemo(() => {
     if (!profile?.school_id) return '';
@@ -374,140 +375,228 @@ export default function SchoolInfoPage() {
           </button>
         ))}
       </div>
-      <Section title="Основная информация">
-        <FieldRow>
-          <Input
-            label="Название"
-            value={getDeep(profile, localePath('basic_info.name'))}
-            onChange={(value: string) => updateField(localePath('basic_info.name'), value)}
-          />
-          <Input
-            label="Отображаемое имя"
-            value={getDeep(profile, localePath('basic_info.display_name'))}
-            onChange={(value: string) =>
-              updateField(localePath('basic_info.display_name'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Select
-            label="Тип школы"
-            value={getDeep(profile, 'basic_info.type')}
-            onChange={(value: string) => updateField('basic_info.type', value)}
-            options={[
-              { value: '', label: 'Не выбрано' },
-              ...SCHOOL_TYPES.map((item) => ({ value: item, label: item })),
-            ]}
-          />
-          <Select
-            label="Город"
-            value={getDeep(profile, 'basic_info.city')}
-            onChange={(value: string) => updateField('basic_info.city', value)}
-            options={[
-              { value: '', label: 'Не выбрано' },
-              ...CITY_NAMES.map((item) => ({ value: item, label: item })),
-            ]}
-          />
-          <Select
-            label="Район"
-            value={getDeep(profile, 'basic_info.district')}
-            onChange={(value: string) => updateField('basic_info.district', value)}
-            options={
-              availableDistricts.length
-                ? [
-                    { value: '', label: 'Не выбрано' },
-                    ...availableDistricts.map((item) => ({ value: item, label: item })),
-                  ]
-                : [{ value: '', label: 'Сначала выберите город' }]
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Адрес"
-            value={getDeep(profile, localePath('basic_info.address'))}
-            onChange={(value: string) => updateField(localePath('basic_info.address'), value)}
-          />
-        </FieldRow>
-        <FieldRow>
-          <TextArea
-            label="Описание"
-            rows={4}
-            value={getDeep(profile, localePath('basic_info.description'))}
-            onChange={(value: string) =>
-              updateField(localePath('basic_info.description'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Широта"
-            value={getDeep(profile, 'basic_info.coordinates.latitude')}
-            onChange={(value: string) => updateField('basic_info.coordinates.latitude', value)}
-          />
-          <Input
-            label="Долгота"
-            value={getDeep(profile, 'basic_info.coordinates.longitude')}
-            onChange={(value: string) => updateField('basic_info.coordinates.longitude', value)}
-          />
-        </FieldRow>
-      </Section>
+      <div className="tabs-layout">
+        <aside className="side-tabs">
+          <button
+            type="button"
+            className={activeTab === 'basic' ? 'active' : ''}
+            onClick={() => setActiveTab('basic')}
+          >
+            Основное
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'contacts' ? 'active' : ''}
+            onClick={() => setActiveTab('contacts')}
+          >
+            Контакты
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'education' ? 'active' : ''}
+            onClick={() => setActiveTab('education')}
+          >
+            Образование
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'admission' ? 'active' : ''}
+            onClick={() => setActiveTab('admission')}
+          >
+            Поступление
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'services' ? 'active' : ''}
+            onClick={() => setActiveTab('services')}
+          >
+            Сервисы
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'finance' ? 'active' : ''}
+            onClick={() => setActiveTab('finance')}
+          >
+            Финансы
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'media' ? 'active' : ''}
+            onClick={() => setActiveTab('media')}
+          >
+            Медиа
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'location' ? 'active' : ''}
+            onClick={() => setActiveTab('location')}
+          >
+            Локация
+          </button>
+        </aside>
+        <div>
+          {activeTab === 'basic' && (
+            <>
+              <Section title="Основная информация">
+                <FieldRow>
+                  <Input
+                    label="Название"
+                    value={getDeep(profile, localePath('basic_info.name'))}
+                    onChange={(value: string) =>
+                      updateField(localePath('basic_info.name'), value)
+                    }
+                  />
+                  <Input
+                    label="Отображаемое имя"
+                    value={getDeep(profile, localePath('basic_info.display_name'))}
+                    onChange={(value: string) =>
+                      updateField(localePath('basic_info.display_name'), value)
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <Select
+                    label="Тип школы"
+                    value={getDeep(profile, 'basic_info.type')}
+                    onChange={(value: string) => updateField('basic_info.type', value)}
+                    options={[
+                      { value: '', label: 'Не выбрано' },
+                      ...SCHOOL_TYPES.map((item) => ({ value: item, label: item })),
+                    ]}
+                  />
+                  <Select
+                    label="Город"
+                    value={getDeep(profile, 'basic_info.city')}
+                    onChange={(value: string) => updateField('basic_info.city', value)}
+                    options={[
+                      { value: '', label: 'Не выбрано' },
+                      ...CITY_NAMES.map((item) => ({ value: item, label: item })),
+                    ]}
+                  />
+                  <Select
+                    label="Район"
+                    value={getDeep(profile, 'basic_info.district')}
+                    onChange={(value: string) => updateField('basic_info.district', value)}
+                    options={
+                      availableDistricts.length
+                        ? [
+                            { value: '', label: 'Не выбрано' },
+                            ...availableDistricts.map((item) => ({
+                              value: item,
+                              label: item,
+                            })),
+                          ]
+                        : [{ value: '', label: 'Сначала выберите город' }]
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <Input
+                    label="Адрес"
+                    value={getDeep(profile, localePath('basic_info.address'))}
+                    onChange={(value: string) =>
+                      updateField(localePath('basic_info.address'), value)
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <TextArea
+                    label="Описание"
+                    rows={4}
+                    value={getDeep(profile, localePath('basic_info.description'))}
+                    onChange={(value: string) =>
+                      updateField(localePath('basic_info.description'), value)
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <Input
+                    label="Широта"
+                    value={getDeep(profile, 'basic_info.coordinates.latitude')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.coordinates.latitude', value)
+                    }
+                  />
+                  <Input
+                    label="Долгота"
+                    value={getDeep(profile, 'basic_info.coordinates.longitude')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.coordinates.longitude', value)
+                    }
+                  />
+                </FieldRow>
+              </Section>
 
-      <Section title="Контакты">
-        <FieldRow>
-          <Input
-            label="Телефон"
-            value={getDeep(profile, 'basic_info.phone')}
-            onChange={(value: string) => updateField('basic_info.phone', value)}
-          />
-          <Input
-            label="WhatsApp"
-            value={getDeep(profile, 'basic_info.whatsapp_phone')}
-            onChange={(value: string) => updateField('basic_info.whatsapp_phone', value)}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Email"
-            value={getDeep(profile, 'basic_info.email')}
-            onChange={(value: string) => updateField('basic_info.email', value)}
-          />
-          <Input
-            label="Сайт"
-            value={getDeep(profile, 'basic_info.website')}
-            onChange={(value: string) => updateField('basic_info.website', value)}
-          />
-        </FieldRow>
-      </Section>
+              <Section title="Лицензия">
+                <FieldRow>
+                  <Input
+                    label="Номер лицензии"
+                    value={getDeep(profile, 'basic_info.license_details.number')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.license_details.number', value)
+                    }
+                  />
+                  <Input
+                    label="Дата выдачи"
+                    type="date"
+                    value={getDeep(profile, 'basic_info.license_details.issued_at')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.license_details.issued_at', value)
+                    }
+                  />
+                  <Input
+                    label="Срок действия"
+                    type="date"
+                    value={getDeep(profile, 'basic_info.license_details.valid_until')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.license_details.valid_until', value)
+                    }
+                  />
+                </FieldRow>
+                <Input
+                  label="Аккредитация"
+                  value={getDeep(profile, 'basic_info.license_accreditation')}
+                  onChange={(value: string) =>
+                    updateField('basic_info.license_accreditation', value)
+                  }
+                />
+              </Section>
+            </>
+          )}
 
-      <Section title="Лицензия">
-        <FieldRow>
-          <Input
-            label="Номер лицензии"
-            value={getDeep(profile, 'basic_info.license_details.number')}
-            onChange={(value: string) => updateField('basic_info.license_details.number', value)}
-          />
-          <Input
-            label="Дата выдачи"
-            type="date"
-            value={getDeep(profile, 'basic_info.license_details.issued_at')}
-            onChange={(value: string) => updateField('basic_info.license_details.issued_at', value)}
-          />
-          <Input
-            label="Срок действия"
-            type="date"
-            value={getDeep(profile, 'basic_info.license_details.valid_until')}
-            onChange={(value: string) => updateField('basic_info.license_details.valid_until', value)}
-          />
-        </FieldRow>
-        <Input
-          label="Аккредитация"
-          value={getDeep(profile, 'basic_info.license_accreditation')}
-          onChange={(value: string) => updateField('basic_info.license_accreditation', value)}
-        />
-      </Section>
+          {activeTab === 'contacts' && (
+            <Section title="Контакты">
+              <FieldRow>
+                <Input
+                  label="Телефон"
+                  value={getDeep(profile, 'basic_info.phone')}
+                  onChange={(value: string) => updateField('basic_info.phone', value)}
+                />
+                <Input
+                  label="WhatsApp"
+                  value={getDeep(profile, 'basic_info.whatsapp_phone')}
+                  onChange={(value: string) =>
+                    updateField('basic_info.whatsapp_phone', value)
+                  }
+                />
+              </FieldRow>
+              <FieldRow>
+                <Input
+                  label="Email"
+                  value={getDeep(profile, 'basic_info.email')}
+                  onChange={(value: string) => updateField('basic_info.email', value)}
+                />
+                <Input
+                  label="Сайт"
+                  value={getDeep(profile, 'basic_info.website')}
+                  onChange={(value: string) => updateField('basic_info.website', value)}
+                />
+              </FieldRow>
+            </Section>
+          )}
 
-      <Section title="Учебный процесс">
+          {activeTab === 'education' && (
+            <Section title="Учебный процесс">
         <CheckboxGroup
           label="Языки обучения"
           options={TEACHING_LANGUAGE_OPTIONS}
@@ -595,9 +684,11 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
-      </Section>
+            </Section>
+          )}
 
-      <Section title="Поступление">
+          {activeTab === 'admission' && (
+            <Section title="Поступление">
         <Toggle
           label="Требуется вступительный экзамен"
           checked={Boolean(getDeep(profile, 'education.entrance_exam.required'))}
@@ -648,9 +739,11 @@ export default function SchoolInfoPage() {
             }
           />
         </FieldRow>
-      </Section>
+            </Section>
+          )}
 
-      <Section title="Сервисы">
+          {activeTab === 'services' && (
+            <Section title="Сервисы">
         <FieldRow>
           <Select
             label="Питание"
@@ -720,9 +813,11 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.after_school', value)}
           />
         </FieldRow>
-      </Section>
+            </Section>
+          )}
 
-      <Section title="Финансы">
+          {activeTab === 'finance' && (
+            <Section title="Финансы">
         <FieldRow>
           <Toggle
             label="Гос финансирование"
@@ -761,9 +856,11 @@ export default function SchoolInfoPage() {
           value={getDeep(profile, 'finance.grants_discounts')}
           onChange={(value: string) => updateField('finance.grants_discounts', value)}
         />
-      </Section>
+            </Section>
+          )}
 
-      <Section title="Медиа">
+          {activeTab === 'media' && (
+            <Section title="Медиа">
         <FieldRow>
           <Input
             label="Логотип URL"
@@ -900,9 +997,11 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.social_links.telegram', value)}
           />
         </FieldRow>
-      </Section>
+            </Section>
+          )}
 
-      <Section title="Локация">
+          {activeTab === 'location' && (
+            <Section title="Локация">
         <FieldRow>
           <Input
             label="Ближайшее метро"
@@ -935,7 +1034,10 @@ export default function SchoolInfoPage() {
             }
           />
         </FieldRow>
-      </Section>
+            </Section>
+          )}
+        </div>
+      </div>
 
       <div className="actions">
         <button className="primary" onClick={save} disabled={state === 'saving'}>
