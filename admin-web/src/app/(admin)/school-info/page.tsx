@@ -254,6 +254,20 @@ export default function SchoolInfoPage() {
 
   const localePath = (path: string) => `${path}.${contentLocale}`;
 
+  const updateLocalizedField = (pathBase: string, value: string) => {
+    updateField(`${pathBase}.${contentLocale}`, value);
+    if (contentLocale === 'ru') {
+      const enPath = `${pathBase}.en`;
+      const kkPath = `${pathBase}.kk`;
+      if (!getDeep(profile, enPath)) {
+        updateField(enPath, value);
+      }
+      if (!getDeep(profile, kkPath)) {
+        updateField(kkPath, value);
+      }
+    }
+  };
+
   const [mediaMessage, setMediaMessage] = useState('');
 
   const uploadMediaFiles = async (files: File[], folder: string) => {
@@ -444,9 +458,7 @@ export default function SchoolInfoPage() {
                   <Input
                     label="Название"
                     value={getDeep(profile, localePath('basic_info.name'))}
-                    onChange={(value: string) =>
-                      updateField(localePath('basic_info.name'), value)
-                    }
+                    onChange={(value: string) => updateLocalizedField('basic_info.name', value)}
                   />
                   <Input
                     label="Отображаемое имя"
