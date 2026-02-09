@@ -22,6 +22,8 @@ body {
   height: 100%;
   color: var(--ink);
   background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
+  background-attachment: fixed;
+  background-color: var(--bg-start);
 }
 
 a {
@@ -197,6 +199,30 @@ a {
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 24px;
+}
+
+.locale-toggle {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.locale-chip {
+  appearance: none;
+  border: 1px solid rgba(86, 103, 253, 0.4);
+  background: #fff;
+  color: #5667fd;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.locale-chip.active {
+  background: #5667fd;
+  color: #fff;
+  border-color: #5667fd;
 }
 
 @media (max-width: 960px) {

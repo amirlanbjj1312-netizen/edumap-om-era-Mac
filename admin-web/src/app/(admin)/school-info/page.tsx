@@ -219,6 +219,7 @@ export default function SchoolInfoPage() {
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
+  const [contentLocale, setContentLocale] = useState<'ru' | 'en'>('ru');
 
   const schoolId = useMemo(() => {
     if (!profile?.school_id) return '';
@@ -247,6 +248,8 @@ export default function SchoolInfoPage() {
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
   };
+
+  const localePath = (path: string) => `${path}.${contentLocale}`;
 
   useEffect(() => {
     let ignore = false;
@@ -323,29 +326,31 @@ export default function SchoolInfoPage() {
 
   return (
     <div className="page">
+      <div className="locale-toggle">
+        {(['ru', 'en'] as const).map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            className={`locale-chip${contentLocale === lang ? ' active' : ''}`}
+            onClick={() => setContentLocale(lang)}
+          >
+            {lang.toUpperCase()}
+          </button>
+        ))}
+      </div>
       <Section title="Основная информация">
         <FieldRow>
           <Input
-            label="Название (RU)"
-            value={getDeep(profile, 'basic_info.name.ru')}
-            onChange={(value: string) => updateField('basic_info.name.ru', value)}
+            label="Название"
+            value={getDeep(profile, localePath('basic_info.name'))}
+            onChange={(value: string) => updateField(localePath('basic_info.name'), value)}
           />
           <Input
-            label="Название (EN)"
-            value={getDeep(profile, 'basic_info.name.en')}
-            onChange={(value: string) => updateField('basic_info.name.en', value)}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Отображаемое имя (RU)"
-            value={getDeep(profile, 'basic_info.display_name.ru')}
-            onChange={(value: string) => updateField('basic_info.display_name.ru', value)}
-          />
-          <Input
-            label="Отображаемое имя (EN)"
-            value={getDeep(profile, 'basic_info.display_name.en')}
-            onChange={(value: string) => updateField('basic_info.display_name.en', value)}
+            label="Отображаемое имя"
+            value={getDeep(profile, localePath('basic_info.display_name'))}
+            onChange={(value: string) =>
+              updateField(localePath('basic_info.display_name'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -383,28 +388,19 @@ export default function SchoolInfoPage() {
         </FieldRow>
         <FieldRow>
           <Input
-            label="Адрес (RU)"
-            value={getDeep(profile, 'basic_info.address.ru')}
-            onChange={(value: string) => updateField('basic_info.address.ru', value)}
-          />
-          <Input
-            label="Адрес (EN)"
-            value={getDeep(profile, 'basic_info.address.en')}
-            onChange={(value: string) => updateField('basic_info.address.en', value)}
+            label="Адрес"
+            value={getDeep(profile, localePath('basic_info.address'))}
+            onChange={(value: string) => updateField(localePath('basic_info.address'), value)}
           />
         </FieldRow>
         <FieldRow>
           <TextArea
-            label="Описание (RU)"
+            label="Описание"
             rows={4}
-            value={getDeep(profile, 'basic_info.description.ru')}
-            onChange={(value: string) => updateField('basic_info.description.ru', value)}
-          />
-          <TextArea
-            label="Описание (EN)"
-            rows={4}
-            value={getDeep(profile, 'basic_info.description.en')}
-            onChange={(value: string) => updateField('basic_info.description.en', value)}
+            value={getDeep(profile, localePath('basic_info.description'))}
+            onChange={(value: string) =>
+              updateField(localePath('basic_info.description'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -484,26 +480,18 @@ export default function SchoolInfoPage() {
         />
         <FieldRow>
           <Input
-            label="Языки (доп.) RU"
-            value={getDeep(profile, 'education.languages_other.ru')}
-            onChange={(value: string) => updateField('education.languages_other.ru', value)}
-          />
-          <Input
-            label="Языки (доп.) EN"
-            value={getDeep(profile, 'education.languages_other.en')}
-            onChange={(value: string) => updateField('education.languages_other.en', value)}
+            label="Языки (доп.)"
+            value={getDeep(profile, localePath('education.languages_other'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.languages_other'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
           <Input
-            label="Программы (RU)"
-            value={getDeep(profile, 'education.programs.ru')}
-            onChange={(value: string) => updateField('education.programs.ru', value)}
-          />
-          <Input
-            label="Программы (EN)"
-            value={getDeep(profile, 'education.programs.en')}
-            onChange={(value: string) => updateField('education.programs.en', value)}
+            label="Программы"
+            value={getDeep(profile, localePath('education.programs'))}
+            onChange={(value: string) => updateField(localePath('education.programs'), value)}
           />
         </FieldRow>
         <CheckboxGroup
@@ -532,14 +520,11 @@ export default function SchoolInfoPage() {
         />
         <FieldRow>
           <Input
-            label="Учебные планы (other RU)"
-            value={getDeep(profile, 'education.curricula.other.ru')}
-            onChange={(value: string) => updateField('education.curricula.other.ru', value)}
-          />
-          <Input
-            label="Учебные планы (other EN)"
-            value={getDeep(profile, 'education.curricula.other.en')}
-            onChange={(value: string) => updateField('education.curricula.other.en', value)}
+            label="Учебные планы (другое)"
+            value={getDeep(profile, localePath('education.curricula.other'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.curricula.other'), value)
+            }
           />
         </FieldRow>
         <CheckboxGroup
@@ -550,14 +535,11 @@ export default function SchoolInfoPage() {
         />
         <FieldRow>
           <Input
-            label="Углубленные (доп.) RU"
-            value={getDeep(profile, 'education.advanced_subjects_other.ru')}
-            onChange={(value: string) => updateField('education.advanced_subjects_other.ru', value)}
-          />
-          <Input
-            label="Углубленные (доп.) EN"
-            value={getDeep(profile, 'education.advanced_subjects_other.en')}
-            onChange={(value: string) => updateField('education.advanced_subjects_other.en', value)}
+            label="Углубленные (доп.)"
+            value={getDeep(profile, localePath('education.advanced_subjects_other'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.advanced_subjects_other'), value)
+            }
           />
         </FieldRow>
         <CheckboxGroup
@@ -600,14 +582,11 @@ export default function SchoolInfoPage() {
             ]}
           />
           <Input
-            label="Формат (доп.) RU"
-            value={getDeep(profile, 'education.entrance_exam.format_other.ru')}
-            onChange={(value: string) => updateField('education.entrance_exam.format_other.ru', value)}
-          />
-          <Input
-            label="Формат (доп.) EN"
-            value={getDeep(profile, 'education.entrance_exam.format_other.en')}
-            onChange={(value: string) => updateField('education.entrance_exam.format_other.en', value)}
+            label="Формат (доп.)"
+            value={getDeep(profile, localePath('education.entrance_exam.format_other'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.entrance_exam.format_other'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -617,26 +596,20 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('education.entrance_exam.subjects', value)}
           />
           <Input
-            label="Предметы (доп.) RU"
-            value={getDeep(profile, 'education.entrance_exam.subjects_other.ru')}
-            onChange={(value: string) => updateField('education.entrance_exam.subjects_other.ru', value)}
-          />
-          <Input
-            label="Предметы (доп.) EN"
-            value={getDeep(profile, 'education.entrance_exam.subjects_other.en')}
-            onChange={(value: string) => updateField('education.entrance_exam.subjects_other.en', value)}
+            label="Предметы (доп.)"
+            value={getDeep(profile, localePath('education.entrance_exam.subjects_other'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.entrance_exam.subjects_other'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
           <TextArea
-            label="Этапы (RU)"
-            value={getDeep(profile, 'education.entrance_exam.stages.ru')}
-            onChange={(value: string) => updateField('education.entrance_exam.stages.ru', value)}
-          />
-          <TextArea
-            label="Этапы (EN)"
-            value={getDeep(profile, 'education.entrance_exam.stages.en')}
-            onChange={(value: string) => updateField('education.entrance_exam.stages.en', value)}
+            label="Этапы"
+            value={getDeep(profile, localePath('education.entrance_exam.stages'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.entrance_exam.stages'), value)
+            }
           />
         </FieldRow>
       </Section>
@@ -673,14 +646,11 @@ export default function SchoolInfoPage() {
         </FieldRow>
         <FieldRow>
           <TextArea
-            label="Примечание по питанию (RU)"
-            value={getDeep(profile, 'services.meals_notes.ru')}
-            onChange={(value: string) => updateField('services.meals_notes.ru', value)}
-          />
-          <TextArea
-            label="Примечание по питанию (EN)"
-            value={getDeep(profile, 'services.meals_notes.en')}
-            onChange={(value: string) => updateField('services.meals_notes.en', value)}
+            label="Примечание по питанию"
+            value={getDeep(profile, localePath('services.meals_notes'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.meals_notes'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -690,14 +660,11 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.foreign_teachers', value)}
           />
           <TextArea
-            label="Комментарий (RU)"
-            value={getDeep(profile, 'services.foreign_teachers_notes.ru')}
-            onChange={(value: string) => updateField('services.foreign_teachers_notes.ru', value)}
-          />
-          <TextArea
-            label="Комментарий (EN)"
-            value={getDeep(profile, 'services.foreign_teachers_notes.en')}
-            onChange={(value: string) => updateField('services.foreign_teachers_notes.en', value)}
+            label="Комментарий"
+            value={getDeep(profile, localePath('services.foreign_teachers_notes'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.foreign_teachers_notes'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -824,26 +791,20 @@ export default function SchoolInfoPage() {
       <Section title="Локация">
         <FieldRow>
           <Input
-            label="Ближайшее метро (RU)"
-            value={getDeep(profile, 'location.nearest_metro_stop.ru')}
-            onChange={(value: string) => updateField('location.nearest_metro_stop.ru', value)}
-          />
-          <Input
-            label="Ближайшее метро (EN)"
-            value={getDeep(profile, 'location.nearest_metro_stop.en')}
-            onChange={(value: string) => updateField('location.nearest_metro_stop.en', value)}
+            label="Ближайшее метро"
+            value={getDeep(profile, localePath('location.nearest_metro_stop'))}
+            onChange={(value: string) =>
+              updateField(localePath('location.nearest_metro_stop'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
           <Input
-            label="Ближайшая остановка (RU)"
-            value={getDeep(profile, 'location.nearest_bus_stop.ru')}
-            onChange={(value: string) => updateField('location.nearest_bus_stop.ru', value)}
-          />
-          <Input
-            label="Ближайшая остановка (EN)"
-            value={getDeep(profile, 'location.nearest_bus_stop.en')}
-            onChange={(value: string) => updateField('location.nearest_bus_stop.en', value)}
+            label="Ближайшая остановка"
+            value={getDeep(profile, localePath('location.nearest_bus_stop'))}
+            onChange={(value: string) =>
+              updateField(localePath('location.nearest_bus_stop'), value)
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -852,15 +813,12 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'location.distance_to_metro_km')}
             onChange={(value: string) => updateField('location.distance_to_metro_km', value)}
           />
-          <Input
-            label="Зона обслуживания (RU)"
-            value={getDeep(profile, 'location.service_area.ru')}
-            onChange={(value: string) => updateField('location.service_area.ru', value)}
-          />
-          <Input
-            label="Зона обслуживания (EN)"
-            value={getDeep(profile, 'location.service_area.en')}
-            onChange={(value: string) => updateField('location.service_area.en', value)}
+          <TextArea
+            label="Зона обслуживания"
+            value={getDeep(profile, localePath('location.service_area'))}
+            onChange={(value: string) =>
+              updateField(localePath('location.service_area'), value)
+            }
           />
         </FieldRow>
       </Section>
