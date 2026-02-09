@@ -152,7 +152,7 @@ export default function SchoolInfoPage() {
   }, [router]);
 
   const updateField = (path: string, value: any) => {
-    setProfile((prev) => (prev ? setDeep(prev, path, value) : prev));
+    setProfile((prev: SchoolProfile | null) => (prev ? setDeep(prev, path, value) : prev));
   };
 
   const save = async () => {
