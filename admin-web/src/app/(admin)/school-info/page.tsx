@@ -20,6 +20,94 @@ const parseArrayValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const normalizeListValue = (value: unknown) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return parseArrayValue(value);
+  return [];
+};
+
+const toggleListValue = (list: string[], item: string) =>
+  list.includes(item) ? list.filter((entry) => entry !== item) : [...list, item];
+
+const SCHOOL_TYPES = ['State', 'Private', 'International', 'Autonomous'];
+
+const CITY_OPTIONS = [
+  {
+    name: 'Almaty',
+    districts: ['Almaly', 'Auezov', 'Bostandyk', 'Zhetysu', 'Medeu', 'Nauryzbay'],
+  },
+  {
+    name: 'Astana',
+    districts: ['Almaty District', 'Baikonyr', 'Yesil', 'Saryarka', 'Nura'],
+  },
+  {
+    name: 'Karaganda',
+    districts: ['City', 'Maikuduk', 'Yugo-Vostok', 'Prishakhtinsk', 'Sortirovka'],
+  },
+];
+
+const CITY_NAMES = CITY_OPTIONS.map((option) => option.name);
+
+const CURRICULA_GROUPS = {
+  national: [
+    'State program (Kazakhstan)',
+    'Updated content',
+    'NIS Integrated Program',
+    'Cambridge Primary',
+    'Cambridge Lower Secondary',
+    'Cambridge IGCSE',
+    'Cambridge A-Level',
+  ],
+  international: [
+    'IB PYP',
+    'STEAM',
+    'STEM',
+    'Montessori',
+    'Waldorf',
+    'American Curriculum',
+    'British National Curriculum',
+  ],
+  additional: ['Bilingual Program', 'Author program'],
+};
+
+const GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const TEACHING_LANGUAGE_OPTIONS = [
+  'Kazakh',
+  'Russian',
+  'English',
+  'Chinese',
+  'French',
+  'German',
+];
+const ADVANCED_SUBJECT_OPTIONS = [
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Computer Science',
+  'Robotics',
+  'Engineering',
+  'Artificial Intelligence',
+  'Data Science',
+  'Economics',
+  'Business',
+  'Entrepreneurship',
+  'English Language',
+  'World History',
+  'Geography',
+  'Design & Technology',
+  'Art & Design',
+  'Music',
+  'Media Studies',
+  'Psychology',
+];
+
+const CLASS_SIZE_OPTIONS = ['10', '12', '15', '18', '20', '22', '24', '26', '30', '35+'];
+const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year'];
+const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
+const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
+const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+
 const getDeep = (obj: any, path: string, fallback: any = '') => {
   return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj) ?? fallback;
 };
@@ -102,6 +190,30 @@ const Select = ({ label, value, onChange, options }: any) => (
   </label>
 );
 
+const CheckboxGroup = ({ label, options, values, onChange }: any) => (
+  <div className="field">
+    <span>{label}</span>
+    <div className="option-grid">
+      {options.map((option: string) => {
+        const checked = values.includes(option);
+        return (
+          <label
+            key={option}
+            className={`option-chip${checked ? ' active' : ''}`}
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => onChange(toggleListValue(values, option))}
+            />
+            <span>{option}</span>
+          </label>
+        );
+      })}
+    </div>
+  </div>
+);
+
 export default function SchoolInfoPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
@@ -112,6 +224,29 @@ export default function SchoolInfoPage() {
     if (!profile?.school_id) return '';
     return profile.school_id;
   }, [profile?.school_id]);
+
+  const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
+  const availableDistricts = useMemo(() => {
+    const match = CITY_OPTIONS.find((option) => option.name === cityValue);
+    return match?.districts ?? [];
+  }, [cityValue]);
+
+  const languagesValue = useMemo(
+    () => normalizeListValue(getDeep(profile, 'education.languages', '')),
+    [profile]
+  );
+  const gradesValue = useMemo(
+    () => normalizeListValue(getDeep(profile, 'education.grades', '')),
+    [profile]
+  );
+  const advancedValue = useMemo(
+    () => normalizeListValue(getDeep(profile, 'education.advanced_subjects', '')),
+    [profile]
+  );
+
+  const updateListField = (path: string, list: string[]) => {
+    updateField(path, list.join(', '));
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -214,20 +349,36 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <Input
+          <Select
             label="Тип школы"
             value={getDeep(profile, 'basic_info.type')}
             onChange={(value: string) => updateField('basic_info.type', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...SCHOOL_TYPES.map((item) => ({ value: item, label: item })),
+            ]}
           />
-          <Input
+          <Select
             label="Город"
             value={getDeep(profile, 'basic_info.city')}
             onChange={(value: string) => updateField('basic_info.city', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...CITY_NAMES.map((item) => ({ value: item, label: item })),
+            ]}
           />
-          <Input
+          <Select
             label="Район"
             value={getDeep(profile, 'basic_info.district')}
             onChange={(value: string) => updateField('basic_info.district', value)}
+            options={
+              availableDistricts.length
+                ? [
+                    { value: '', label: 'Не выбрано' },
+                    ...availableDistricts.map((item) => ({ value: item, label: item })),
+                  ]
+                : [{ value: '', label: 'Сначала выберите город' }]
+            }
           />
         </FieldRow>
         <FieldRow>
@@ -325,12 +476,13 @@ export default function SchoolInfoPage() {
       </Section>
 
       <Section title="Учебный процесс">
+        <CheckboxGroup
+          label="Языки обучения"
+          options={TEACHING_LANGUAGE_OPTIONS}
+          values={languagesValue}
+          onChange={(next: string[]) => updateListField('education.languages', next)}
+        />
         <FieldRow>
-          <Input
-            label="Языки"
-            value={getDeep(profile, 'education.languages')}
-            onChange={(value: string) => updateField('education.languages', value)}
-          />
           <Input
             label="Языки (доп.) RU"
             value={getDeep(profile, 'education.languages_other.ru')}
@@ -354,24 +506,31 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('education.programs.en', value)}
           />
         </FieldRow>
+        <CheckboxGroup
+          label="Учебные планы (национальные)"
+          options={CURRICULA_GROUPS.national}
+          values={normalizeListValue(getDeep(profile, 'education.curricula.national', []))}
+          onChange={(next: string[]) =>
+            updateField('education.curricula.national', next)
+          }
+        />
+        <CheckboxGroup
+          label="Учебные планы (международные)"
+          options={CURRICULA_GROUPS.international}
+          values={normalizeListValue(getDeep(profile, 'education.curricula.international', []))}
+          onChange={(next: string[]) =>
+            updateField('education.curricula.international', next)
+          }
+        />
+        <CheckboxGroup
+          label="Учебные планы (дополнительные)"
+          options={CURRICULA_GROUPS.additional}
+          values={normalizeListValue(getDeep(profile, 'education.curricula.additional', []))}
+          onChange={(next: string[]) =>
+            updateField('education.curricula.additional', next)
+          }
+        />
         <FieldRow>
-          <Input
-            label="Учебные планы (нац.)"
-            value={formatArrayValue(getDeep(profile, 'education.curricula.national'))}
-            onChange={(value: string) => updateField('education.curricula.national', parseArrayValue(value))}
-          />
-          <Input
-            label="Учебные планы (междун.)"
-            value={formatArrayValue(getDeep(profile, 'education.curricula.international'))}
-            onChange={(value: string) => updateField('education.curricula.international', parseArrayValue(value))}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Учебные планы (доп.)"
-            value={formatArrayValue(getDeep(profile, 'education.curricula.additional'))}
-            onChange={(value: string) => updateField('education.curricula.additional', parseArrayValue(value))}
-          />
           <Input
             label="Учебные планы (other RU)"
             value={getDeep(profile, 'education.curricula.other.ru')}
@@ -383,12 +542,13 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('education.curricula.other.en', value)}
           />
         </FieldRow>
+        <CheckboxGroup
+          label="Углубленные предметы"
+          options={ADVANCED_SUBJECT_OPTIONS}
+          values={advancedValue}
+          onChange={(next: string[]) => updateListField('education.advanced_subjects', next)}
+        />
         <FieldRow>
-          <Input
-            label="Углубленные предметы"
-            value={getDeep(profile, 'education.advanced_subjects')}
-            onChange={(value: string) => updateField('education.advanced_subjects', value)}
-          />
           <Input
             label="Углубленные (доп.) RU"
             value={getDeep(profile, 'education.advanced_subjects_other.ru')}
@@ -400,11 +560,21 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('education.advanced_subjects_other.en', value)}
           />
         </FieldRow>
+        <CheckboxGroup
+          label="Классы"
+          options={GRADE_OPTIONS}
+          values={gradesValue}
+          onChange={(next: string[]) => updateListField('education.grades', next)}
+        />
         <FieldRow>
-          <Input
+          <Select
             label="Средний размер класса"
             value={getDeep(profile, 'education.average_class_size')}
             onChange={(value: string) => updateField('education.average_class_size', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...CLASS_SIZE_OPTIONS.map((item) => ({ value: item, label: item })),
+            ]}
           />
         </FieldRow>
       </Section>
@@ -479,20 +649,26 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('services.meals_status', value)}
             options={[
               { value: '', label: 'Не выбрано' },
-              { value: 'free', label: 'Бесплатно' },
-              { value: 'paid', label: 'Платно' },
-              { value: 'none', label: 'Нет' },
+              ...MEAL_OPTIONS.map((item) => ({ value: item, label: item })),
             ]}
           />
-          <Input
+          <Select
             label="Разов в день"
             value={getDeep(profile, 'services.meals_times_per_day')}
             onChange={(value: string) => updateField('services.meals_times_per_day', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...MEAL_TIMES_OPTIONS.map((item) => ({ value: item, label: item })),
+            ]}
           />
-          <Input
+          <Select
             label="Бесплатно до класса"
             value={getDeep(profile, 'services.meals_free_until_grade')}
             onChange={(value: string) => updateField('services.meals_free_until_grade', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...MEAL_GRADE_OPTIONS.map((item) => ({ value: item, label: item })),
+            ]}
           />
         </FieldRow>
         <FieldRow>
@@ -567,10 +743,14 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'finance.monthly_fee')}
             onChange={(value: string) => updateField('finance.monthly_fee', value)}
           />
-          <Input
+          <Select
             label="Система оплаты"
             value={getDeep(profile, 'finance.payment_system')}
             onChange={(value: string) => updateField('finance.payment_system', value)}
+            options={[
+              { value: '', label: 'Не выбрано' },
+              ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({ value: item, label: item })),
+            ]}
           />
         </FieldRow>
         <Input

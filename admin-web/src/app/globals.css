@@ -117,6 +117,34 @@ a {
   height: 18px;
 }
 
+.option-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.option-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.option-chip input {
+  width: 16px;
+  height: 16px;
+}
+
+.option-chip.active {
+  background: var(--chip-bg);
+  border-color: rgba(107, 124, 255, 0.4);
+}
+
 .actions {
   margin-top: 24px;
   display: flex;
