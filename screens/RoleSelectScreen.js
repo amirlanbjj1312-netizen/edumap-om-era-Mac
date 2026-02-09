@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ROLES, useRole } from '../context/RoleContext';
 import { images } from '../assets';
 import { useLocale } from '../context/LocaleContext';
+import AuthLogo from '../components/AuthLogo';
 
 const CARD_HORIZONTAL_MARGIN = 5; // spacing между карточками
 const CARD_CONTAINER_PADDING = 48; // отступ от краёв экрана
@@ -88,7 +89,7 @@ export default function RoleSelectScreen() {
 
   return (
     <LinearGradient
-      colors={['#786AFF', '#4FCCFF']}
+      colors={['#7B70FF', '#55C9FF']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       className="flex-1"
@@ -138,14 +139,30 @@ export default function RoleSelectScreen() {
                 EN
               </Text>
             </Pressable>
+            <Pressable
+              onPress={() => setLocale('kk')}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor:
+                  locale === 'kk' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.15)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.6)',
+                marginTop: 8,
+              }}
+            >
+              <Text
+                className="font-exoSemibold text-xs"
+                style={{ color: locale === 'kk' ? '#2870FF' : '#FFFFFF' }}
+              >
+                KK
+              </Text>
+            </Pressable>
           </View>
         </View>
         <View className="items-center">
-          <Image
-            source={images.authHero}
-            style={{ width: 170, height: 170, marginTop: -6 }}
-            resizeMode="contain"
-          />
+          <AuthLogo size={170} style={{ marginTop: -6 }} />
           <Text className="text-white font-exo text-2xl mt-1 text-center">
             {t('roleSelect.welcomePrefix')}
           </Text>

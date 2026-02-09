@@ -20,6 +20,7 @@ import {
   UserCircleIcon,
 } from 'react-native-heroicons/outline';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRole, ROLES } from '../context/RoleContext';
 import { supabase } from '../services/supabaseClient';
@@ -141,10 +142,27 @@ export default function AdminProfileScreen() {
     }
   };
 
+  const pickFromFiles = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'image/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.type === 'cancel') return;
+      if (result.uri) {
+        await saveAvatarUri(result.uri);
+      }
+    } catch (error) {
+      console.warn('[AdminProfileScreen] Failed to pick file', error);
+    }
+  };
+
   const handleAvatarPress = () => {
     Alert.alert(t('profile.changePhotoTitle'), t('profile.changePhotoPrompt'), [
       { text: t('profile.camera'), onPress: takePhoto },
       { text: t('profile.photoLibrary'), onPress: pickFromLibrary },
+      { text: t('profile.files'), onPress: pickFromFiles },
       { text: t('profile.cancel'), style: 'cancel' },
     ]);
   };
@@ -153,6 +171,7 @@ export default function AdminProfileScreen() {
     Alert.alert(t('language.select'), '', [
       { text: t('language.ru'), onPress: () => setLocale('ru') },
       { text: t('language.en'), onPress: () => setLocale('en') },
+      { text: t('language.kk'), onPress: () => setLocale('kk') },
       { text: t('profile.cancel'), style: 'cancel' },
     ]);
   };
@@ -228,7 +247,11 @@ export default function AdminProfileScreen() {
                   <SettingRow
                     label={t('profile.language')}
                     actionText={
-                      locale === 'ru' ? t('language.ru') : t('language.en')
+                      locale === 'ru'
+                        ? t('language.ru')
+                        : locale === 'kk'
+                        ? t('language.kk')
+                        : t('language.en')
                     }
                     icon={GlobeAltIcon}
                     onPress={handleLanguagePress}

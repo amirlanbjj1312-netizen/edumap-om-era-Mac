@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 import { useSchools } from '../context/SchoolsContext';
 import {
@@ -26,7 +28,6 @@ import { integralDemoProfile } from '../data/integralDemoProfile';
 import { useAuth } from '../context/AuthContext';
 import {
   finalizeLocalizedText,
-  getLocalizedText,
   normalizeLocalizedText,
   setLocalizedText,
 } from '../utils/localizedText';
@@ -46,7 +47,7 @@ import {
   translateLabel,
 } from '../utils/schoolLabels';
 
-const SCHOOL_TYPES = ['State', 'Private', 'International'];
+const SCHOOL_TYPES = ['State', 'Private', 'International', 'Autonomous'];
 const GRADIENT_COLORS = ['#786AFF', '#4FCCFF'];
 const CITY_OPTIONS = [
   {
@@ -70,7 +71,9 @@ const CITY_OPTIONS = [
   },
 ];
 const CITY_NAMES = CITY_OPTIONS.map((option) => option.name);
-const MEAL_OPTIONS = ['Free', 'Paid', 'No meals'];
+const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
+const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
+const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year'];
 const RU_TO_EN_CITY = {
   'алматы': 'Almaty',
@@ -109,6 +112,11 @@ const AdminLocaleContext = React.createContext({
 });
 
 const useAdminLocale = () => React.useContext(AdminLocaleContext);
+
+const getLocaleOnlyText = (value, locale) => {
+  const normalized = normalizeLocalizedText(value);
+  return normalized[locale] || '';
+};
 
 const buildFallbackSchoolId = (value) => {
   const base = (value || 'school')
@@ -162,6 +170,20 @@ const ADVANCED_SUBJECT_OPTIONS = [
   'Music',
   'Media Studies',
   'Psychology',
+];
+const ADMISSION_FORMAT_OPTIONS = [
+  'None',
+  'Test',
+  'Exam',
+  'Interview',
+  'Other',
+];
+const ADMISSION_SUBJECT_OPTIONS = [
+  'Mathematics',
+  'Kazakh Language',
+  'Russian Language',
+  'English Language',
+  'Logic',
 ];
 const SPECIALISTS_OPTIONS = [
   'Psychologist',
@@ -579,7 +601,7 @@ const CurriculaSelector = ({ value, onChange, locale, getLabel }) => {
         </Pressable>
         {expanded.other ? (
           <TextInput
-            value={getLocalizedText(current.other, locale)}
+            value={getLocaleOnlyText(current.other, locale)}
             onChangeText={(text) =>
               onChange({
                 ...current,
@@ -994,6 +1016,73 @@ const PhotosSelector = ({ value, onChange }) => {
   const [input, setInput] = useState('');
   const list = splitList(value).filter(isValidRemoteImage);
 
+  const appendItems = (items) => {
+    const next = mergeUniqueList(list, items, 12);
+    onChange(next.join(', '));
+  };
+
+  const pickFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionPhotos')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      appendItems(result.assets.map((asset) => asset.uri));
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionCamera')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      appendItems([result.assets[0].uri]);
+    }
+  };
+
+  const pickFromFiles = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'image/*',
+      copyToCacheDirectory: true,
+      multiple: true,
+    });
+    const uris = extractDocumentUris(result);
+    if (uris.length) {
+      appendItems(uris);
+    }
+  };
+
+  const handlePickPress = () => {
+    Alert.alert(
+      t('adminSchool.media.sourceTitle'),
+      t('adminSchool.media.sourcePrompt'),
+      [
+        { text: t('adminSchool.media.camera'), onPress: takePhoto },
+        { text: t('adminSchool.media.gallery'), onPress: pickFromLibrary },
+        { text: t('adminSchool.media.files'), onPress: pickFromFiles },
+        { text: t('adminSchool.action.cancel'), style: 'cancel' },
+      ]
+    );
+  };
+
   const handleAdd = () => {
     const trimmed = input.trim();
     if (!isValidRemoteImage(trimmed)) return;
@@ -1024,6 +1113,11 @@ const PhotosSelector = ({ value, onChange }) => {
         </View>
         <Pressable style={styles.addButton} onPress={handleAdd}>
           <Text style={styles.addButtonText}>{t('adminSchool.action.add')}</Text>
+        </Pressable>
+        <Pressable style={styles.pickButton} onPress={handlePickPress}>
+          <Text style={styles.pickButtonText}>
+            {t('adminSchool.action.pickMedia')}
+          </Text>
         </Pressable>
       </View>
       {list.length ? (
@@ -1062,62 +1156,171 @@ const PhotosSelector = ({ value, onChange }) => {
   );
 };
 
-const EntranceExamSection = ({ value, onChange }) => {
-  const { t } = useAdminLocale();
-  const required = Boolean(value?.required);
-  const yesLabel = t('schools.exam.yes');
-  const noLabel = t('schools.exam.no');
-  const displayValue = required
-    ? yesLabel
-    : value?.required === false
-    ? noLabel
-    : '';
+const mapAdmissionFormat = (rawValue) => {
+  if (!rawValue || typeof rawValue !== 'string') {
+    return { format: '', otherText: '' };
+  }
+  const normalized = rawValue.toLowerCase();
+  if (
+    normalized.includes('none') ||
+    normalized.includes('нет') ||
+    normalized.includes('не требуется') ||
+    normalized.includes('no exam')
+  ) {
+    return { format: 'None', otherText: '' };
+  }
+  if (normalized.includes('test') || normalized.includes('тест')) {
+    return { format: 'Test', otherText: '' };
+  }
+  if (normalized.includes('exam') || normalized.includes('экзамен')) {
+    return { format: 'Exam', otherText: '' };
+  }
+  if (normalized.includes('interview') || normalized.includes('собесед')) {
+    return { format: 'Interview', otherText: '' };
+  }
+  return { format: 'Other', otherText: rawValue };
+};
 
-  const handleSelect = (option) => {
-    const nextRequired = option === yesLabel;
+const AdmissionSection = ({ value, onChange, locale }) => {
+  const { t } = useAdminLocale();
+  const formatValue = value?.format || '';
+  const isRequired = Boolean(formatValue && formatValue !== 'None');
+  const [otherSubjects, setOtherSubjects] = useState(
+    getLocaleOnlyText(value?.subjects_other, locale) || ''
+  );
+
+  const selectedSubjects = new Set(
+    splitList(value?.subjects).filter((item) =>
+      ADMISSION_SUBJECT_OPTIONS.includes(item)
+    )
+  );
+
+  const handleFormatSelect = (option) => {
+    if (option === 'None') {
+      onChange({
+        ...value,
+        required: false,
+        format: option,
+        format_other: { ru: '', en: '' },
+        subjects: '',
+        subjects_other: { ru: '', en: '' },
+        stages: { ru: '', en: '' },
+      });
+      return;
+    }
     onChange({
       ...value,
-      required: nextRequired,
-      type: nextRequired ? value?.type || '' : '',
-      format: nextRequired ? value?.format || '' : '',
+      required: true,
+      format: option,
+      format_other:
+        option === 'Other'
+          ? value?.format_other || { ru: '', en: '' }
+          : { ru: '', en: '' },
+      subjects: value?.subjects || '',
+      subjects_other: value?.subjects_other || { ru: '', en: '' },
+      stages: value?.stages || { ru: '', en: '' },
     });
   };
+
+  const toggleSubject = (subject) => {
+    const next = new Set(selectedSubjects);
+    if (next.has(subject)) {
+      next.delete(subject);
+    } else {
+      next.add(subject);
+    }
+    onChange({
+      ...value,
+      subjects: Array.from(next).join(', '),
+    });
+  };
+
+  const handleOtherSubjectsChange = (text) => {
+    setOtherSubjects(text);
+    onChange({
+      ...value,
+      subjects_other: setLocalizedText(value?.subjects_other, locale, text),
+    });
+  };
+
+  useEffect(() => {
+    setOtherSubjects(getLocaleOnlyText(value?.subjects_other, locale) || '');
+  }, [value?.subjects_other, locale]);
 
   return (
     <View style={styles.fieldWrapper}>
       <SelectField
-        label={t('adminSchool.field.entranceExam')}
-        value={displayValue}
-        onSelect={handleSelect}
-        placeholder={t('adminSchool.placeholder.entranceExamOption')}
-        options={[yesLabel, noLabel]}
+        label={t('adminSchool.field.admission')}
+        value={formatValue}
+        onSelect={handleFormatSelect}
+        placeholder={t('adminSchool.placeholder.admissionFormat')}
+        options={ADMISSION_FORMAT_OPTIONS}
+        getOptionLabel={(option) =>
+          t(`adminSchool.admission.format.${option.toLowerCase()}`)
+        }
       />
-      {required ? (
+      {isRequired ? (
         <View style={[styles.curriculaGroup, { marginTop: 8 }]}>
-          <FormField
-            label={t('adminSchool.field.entranceExamType')}
-            value={value?.type || ''}
-            onChangeText={(text) =>
-              onChange({
-                ...value,
-                required: true,
-                type: text,
-              })
-            }
-            placeholder={t('adminSchool.placeholder.entranceExamType')}
+          {formatValue === 'Other' ? (
+            <FormField
+              label={t('adminSchool.field.admissionFormat')}
+              value={getLocaleOnlyText(value?.format_other, locale)}
+              onChangeText={(text) =>
+                onChange({
+                  ...value,
+                  format_other: setLocalizedText(value?.format_other, locale, text),
+                })
+              }
+              placeholder={t('adminSchool.placeholder.admissionFormatOther')}
+              multiline
+            />
+          ) : null}
+          <Text style={styles.fieldLabel}>
+            {t('adminSchool.field.admissionSubjects')}
+          </Text>
+          {ADMISSION_SUBJECT_OPTIONS.map((subject) => {
+            const selected = selectedSubjects.has(subject);
+            return (
+              <Pressable
+                key={subject}
+                onPress={() => toggleSubject(subject)}
+                style={styles.checkboxRow}
+              >
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    selected ? styles.checkboxBoxSelected : undefined,
+                  ]}
+                >
+                  {selected ? <Text style={styles.checkboxTick}>✓</Text> : null}
+                </View>
+                <Text style={styles.checkboxLabel}>
+                  {translateLabel(t, SUBJECT_LABEL_KEYS, subject)}
+                </Text>
+              </Pressable>
+            );
+          })}
+          <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
+            {t('adminSchool.label.other')}
+          </Text>
+          <TextInput
+            value={otherSubjects}
+            onChangeText={handleOtherSubjectsChange}
+            placeholder={t('adminSchool.placeholder.admissionSubjectsOther')}
+            placeholderTextColor="#9CA3AF"
+            style={[styles.input, styles.inputMultiline, { minHeight: 64 }]}
             multiline
           />
           <FormField
-            label={t('adminSchool.field.entranceExamFormat')}
-            value={value?.format || ''}
+            label={t('adminSchool.field.admissionStages')}
+            value={getLocaleOnlyText(value?.stages, locale)}
             onChangeText={(text) =>
               onChange({
                 ...value,
-                required: true,
-                format: text,
+                stages: setLocalizedText(value?.stages, locale, text),
               })
             }
-            placeholder={t('adminSchool.placeholder.entranceExamFormat')}
+            placeholder={t('adminSchool.placeholder.admissionStages')}
             multiline
           />
         </View>
@@ -1130,6 +1333,73 @@ const VideosSelector = ({ value, onChange }) => {
   const { t } = useAdminLocale();
   const [input, setInput] = useState('');
   const list = splitList(value).filter(Boolean);
+
+  const appendItems = (items) => {
+    const next = mergeUniqueList(list, items, 10);
+    onChange(next.join(', '));
+  };
+
+  const pickFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionPhotos')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsMultipleSelection: true,
+      quality: 1,
+    });
+    if (!result.canceled && result.assets?.length) {
+      appendItems(result.assets.map((asset) => asset.uri));
+    }
+  };
+
+  const takeVideo = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionCamera')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      quality: 1,
+    });
+    if (!result.canceled && result.assets?.length) {
+      appendItems([result.assets[0].uri]);
+    }
+  };
+
+  const pickFromFiles = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'video/*',
+      copyToCacheDirectory: true,
+      multiple: true,
+    });
+    const uris = extractDocumentUris(result);
+    if (uris.length) {
+      appendItems(uris);
+    }
+  };
+
+  const handlePickPress = () => {
+    Alert.alert(
+      t('adminSchool.media.sourceTitle'),
+      t('adminSchool.media.sourcePrompt'),
+      [
+        { text: t('adminSchool.media.camera'), onPress: takeVideo },
+        { text: t('adminSchool.media.gallery'), onPress: pickFromLibrary },
+        { text: t('adminSchool.media.files'), onPress: pickFromFiles },
+        { text: t('adminSchool.action.cancel'), style: 'cancel' },
+      ]
+    );
+  };
 
   const handleAdd = () => {
     const trimmed = input.trim();
@@ -1161,6 +1431,11 @@ const VideosSelector = ({ value, onChange }) => {
         </View>
         <Pressable style={styles.addButton} onPress={handleAdd}>
           <Text style={styles.addButtonText}>{t('adminSchool.action.add')}</Text>
+        </Pressable>
+        <Pressable style={styles.pickButton} onPress={handlePickPress}>
+          <Text style={styles.pickButtonText}>
+            {t('adminSchool.action.pickMedia')}
+          </Text>
         </Pressable>
       </View>
       {list.length ? (
@@ -1397,6 +1672,13 @@ const parseCoordinate = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const normalizeCoordinateInput = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.trim().replace(',', '.');
+};
+
 const toIsoDateString = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     return '';
@@ -1465,6 +1747,22 @@ const splitList = (value) => {
     .filter((item) => item.length);
 };
 
+const mergeUniqueList = (current, additions, limit = 10) =>
+  Array.from(new Set([...(current || []), ...(additions || [])].filter(Boolean))).slice(
+    0,
+    limit
+  );
+
+const extractDocumentUris = (result) => {
+  if (!result) return [];
+  if (result.type === 'cancel' || result.canceled) return [];
+  if (Array.isArray(result.assets)) {
+    return result.assets.map((item) => item?.uri).filter(Boolean);
+  }
+  if (typeof result.uri === 'string') return [result.uri];
+  return [];
+};
+
 const buildLicenseSummary = (details, fallbackText = '') => {
   const number = details?.number?.trim?.() || '';
   const issued = formatDateDisplay(details?.issued_at);
@@ -1529,18 +1827,10 @@ const finalizeClubsOther = (value, primaryLocale) => {
       }),
       {}
     );
-  const trimmed = {
+  return {
     ru: trimLocale(normalized.ru),
     en: trimLocale(normalized.en),
   };
-  const otherLocale = primaryLocale === 'en' ? 'ru' : 'en';
-  const hasOther = CLUB_OTHER_KEYS.some(
-    (key) => trimmed[otherLocale][key]
-  );
-  if (!hasOther) {
-    trimmed[otherLocale] = { ...trimmed[primaryLocale] };
-  }
-  return trimmed;
 };
 
 export default function AdminSchoolInfoScreen() {
@@ -1555,23 +1845,44 @@ export default function AdminSchoolInfoScreen() {
     DISTRICT_LABEL_KEYS[city]
       ? getLabel(DISTRICT_LABEL_KEYS[city], value)
       : value;
+  const getMealsTimesLabel = (value) => {
+    const count = Number(value);
+    if (!Number.isFinite(count)) return value;
+    if (contentLocale === 'ru') {
+      const suffix = count === 1 ? 'раз' : count >= 2 && count <= 4 ? 'раза' : 'раз';
+      return `${count} ${suffix} в день`;
+    }
+    return `${count} times/day`;
+  };
+  const getMealsFreeUntilLabel = (value) => {
+    const count = Number(value);
+    if (!Number.isFinite(count)) return value;
+    return contentLocale === 'ru' ? `до ${count} класса` : `until grade ${count}`;
+  };
   const targetSchoolId =
     account?.school_id ||
     buildFallbackSchoolId(account?.email || account?.organization);
 
   const derivedProfile = useMemo(() => {
+    const seedBasicInfo = {
+      name: normalizeLocalizedText(account?.organization || ''),
+      display_name: normalizeLocalizedText(''),
+      email: account?.email || '',
+      phone: account?.contactPhone || account?.phone || '',
+      website: account?.website || '',
+      license_details: {
+        number: account?.licenseNumber || '',
+        issued_at: account?.licenseIssuedAt || '',
+        valid_until: account?.licenseExpiresAt || '',
+      },
+    };
     if (profiles.length === 0) {
       return createEmptySchoolProfile({
-        ...integralDemoProfile,
         school_id: targetSchoolId,
         basic_info: {
-          ...integralDemoProfile.basic_info,
-          name: normalizeLocalizedText(
-            account?.organization || integralDemoProfile.basic_info.name
-          ),
-          display_name: normalizeLocalizedText(
-            integralDemoProfile.basic_info.display_name || ''
-          ),
+          ...seedBasicInfo,
+          name: normalizeLocalizedText(account?.organization || ''),
+          display_name: normalizeLocalizedText(''),
         },
       });
     }
@@ -1584,11 +1895,21 @@ export default function AdminSchoolInfoScreen() {
     return createEmptySchoolProfile({
       school_id: targetSchoolId,
       basic_info: {
-        name: normalizeLocalizedText(account?.organization || ''),
-        display_name: normalizeLocalizedText(''),
+        ...seedBasicInfo,
       },
     });
-  }, [profiles, targetSchoolId, account?.organization]);
+  }, [
+    profiles,
+    targetSchoolId,
+    account?.organization,
+    account?.email,
+    account?.contactPhone,
+    account?.phone,
+    account?.website,
+    account?.licenseNumber,
+    account?.licenseIssuedAt,
+    account?.licenseExpiresAt,
+  ]);
 
   const normalizeProfile = (profile) => {
     const next = createEmptySchoolProfile(profile || {});
@@ -1610,11 +1931,78 @@ export default function AdminSchoolInfoScreen() {
         ...next.education.curricula,
         other: normalizeLocalizedText(next.education.curricula?.other),
       },
+      entrance_exam: (() => {
+        const rawExam = next.education.entrance_exam || {};
+        const rawFormat =
+          typeof rawExam.format === 'string'
+            ? rawExam.format
+            : getLocaleOnlyText(rawExam.format, contentLocale);
+        const mappedFormat = mapAdmissionFormat(rawFormat);
+        const resolvedFormat =
+          typeof rawExam.format === 'string'
+            ? rawExam.format
+            : mappedFormat.format;
+        const formatOther = rawExam.format_other
+          ? normalizeLocalizedText(rawExam.format_other)
+          : mappedFormat.otherText
+          ? setLocalizedText({ ru: '', en: '' }, contentLocale, mappedFormat.otherText)
+          : { ru: '', en: '' };
+        const subjects = typeof rawExam.subjects === 'string' ? rawExam.subjects : '';
+        const subjectsOther = rawExam.subjects_other
+          ? normalizeLocalizedText(rawExam.subjects_other)
+          : rawExam.type
+          ? normalizeLocalizedText(rawExam.type)
+          : { ru: '', en: '' };
+        const stages = rawExam.stages
+          ? normalizeLocalizedText(rawExam.stages)
+          : { ru: '', en: '' };
+        const required =
+          resolvedFormat && resolvedFormat !== 'None'
+            ? true
+            : Boolean(rawExam.required);
+        return {
+          required,
+          format: resolvedFormat || '',
+          format_other: formatOther,
+          subjects,
+          subjects_other: subjectsOther,
+          stages,
+        };
+      })(),
     };
     next.services = {
       ...next.services,
+      meals_status: next.services.meals_status || next.services.meals || '',
+      meals_times_per_day: next.services.meals_times_per_day || '',
+      meals_free_until_grade: next.services.meals_free_until_grade || '',
+      meals_notes: normalizeLocalizedText(next.services.meals_notes),
+      foreign_teachers: Boolean(next.services.foreign_teachers),
+      foreign_teachers_notes: normalizeLocalizedText(next.services.foreign_teachers_notes),
       specialists_other: normalizeLocalizedText(next.services.specialists_other),
       clubs_other: normalizeClubsOther(next.services.clubs_other),
+    };
+    next.finance = {
+      ...createFinanceDefaults(),
+      ...next.finance,
+      funding_state: Boolean(next.finance?.funding_state),
+      funding_self: Boolean(next.finance?.funding_self),
+    };
+    next.location = {
+      ...next.location,
+      nearest_metro_stop: normalizeLocalizedText(next.location.nearest_metro_stop),
+      nearest_bus_stop: normalizeLocalizedText(next.location.nearest_bus_stop),
+      service_area: normalizeLocalizedText(next.location.service_area),
+    };
+    next.media = {
+      ...next.media,
+      social_links: {
+        instagram: next.media?.social_links?.instagram || '',
+        tiktok: next.media?.social_links?.tiktok || '',
+        youtube: next.media?.social_links?.youtube || '',
+        facebook: next.media?.social_links?.facebook || '',
+        vk: next.media?.social_links?.vk || '',
+        telegram: next.media?.social_links?.telegram || '',
+      },
     };
 
     const languageSplit = splitKnownExtras(
@@ -1624,7 +2012,10 @@ export default function AdminSchoolInfoScreen() {
     next.education.languages = languageSplit.selected.join(', ');
     if (!hasLocalizedContent(next.education.languages_other) && languageSplit.extras.length) {
       const extraText = languageSplit.extras.join(', ');
-      next.education.languages_other = { ru: extraText, en: extraText };
+      next.education.languages_other = {
+        ru: contentLocale === 'ru' ? extraText : '',
+        en: contentLocale === 'en' ? extraText : '',
+      };
     }
 
     const subjectSplit = splitKnownExtras(
@@ -1637,7 +2028,10 @@ export default function AdminSchoolInfoScreen() {
       subjectSplit.extras.length
     ) {
       const extraText = subjectSplit.extras.join(', ');
-      next.education.advanced_subjects_other = { ru: extraText, en: extraText };
+      next.education.advanced_subjects_other = {
+        ru: contentLocale === 'ru' ? extraText : '',
+        en: contentLocale === 'en' ? extraText : '',
+      };
     }
 
     const specialistsSplit = splitKnownExtras(
@@ -1650,7 +2044,10 @@ export default function AdminSchoolInfoScreen() {
       specialistsSplit.extras.length
     ) {
       const extraText = specialistsSplit.extras.join(', ');
-      next.services.specialists_other = { ru: extraText, en: extraText };
+      next.services.specialists_other = {
+        ru: contentLocale === 'ru' ? extraText : '',
+        en: contentLocale === 'en' ? extraText : '',
+      };
     }
 
     const clubOptions = Object.values(CLUB_GROUPS).flatMap(
@@ -1663,7 +2060,16 @@ export default function AdminSchoolInfoScreen() {
     );
     if (!clubsOtherHasContent && clubsSplit.extras.length) {
       const extraText = clubsSplit.extras.join(', ');
-      next.services.clubs_other = normalizeClubsOther(extraText);
+      next.services.clubs_other = normalizeClubsOther({
+        ru: {
+          ...buildEmptyClubsOtherMap(),
+          other: contentLocale === 'ru' ? extraText : '',
+        },
+        en: {
+          ...buildEmptyClubsOtherMap(),
+          other: contentLocale === 'en' ? extraText : '',
+        },
+      });
     }
 
     return next;
@@ -1672,10 +2078,24 @@ export default function AdminSchoolInfoScreen() {
   const [form, setForm] = useState(() =>
     normalizeProfile(derivedProfile || createEmptySchoolProfile({}))
   );
-  const isPrivateSchool = useMemo(() => {
-    const normalized = (form.basic_info.type || '').trim().toLowerCase();
-    return normalized === 'private' || normalized === 'частная';
-  }, [form.basic_info.type]);
+  const normalizedSchoolType = useMemo(
+    () => (form.basic_info.type || '').trim().toLowerCase(),
+    [form.basic_info.type]
+  );
+  const isPrivateSchool = useMemo(
+    () => normalizedSchoolType === 'private' || normalizedSchoolType === 'частная',
+    [normalizedSchoolType]
+  );
+  const isAutonomousSchool = useMemo(
+    () =>
+      normalizedSchoolType === 'autonomous' ||
+      normalizedSchoolType === 'автономная',
+    [normalizedSchoolType]
+  );
+  const showTuitionFields =
+    isPrivateSchool ||
+    normalizedSchoolType === 'international' ||
+    (isAutonomousSchool && form.finance.funding_self);
   const licenseDetails = form.basic_info.license_details || {};
   const availableDistricts = useMemo(() => {
     const match = CITY_OPTIONS.find(
@@ -1728,15 +2148,26 @@ export default function AdminSchoolInfoScreen() {
   }, [form.school_id, targetSchoolId]);
 
   const handleTypeSelect = (value) => {
-    setForm((prev) => ({
-      ...prev,
-      basic_info: {
-        ...prev.basic_info,
-        type: value,
-      },
-      finance:
-        value === 'Private' ? prev.finance : createFinanceDefaults(),
-    }));
+    setForm((prev) => {
+      const isState = value === 'State';
+      const isAutonomous = value === 'Autonomous';
+      const nextFinance = isState
+        ? createFinanceDefaults()
+        : {
+            ...prev.finance,
+            funding_state: isAutonomous ? prev.finance.funding_state : false,
+            funding_self: isAutonomous ? prev.finance.funding_self : false,
+          };
+
+      return {
+        ...prev,
+        basic_info: {
+          ...prev.basic_info,
+          type: value,
+        },
+        finance: nextFinance,
+      };
+    });
   };
 
   const updateRootField = (key, value) => {
@@ -1777,6 +2208,82 @@ export default function AdminSchoolInfoScreen() {
         },
       },
     }));
+  };
+
+  const setLogoUri = (uri) => {
+    setForm((prev) => ({
+      ...prev,
+      media: {
+        ...prev.media,
+        logo_local_uri: uri || '',
+        logo: uri ? '' : prev.media.logo,
+      },
+    }));
+  };
+
+  const pickLogoFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionPhotos')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      setLogoUri(result.assets[0].uri);
+    }
+  };
+
+  const takeLogoPhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t('adminSchool.media.permissionTitle'),
+        t('adminSchool.media.permissionCamera')
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      setLogoUri(result.assets[0].uri);
+    }
+  };
+
+  const pickLogoFromFiles = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'image/*',
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    const uris = extractDocumentUris(result);
+    if (uris.length) {
+      setLogoUri(uris[0]);
+    }
+  };
+
+  const handleLogoPickPress = () => {
+    Alert.alert(
+      t('adminSchool.media.sourceTitle'),
+      t('adminSchool.media.sourcePrompt'),
+      [
+        { text: t('adminSchool.media.camera'), onPress: takeLogoPhoto },
+        { text: t('adminSchool.media.gallery'), onPress: pickLogoFromLibrary },
+        { text: t('adminSchool.media.files'), onPress: pickLogoFromFiles },
+        { text: t('adminSchool.action.cancel'), style: 'cancel' },
+      ]
+    );
   };
 
   const updateLocalizedNestedSectionField = (
@@ -1853,8 +2360,12 @@ export default function AdminSchoolInfoScreen() {
           contentLocale
         ),
         coordinates: {
-          latitude: form.basic_info.coordinates.latitude.trim(),
-          longitude: form.basic_info.coordinates.longitude.trim(),
+          latitude: normalizeCoordinateInput(
+            form.basic_info.coordinates.latitude
+          ),
+          longitude: normalizeCoordinateInput(
+            form.basic_info.coordinates.longitude
+          ),
         },
         phone: form.basic_info.phone.trim(),
         email: form.basic_info.email.trim(),
@@ -1888,14 +2399,41 @@ export default function AdminSchoolInfoScreen() {
         ),
         average_class_size: form.education.average_class_size.trim(),
         entrance_exam: {
-          required: Boolean(form.education.entrance_exam?.required),
-          type: form.education.entrance_exam?.type?.trim?.() || '',
-          format: form.education.entrance_exam?.format?.trim?.() || '',
+          required: Boolean(
+            form.education.entrance_exam?.format &&
+              form.education.entrance_exam?.format !== 'None'
+          ),
+          format: form.education.entrance_exam?.format || '',
+          format_other: finalizeLocalizedText(
+            form.education.entrance_exam?.format_other,
+            contentLocale
+          ),
+          subjects: form.education.entrance_exam?.subjects?.trim?.() || '',
+          subjects_other: finalizeLocalizedText(
+            form.education.entrance_exam?.subjects_other,
+            contentLocale
+          ),
+          stages: finalizeLocalizedText(
+            form.education.entrance_exam?.stages,
+            contentLocale
+          ),
         },
       },
       services: {
         ...form.services,
-        meals: form.services.meals.trim(),
+        meals: (form.services.meals_status || '').trim(),
+        meals_status: (form.services.meals_status || '').trim(),
+        meals_times_per_day: (form.services.meals_times_per_day || '').trim(),
+        meals_free_until_grade: (form.services.meals_free_until_grade || '').trim(),
+        meals_notes: finalizeLocalizedText(
+          form.services.meals_notes,
+          contentLocale
+        ),
+        foreign_teachers: Boolean(form.services.foreign_teachers),
+        foreign_teachers_notes: finalizeLocalizedText(
+          form.services.foreign_teachers_notes,
+          contentLocale
+        ),
         specialists: form.services.specialists.trim(),
         specialists_other: finalizeLocalizedText(
           form.services.specialists_other,
@@ -1910,6 +2448,8 @@ export default function AdminSchoolInfoScreen() {
         payment_system: form.finance.payment_system.trim(),
         grants_discounts: form.finance.grants_discounts.trim(),
         free_places: Boolean(form.finance.free_places),
+        funding_state: Boolean(form.finance.funding_state),
+        funding_self: Boolean(form.finance.funding_self),
       },
       media: {
         ...form.media,
@@ -1918,13 +2458,30 @@ export default function AdminSchoolInfoScreen() {
         logo: form.media.logo.trim(),
         logo_local_uri: form.media.logo_local_uri?.trim?.() || form.media.logo_local_uri,
         certificates: form.media.certificates.trim(),
+        social_links: {
+          instagram: form.media.social_links?.instagram?.trim?.() || '',
+          tiktok: form.media.social_links?.tiktok?.trim?.() || '',
+          youtube: form.media.social_links?.youtube?.trim?.() || '',
+          facebook: form.media.social_links?.facebook?.trim?.() || '',
+          vk: form.media.social_links?.vk?.trim?.() || '',
+          telegram: form.media.social_links?.telegram?.trim?.() || '',
+        },
       },
       location: {
         ...form.location,
-        nearest_metro_stop: form.location.nearest_metro_stop.trim(),
-        nearest_bus_stop: form.location.nearest_bus_stop.trim(),
+        nearest_metro_stop: finalizeLocalizedText(
+          form.location.nearest_metro_stop,
+          contentLocale
+        ),
+        nearest_bus_stop: finalizeLocalizedText(
+          form.location.nearest_bus_stop,
+          contentLocale
+        ),
         distance_to_metro_km: form.location.distance_to_metro_km.trim(),
-        service_area: form.location.service_area.trim(),
+        service_area: finalizeLocalizedText(
+          form.location.service_area,
+          contentLocale
+        ),
       },
       system: {
         ...form.system,
@@ -1952,6 +2509,8 @@ export default function AdminSchoolInfoScreen() {
     }
   };
 
+  const logoPreviewUri = (form.media.logo_local_uri || form.media.logo || '').trim();
+
   return (
     <AdminLocaleContext.Provider value={{ t }}>
       <View style={styles.screen}>
@@ -1971,7 +2530,7 @@ export default function AdminSchoolInfoScreen() {
               {t('adminSchool.title')}
             </Text>
         <View style={styles.localeToggle}>
-          {['ru', 'en'].map((lang) => {
+          {['ru', 'en', 'kk'].map((lang) => {
             const isActive = contentLocale === lang;
             return (
               <Pressable
@@ -2011,7 +2570,7 @@ export default function AdminSchoolInfoScreen() {
         >
           <FormField
             label={t('adminSchool.field.name')}
-            value={getLocalizedText(form.basic_info.name, contentLocale)}
+            value={getLocaleOnlyText(form.basic_info.name, contentLocale)}
             onChangeText={(value) =>
               updateLocalizedSectionField('basic_info', 'name', value)
             }
@@ -2019,7 +2578,7 @@ export default function AdminSchoolInfoScreen() {
           />
           <FormField
             label={t('adminSchool.field.displayName')}
-            value={getLocalizedText(form.basic_info.display_name, contentLocale)}
+            value={getLocaleOnlyText(form.basic_info.display_name, contentLocale)}
             onChangeText={(value) =>
               updateLocalizedSectionField('basic_info', 'display_name', value)
             }
@@ -2035,48 +2594,72 @@ export default function AdminSchoolInfoScreen() {
               getLabel(TYPE_LABEL_KEYS, option) || option
             }
           />
-          <View style={styles.curriculaGroup}>
-            <Text style={styles.fieldLabel}>
-              {t('adminSchool.label.tuition')}
-            </Text>
-            <FormField
-              label={t('adminSchool.field.monthlyFee')}
-              value={form.finance.monthly_fee}
-              onChangeText={(value) =>
-                updateSectionField('finance', 'monthly_fee', value)
-              }
-              placeholder={t('adminSchool.placeholder.monthlyFee')}
-              keyboardType="number-pad"
-            />
-            <SelectField
-              label={t('adminSchool.field.paymentSystem')}
-              value={form.finance.payment_system}
-              onSelect={(value) =>
-                updateSectionField('finance', 'payment_system', value)
-              }
-              placeholder={t('adminSchool.placeholder.selectPayment')}
-              options={PAYMENT_SYSTEM_OPTIONS}
-              getOptionLabel={(option) =>
-                getLabel(PAYMENT_LABEL_KEYS, option) || option
-              }
-            />
-            <FormField
-              label={t('adminSchool.field.grants')}
-              value={form.finance.grants_discounts}
-              onChangeText={(value) =>
-                updateSectionField('finance', 'grants_discounts', value)
-              }
-              placeholder={t('adminSchool.placeholder.grants')}
-              multiline
-            />
-            <SwitchField
-              label={t('adminSchool.field.freePlaces')}
-              value={form.finance.free_places}
-              onValueChange={(value) =>
-                updateSectionField('finance', 'free_places', value)
-              }
-            />
-          </View>
+          {(showTuitionFields || isAutonomousSchool) && (
+            <View style={styles.curriculaGroup}>
+              <Text style={styles.fieldLabel}>
+                {t('adminSchool.label.tuition')}
+              </Text>
+              {isAutonomousSchool ? (
+                <>
+                  <SwitchField
+                    label={t('adminSchool.field.fundingState')}
+                    value={form.finance.funding_state}
+                    onValueChange={(value) =>
+                      updateSectionField('finance', 'funding_state', value)
+                    }
+                  />
+                  <SwitchField
+                    label={t('adminSchool.field.fundingSelf')}
+                    value={form.finance.funding_self}
+                    onValueChange={(value) =>
+                      updateSectionField('finance', 'funding_self', value)
+                    }
+                  />
+                </>
+              ) : null}
+              {showTuitionFields ? (
+                <>
+                  <FormField
+                    label={t('adminSchool.field.monthlyFee')}
+                    value={form.finance.monthly_fee}
+                    onChangeText={(value) =>
+                      updateSectionField('finance', 'monthly_fee', value)
+                    }
+                    placeholder={t('adminSchool.placeholder.monthlyFee')}
+                    keyboardType="number-pad"
+                  />
+                  <SelectField
+                    label={t('adminSchool.field.paymentSystem')}
+                    value={form.finance.payment_system}
+                    onSelect={(value) =>
+                      updateSectionField('finance', 'payment_system', value)
+                    }
+                    placeholder={t('adminSchool.placeholder.selectPayment')}
+                    options={PAYMENT_SYSTEM_OPTIONS}
+                    getOptionLabel={(option) =>
+                      getLabel(PAYMENT_LABEL_KEYS, option) || option
+                    }
+                  />
+                  <FormField
+                    label={t('adminSchool.field.grants')}
+                    value={form.finance.grants_discounts}
+                    onChangeText={(value) =>
+                      updateSectionField('finance', 'grants_discounts', value)
+                    }
+                    placeholder={t('adminSchool.placeholder.grants')}
+                    multiline
+                  />
+                  <SwitchField
+                    label={t('adminSchool.field.freePlaces')}
+                    value={form.finance.free_places}
+                    onValueChange={(value) =>
+                      updateSectionField('finance', 'free_places', value)
+                    }
+                  />
+                </>
+              ) : null}
+            </View>
+          )}
           <SelectField
             label={t('adminSchool.field.city')}
             value={form.basic_info.city}
@@ -2106,7 +2689,7 @@ export default function AdminSchoolInfoScreen() {
           />
           <FormField
             label={t('adminSchool.field.address')}
-            value={getLocalizedText(form.basic_info.address, contentLocale)}
+            value={getLocaleOnlyText(form.basic_info.address, contentLocale)}
             onChangeText={(value) =>
               updateLocalizedSectionField('basic_info', 'address', value)
             }
@@ -2115,7 +2698,7 @@ export default function AdminSchoolInfoScreen() {
           />
           <FormField
             label={t('adminSchool.field.description')}
-            value={getLocalizedText(form.basic_info.description, contentLocale)}
+            value={getLocaleOnlyText(form.basic_info.description, contentLocale)}
             onChangeText={(value) =>
               updateLocalizedSectionField('basic_info', 'description', value)
             }
@@ -2159,7 +2742,7 @@ export default function AdminSchoolInfoScreen() {
           <MapPreview
             latitude={form.basic_info.coordinates.latitude}
             longitude={form.basic_info.coordinates.longitude}
-            address={getLocalizedText(form.basic_info.address, contentLocale)}
+            address={getLocaleOnlyText(form.basic_info.address, contentLocale)}
           />
           <FormField
             label={t('adminSchool.field.phone')}
@@ -2264,6 +2847,22 @@ export default function AdminSchoolInfoScreen() {
           title={t('adminSchool.section.education.title')}
           description={t('adminSchool.section.education.description')}
         >
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => {
+              updateSectionField('education', 'curricula', {
+                national: [],
+                international: [],
+                additional: [],
+                other: { ru: '', en: '' },
+              });
+              updateSectionField('education', 'programs', { ru: '', en: '' });
+            }}
+          >
+            <Text style={styles.resetButtonText}>
+              {t('adminSchool.action.resetCurricula')}
+            </Text>
+          </Pressable>
           <CurriculaSelector
             value={form.education.curricula}
             onChange={(value) =>
@@ -2274,7 +2873,7 @@ export default function AdminSchoolInfoScreen() {
           />
           <LanguagesSelector
             value={form.education.languages}
-            otherValue={getLocalizedText(
+            otherValue={getLocaleOnlyText(
               form.education.languages_other,
               contentLocale
             )}
@@ -2300,15 +2899,16 @@ export default function AdminSchoolInfoScreen() {
             placeholder={t('adminSchool.placeholder.selectAverageSize')}
             options={CLASS_SIZE_OPTIONS}
           />
-          <EntranceExamSection
+          <AdmissionSection
             value={form.education.entrance_exam}
             onChange={(value) =>
               updateSectionField('education', 'entrance_exam', value)
             }
+            locale={contentLocale}
           />
           <AdvancedSubjectsSelector
             value={form.education.advanced_subjects}
-            otherValue={getLocalizedText(
+            otherValue={getLocaleOnlyText(
               form.education.advanced_subjects_other,
               contentLocale
             )}
@@ -2339,13 +2939,67 @@ export default function AdminSchoolInfoScreen() {
           />
           <SelectField
             label={t('adminSchool.field.meals')}
-            value={form.services.meals}
-            onSelect={(value) => updateSectionField('services', 'meals', value)}
+            value={form.services.meals_status}
+            onSelect={(value) =>
+              updateSectionField('services', 'meals_status', value)
+            }
             placeholder={t('adminSchool.placeholder.selectOption')}
             options={MEAL_OPTIONS}
             getOptionLabel={(option) =>
               getLabel(MEAL_LABEL_KEYS, option) || option
             }
+          />
+          <SelectField
+            label={t('adminSchool.field.mealsTimes')}
+            value={form.services.meals_times_per_day}
+            onSelect={(value) =>
+              updateSectionField('services', 'meals_times_per_day', value)
+            }
+            placeholder={t('adminSchool.placeholder.mealsTimes')}
+            options={MEAL_TIMES_OPTIONS}
+            getOptionLabel={getMealsTimesLabel}
+          />
+          <SelectField
+            label={t('adminSchool.field.mealsFreeUntil')}
+            value={form.services.meals_free_until_grade}
+            onSelect={(value) =>
+              updateSectionField('services', 'meals_free_until_grade', value)
+            }
+            placeholder={t('adminSchool.placeholder.mealsFreeUntil')}
+            options={MEAL_GRADE_OPTIONS}
+            getOptionLabel={getMealsFreeUntilLabel}
+          />
+          <FormField
+            label={t('adminSchool.field.mealsNotes')}
+            value={getLocaleOnlyText(form.services.meals_notes, contentLocale)}
+            onChangeText={(value) =>
+              updateLocalizedSectionField('services', 'meals_notes', value)
+            }
+            placeholder={t('adminSchool.placeholder.mealsNotes')}
+            multiline
+          />
+          <SwitchField
+            label={t('adminSchool.field.foreignTeachers')}
+            value={form.services.foreign_teachers}
+            onValueChange={(value) =>
+              updateSectionField('services', 'foreign_teachers', value)
+            }
+          />
+          <FormField
+            label={t('adminSchool.field.foreignTeachersNotes')}
+            value={getLocaleOnlyText(
+              form.services.foreign_teachers_notes,
+              contentLocale
+            )}
+            onChangeText={(value) =>
+              updateLocalizedSectionField(
+                'services',
+                'foreign_teachers_notes',
+                value
+              )
+            }
+            placeholder={t('adminSchool.placeholder.foreignTeachersNotes')}
+            multiline
           />
           <SwitchField
             label={t('adminSchool.field.transport')}
@@ -2363,7 +3017,7 @@ export default function AdminSchoolInfoScreen() {
           />
           <SpecialistsSelector
             value={form.services.specialists}
-            otherValue={getLocalizedText(
+            otherValue={getLocaleOnlyText(
               form.services.specialists_other,
               contentLocale
             )}
@@ -2435,13 +3089,18 @@ export default function AdminSchoolInfoScreen() {
             placeholder={t('adminSchool.placeholder.logoUrl')}
             multiline
           />
-          {isValidRemoteImage(form.media.logo) ? (
+          <Pressable style={styles.pickButton} onPress={handleLogoPickPress}>
+            <Text style={styles.pickButtonText}>
+              {t('adminSchool.action.pickMedia')}
+            </Text>
+          </Pressable>
+          {isValidRemoteImage(logoPreviewUri) ? (
             <View className="bg-white border border-bgPurple/15 rounded-2xl p-3 items-center mt-2">
               <Text className="font-exo text-darkGrayText mb-2">
                 {t('adminSchool.field.logoPreview')}
               </Text>
               <RNImage
-                source={{ uri: form.media.logo.trim() }}
+                source={{ uri: logoPreviewUri }}
                 style={{ width: 120, height: 120, borderRadius: 24 }}
                 resizeMode="cover"
               />
@@ -2510,22 +3169,82 @@ export default function AdminSchoolInfoScreen() {
         </SectionCard>
 
         <SectionCard
+          title={t('adminSchool.section.socials.title')}
+          description={t('adminSchool.section.socials.description')}
+        >
+          <FormField
+            label={t('adminSchool.field.social.instagram')}
+            value={form.media.social_links?.instagram || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'instagram', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.instagram')}
+          />
+          <FormField
+            label={t('adminSchool.field.social.tiktok')}
+            value={form.media.social_links?.tiktok || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'tiktok', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.tiktok')}
+          />
+          <FormField
+            label={t('adminSchool.field.social.youtube')}
+            value={form.media.social_links?.youtube || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'youtube', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.youtube')}
+          />
+          <FormField
+            label={t('adminSchool.field.social.facebook')}
+            value={form.media.social_links?.facebook || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'facebook', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.facebook')}
+          />
+          <FormField
+            label={t('adminSchool.field.social.vk')}
+            value={form.media.social_links?.vk || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'vk', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.vk')}
+          />
+          <FormField
+            label={t('adminSchool.field.social.telegram')}
+            value={form.media.social_links?.telegram || ''}
+            onChangeText={(value) =>
+              updateNestedSectionField('media', 'social_links', 'telegram', value)
+            }
+            placeholder={t('adminSchool.placeholder.social.telegram')}
+          />
+        </SectionCard>
+
+        <SectionCard
           title={t('adminSchool.section.location.title')}
           description={t('adminSchool.section.location.description')}
         >
           <FormField
             label={t('adminSchool.field.location.metro')}
-            value={form.location.nearest_metro_stop}
+            value={getLocaleOnlyText(
+              form.location.nearest_metro_stop,
+              contentLocale
+            )}
             onChangeText={(value) =>
-              updateSectionField('location', 'nearest_metro_stop', value)
+              updateLocalizedSectionField('location', 'nearest_metro_stop', value)
             }
             placeholder={t('adminSchool.placeholder.metro')}
           />
           <FormField
             label={t('adminSchool.field.location.busStop')}
-            value={form.location.nearest_bus_stop}
+            value={getLocaleOnlyText(
+              form.location.nearest_bus_stop,
+              contentLocale
+            )}
             onChangeText={(value) =>
-              updateSectionField('location', 'nearest_bus_stop', value)
+              updateLocalizedSectionField('location', 'nearest_bus_stop', value)
             }
             placeholder={t('adminSchool.placeholder.busStop')}
           />
@@ -2540,9 +3259,12 @@ export default function AdminSchoolInfoScreen() {
           />
           <FormField
             label={t('adminSchool.field.location.serviceArea')}
-            value={form.location.service_area}
+            value={getLocaleOnlyText(
+              form.location.service_area,
+              contentLocale
+            )}
             onChangeText={(value) =>
-              updateSectionField('location', 'service_area', value)
+              updateLocalizedSectionField('location', 'service_area', value)
             }
             placeholder={t('adminSchool.placeholder.serviceArea')}
             multiline
@@ -2765,6 +3487,31 @@ const styles = StyleSheet.create({
   rowItemWithSpacing: {
     marginRight: 16,
   },
+  addButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    marginLeft: 8,
+  },
+  addButtonText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  pickButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(94, 139, 255, 0.35)',
+    marginLeft: 8,
+  },
+  pickButtonText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#5B6EE1',
+  },
   selectContainer: {
     height: 54,
     borderRadius: 18,
@@ -2898,6 +3645,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4B5563',
   },
+  resetButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(94, 139, 255, 0.35)',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  resetButtonText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#5B6EE1',
+  },
   mapHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3004,7 +3765,11 @@ const styles = StyleSheet.create({
 const isValidRemoteImage = (value) => {
   if (!value) return false;
   const trimmed = value.trim();
-  return /^https?:\/\//i.test(trimmed) || trimmed.startsWith('file://');
+  return (
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith('file://') ||
+    trimmed.startsWith('content://')
+  );
 };
 
 const getYoutubeThumbnail = (url) => {

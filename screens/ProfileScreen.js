@@ -20,6 +20,7 @@ import {
   UserCircleIcon,
 } from 'react-native-heroicons/outline';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRole, ROLES } from '../context/RoleContext';
 import { supabase } from '../services/supabaseClient';
@@ -141,10 +142,27 @@ export default function ProfileScreen() {
     }
   };
 
+  const pickFromFiles = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'image/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.type === 'cancel') return;
+      if (result.uri) {
+        await saveAvatarUri(result.uri);
+      }
+    } catch (error) {
+      console.warn('[ProfileScreen] Failed to pick file', error);
+    }
+  };
+
   const handleAvatarPress = () => {
     Alert.alert(t('profile.changePhotoTitle'), t('profile.changePhotoPrompt'), [
       { text: t('profile.camera'), onPress: takePhoto },
       { text: t('profile.photoLibrary'), onPress: pickFromLibrary },
+      { text: t('profile.files'), onPress: pickFromFiles },
       { text: t('profile.cancel'), style: 'cancel' },
     ]);
   };
@@ -153,6 +171,7 @@ export default function ProfileScreen() {
     Alert.alert(t('language.select'), '', [
       { text: t('language.ru'), onPress: () => setLocale('ru') },
       { text: t('language.en'), onPress: () => setLocale('en') },
+      { text: t('language.kk'), onPress: () => setLocale('kk') },
       { text: t('profile.cancel'), style: 'cancel' },
     ]);
   };
@@ -214,6 +233,56 @@ export default function ProfileScreen() {
                 <Text className="text-darkGrayText font-exo mb-4">
                   {t('profile.guestText')}
                 </Text>
+                <View style={styles.guestLangRow}>
+                  <Pressable
+                    onPress={() => setLocale('ru')}
+                    style={[
+                      styles.guestLangButton,
+                      locale === 'ru' && styles.guestLangButtonActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.guestLangText,
+                        locale === 'ru' && styles.guestLangTextActive,
+                      ]}
+                    >
+                      RU
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setLocale('en')}
+                    style={[
+                      styles.guestLangButton,
+                      locale === 'en' && styles.guestLangButtonActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.guestLangText,
+                        locale === 'en' && styles.guestLangTextActive,
+                      ]}
+                    >
+                      EN
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setLocale('kk')}
+                    style={[
+                      styles.guestLangButton,
+                      locale === 'kk' && styles.guestLangButtonActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.guestLangText,
+                        locale === 'kk' && styles.guestLangTextActive,
+                      ]}
+                    >
+                      KK
+                    </Text>
+                  </Pressable>
+                </View>
                 <Pressable
                   className="w-full bg-bgPurple rounded-full py-3 items-center mb-3"
                   onPress={() => navigation.navigate('SignUp')}
@@ -237,7 +306,11 @@ export default function ProfileScreen() {
                   <SettingRow
                     label={t('profile.language')}
                     actionText={
-                      locale === 'ru' ? t('language.ru') : t('language.en')
+                      locale === 'ru'
+                        ? t('language.ru')
+                        : locale === 'kk'
+                        ? t('language.kk')
+                        : t('language.en')
                     }
                     icon={GlobeAltIcon}
                     onPress={handleLanguagePress}
@@ -361,6 +434,32 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 24,
     paddingTop: 24,
+  },
+  guestLangRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  guestLangButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(88, 99, 242, 0.35)',
+    backgroundColor: 'rgba(88, 99, 242, 0.08)',
+  },
+  guestLangButtonActive: {
+    backgroundColor: '#5A63F2',
+    borderColor: '#5A63F2',
+  },
+  guestLangText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#5A63F2',
+  },
+  guestLangTextActive: {
+    color: '#FFFFFF',
   },
   sectionTitle: {
     fontFamily: 'exoSemibold',
