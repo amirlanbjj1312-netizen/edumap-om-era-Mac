@@ -462,16 +462,11 @@ export default function SchoolInfoPage() {
             Локация
           </button>
         </aside>
-        <div>
+        <div className="panel">
           {activeTab === 'basic' && (
             <>
               <Section title="Основная информация">
                 <FieldRow>
-                  <Input
-                    label="Название"
-                    value={getDeep(profile, localePath('basic_info.name'))}
-                    onChange={(value: string) => updateLocalizedField('basic_info.name', value)}
-                  />
                   <Input
                     label="Отображаемое имя"
                     value={getDeep(profile, localePath('basic_info.display_name'))}
