@@ -426,18 +426,19 @@ export default function SchoolDetailScreen() {
   const allMarkers = useMemo(() => {
     return profiles
       .map((item) => {
-        const lat = parseCoordinate(item.basic_info.coordinates?.latitude);
-        const lon = parseCoordinate(item.basic_info.coordinates?.longitude);
+        const basicInfo = item?.basic_info || {};
+        const lat = parseCoordinate(basicInfo.coordinates?.latitude);
+        const lon = parseCoordinate(basicInfo.coordinates?.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
           return null;
         }
         const markerName =
-          getLocalizedText(item.basic_info.display_name, locale) ||
-          getLocalizedText(item.basic_info.name, locale) ||
+          getLocalizedText(basicInfo.display_name, locale) ||
+          getLocalizedText(basicInfo.name, locale) ||
           '';
-        const markerAddress = getLocalizedText(item.basic_info.address, locale);
+        const markerAddress = getLocalizedText(basicInfo.address, locale);
         return {
-          id: item.school_id || item.basic_info.name,
+          id: item.school_id || basicInfo.name,
           name: markerName,
           address: markerAddress,
           latitude: lat,
@@ -451,9 +452,10 @@ export default function SchoolDetailScreen() {
     if (!profile) {
       return null;
     }
+    const markerId = profile.school_id || profile.basic_info?.name;
     return (
       allMarkers.find(
-        (marker) => marker.id === (profile.school_id || profile.basic_info.name)
+        (marker) => marker.id === markerId
       ) || null
     );
   }, [allMarkers, profile]);
