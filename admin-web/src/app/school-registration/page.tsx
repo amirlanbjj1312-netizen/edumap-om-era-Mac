@@ -4,10 +4,92 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import rawSchools from '../../../../assets/data/schools.json';
 
 type Status = 'idle' | 'submitting' | 'sent' | 'verifying' | 'error';
 
 const normalizeEmail = (value: string) => (value ? value.trim().toLowerCase() : '');
+
+const normalizeRegistryValue = (value = '') =>
+  value
+    .toLowerCase()
+    .replace(/[^a-zа-я0-9ё]/gi, '')
+    .trim();
+
+const collectRegistryNames = (school: any) => {
+  if (!school) return [];
+  const names = [school.name, school.name_ru, school.name_en].filter(Boolean);
+  if (Array.isArray(school.aliases)) {
+    names.push(...school.aliases);
+  }
+  return names;
+};
+
+const registryNames = Array.from(
+  new Set(
+    rawSchools
+      .flatMap((school) => collectRegistryNames(school))
+      .map((name) => normalizeRegistryValue(name))
+      .filter(Boolean)
+  )
+);
+
+const isSchoolInRegistry = (organization: string) => {
+  const normalized = normalizeRegistryValue(organization);
+  if (!normalized) return false;
+  return registryNames.some((name) => name.includes(normalized) || normalized.includes(name));
+};
+
+const extractDigits = (value = '') => value.replace(/\D/g, '');
+
+const isValidDateString = (value = '') => {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
+  const [yearStr, monthStr, dayStr] = trimmed.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isFinite(year) || year < 1900 || year > 2100) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+};
+
+const compareDates = (fromValue: string, toValue: string) => {
+  if (!fromValue || !toValue) return true;
+  const from = new Date(`${fromValue}T00:00:00Z`);
+  const to = new Date(`${toValue}T00:00:00Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return true;
+  return to.getTime() >= from.getTime();
+};
+
+const formatKzPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  let local = digits;
+  if (local.startsWith('7') || local.startsWith('8')) {
+    local = local.slice(1);
+  }
+  local = local.slice(0, 10);
+  const parts = [
+    local.slice(0, 3),
+    local.slice(3, 6),
+    local.slice(6, 8),
+    local.slice(8, 10),
+  ];
+  let formatted = '+7';
+  if (parts[0]) formatted += ` (${parts[0]}`;
+  if (parts[0]?.length === 3) formatted += ')';
+  if (parts[1]) formatted += ` ${parts[1]}`;
+  if (parts[2]) formatted += `-${parts[2]}`;
+  if (parts[3]) formatted += `-${parts[3]}`;
+  return formatted;
+};
 
 function SchoolRegistrationContent() {
   const router = useRouter();
@@ -83,6 +165,43 @@ function SchoolRegistrationContent() {
     if (!emailInput || !password) {
       setStatus('error');
       setMessage('Укажите email и пароль.');
+      return;
+    }
+    if (!isSchoolInRegistry(organization)) {
+      setStatus('error');
+      setMessage('Школа не найдена в реестре.');
+      return;
+    }
+    const trimmedIin = extractDigits(iin);
+    if (trimmedIin.startsWith('28')) {
+      setStatus('error');
+      setMessage('ИИН не может начинаться с 28.');
+      return;
+    }
+    if (trimmedIin && trimmedIin.length !== 12) {
+      setStatus('error');
+      setMessage('ИИН должен содержать 12 цифр.');
+      return;
+    }
+    const trimmedBin = extractDigits(bin);
+    if (trimmedBin && trimmedBin.length !== 12) {
+      setStatus('error');
+      setMessage('БИН должен содержать 12 цифр.');
+      return;
+    }
+    if (!isValidDateString(licenseIssuedAt)) {
+      setStatus('error');
+      setMessage('Неверный формат даты выдачи лицензии.');
+      return;
+    }
+    if (!isValidDateString(licenseExpiresAt)) {
+      setStatus('error');
+      setMessage('Неверный формат срока действия лицензии.');
+      return;
+    }
+    if (licenseIssuedAt && licenseExpiresAt && !compareDates(licenseIssuedAt, licenseExpiresAt)) {
+      setStatus('error');
+      setMessage('Срок действия лицензии должен быть позже даты выдачи.');
       return;
     }
     setStatus('submitting');
@@ -245,9 +364,9 @@ function SchoolRegistrationContent() {
               <input
                 className="input"
                 value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
+                onChange={(e) => setContactPhone(formatKzPhone(e.target.value))}
                 type="tel"
-                placeholder="+7..."
+                placeholder="+7 (___) ___-__-__"
               />
             </div>
             <div className="field">
