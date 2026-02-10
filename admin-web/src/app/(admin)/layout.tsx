@@ -40,6 +40,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, [router]);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace('/login');
+  };
+
   if (!ready) {
     return (
       <div className="page">
@@ -65,6 +70,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {item.label}
               </Link>
             ))}
+            <button type="button" className="topnav-logout" onClick={handleSignOut}>
+              Выйти
+            </button>
           </nav>
         </header>
         <main>{children}</main>

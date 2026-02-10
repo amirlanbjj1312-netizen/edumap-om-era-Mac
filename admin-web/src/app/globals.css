@@ -215,6 +215,22 @@ a {
   white-space: nowrap;
 }
 
+.topnav-logout {
+  appearance: none;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.topnav-logout:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 .topnav a.active {
   background: rgba(255, 255, 255, 0.35);
 }
