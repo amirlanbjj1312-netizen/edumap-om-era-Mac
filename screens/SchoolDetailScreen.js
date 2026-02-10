@@ -25,7 +25,9 @@ import Rating from '../components/home/rating';
 import { useAuth } from '../context/AuthContext';
 import { recordVisit } from '../services/visitHistory';
 import { useLocale } from '../context/LocaleContext';
+import { useRole } from '../context/RoleContext';
 import { getLocalizedText } from '../utils/localizedText';
+import { parseCoordinate } from '../utils/coordinates';
 import {
   CITY_LABEL_KEYS,
   CLUB_LABEL_KEYS,
@@ -41,11 +43,11 @@ import {
   translateList,
 } from '../utils/schoolLabels';
 
-const CONSULTATION_TYPES = [
-  'First meeting',
-  'Transfer from another school',
-  'Question about learning',
-  'Other',
+const CONSULTATION_TYPE_KEYS = [
+  'schoolDetail.consultation.firstMeeting',
+  'schoolDetail.consultation.transfer',
+  'schoolDetail.consultation.learningQuestion',
+  'schoolDetail.consultation.other',
 ];
 
 const GRADE_CHOICES = ['Pre-K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -56,7 +58,7 @@ const initialConsultForm = {
   parentEmail: '',
   childName: '',
   childGrade: '',
-  consultationType: CONSULTATION_TYPES[0],
+  consultationType: '',
   comment: '',
 };
 
@@ -88,67 +90,10 @@ const getYoutubeThumbnail = (url) => {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
 };
 
-const toEnglishType = (value) => {
-  const normalized = (value || '').trim().toLowerCase();
-  if (normalized === 'частная') return 'Private';
-  if (normalized === 'государственная') return 'State';
-  if (normalized === 'международная') return 'International';
-  return value || '—';
-};
-
-const toEnglishPayment = (value) => {
-  const normalized = (value || '').trim().toLowerCase();
-  if (normalized === 'по месяцам') return 'Per month';
-  if (normalized === 'по семестру' || normalized === 'по семестрам') return 'Per semester';
-  if (normalized === 'по году' || normalized === 'по годам') return 'Per year';
-  return value || '—';
-};
-
-const toEnglishCity = (value) => {
-  const normalized = (value || '').trim().toLowerCase();
-  if (normalized === 'алматы') return 'Almaty';
-  if (normalized === 'астана') return 'Astana';
-  if (normalized === 'караганда' || normalized === 'карагaнда') return 'Karaganda';
-  return value || '—';
-};
-
-const toEnglishDistrict = (city, district) => {
-  const cityKey = (city || '').trim().toLowerCase();
-  const distKey = (district || '').trim().toLowerCase();
-  if (cityKey === 'алматы') {
-    const map = {
-      'алмалы': 'Almaly',
-      'ауэзовский': 'Auezov',
-      'бостандыкский район': 'Bostandyk',
-      'бостандыкский': 'Bostandyk',
-      'жетысуский': 'Zhetysu',
-      'медеуский': 'Medeu',
-      'наурызбайский': 'Nauryzbay',
-    };
-    return map[distKey] || district || '—';
-  }
-  if (cityKey === 'астана') {
-    const map = {
-      'алматы': 'Almaty District',
-      'байқоныр': 'Baikonyr',
-      'байконур': 'Baikonyr',
-      'есиль': 'Yesil',
-      'сарыарка': 'Saryarka',
-      'нура': 'Nura',
-    };
-    return map[distKey] || district || '—';
-  }
-  if (cityKey === 'караганда' || cityKey === 'карагaнда') {
-    const map = {
-      'город': 'City',
-      'майкудук': 'Maikuduk',
-      'юго-восток': 'Yugo-Vostok',
-      'пришахтинск': 'Prishakhtinsk',
-      'сортировка': 'Sortirovka',
-    };
-    return map[distKey] || district || '—';
-  }
-  return district || '—';
+const normalizeDisplayValue = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value?.ru || value?.en || '';
 };
 
 const clampRatingValue = (value) => {
@@ -169,14 +114,24 @@ const formatReviewDate = (value) => {
 };
 
 const DetailRow = ({ label, value, labelColor }) => {
-  if (!value) return null;
+  const normalizedValue = (() => {
+    if (!value) return '';
+    if (Array.isArray(value)) {
+      return value.filter(Boolean).join(', ');
+    }
+    if (typeof value === 'object') {
+      return value.ru || value.en || '';
+    }
+    return String(value);
+  })();
+  if (!normalizedValue) return null;
 
   return (
     <View style={styles.detailRow}>
       <Text style={[styles.detailLabel, labelColor ? { color: labelColor } : null]}>
         {label}
       </Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <Text style={styles.detailValue}>{normalizedValue}</Text>
     </View>
   );
 };
@@ -218,11 +173,40 @@ const openMaps = (address, latitude, longitude) => {
   Linking.openURL(url).catch(() => {});
 };
 
+const openSocialLink = async (url) => {
+  if (!url || typeof url !== 'string') return;
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return;
+  try {
+    const canOpen = await Linking.canOpenURL(trimmed);
+    if (canOpen) {
+      await Linking.openURL(trimmed);
+    }
+  } catch (_) {
+    // ignore
+  }
+};
+
+const formatMealsTimes = (count, locale) => {
+  if (!Number.isFinite(count)) return '';
+  if (locale === 'ru') {
+    const suffix = count === 1 ? 'раз' : count >= 2 && count <= 4 ? 'раза' : 'раз';
+    return `${count} ${suffix} в день`;
+  }
+  return `${count} times/day`;
+};
+
+const formatMealsFreeUntil = (grade, locale) => {
+  if (!Number.isFinite(grade)) return '';
+  return locale === 'ru' ? `бесплатно до ${grade} класса` : `free until grade ${grade}`;
+};
+
 export default function SchoolDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { profiles, saveProfile } = useSchools();
   const { account } = useAuth();
+  const { isGuest } = useRole();
   const { t, locale } = useLocale();
 
   const getLocalizedMapText = (value) => {
@@ -259,6 +243,7 @@ export default function SchoolDetailScreen() {
   const [expanded, setExpanded] = useState({
     studying: true,
     contacts: false,
+    socials: false,
     services: false,
     reviews: false,
   });
@@ -267,7 +252,10 @@ export default function SchoolDetailScreen() {
   const [mapFocusedMarker, setMapFocusedMarker] = useState(null);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [isSubmittingConsult, setSubmittingConsult] = useState(false);
-  const [consultForm, setConsultForm] = useState(initialConsultForm);
+  const [consultForm, setConsultForm] = useState(() => ({
+    ...initialConsultForm,
+    consultationType: CONSULTATION_TYPE_KEYS[0],
+  }));
   const [localReviews, setLocalReviews] = useState([]);
   const [isReviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewForm, setReviewForm] = useState(initialReviewForm);
@@ -304,62 +292,91 @@ export default function SchoolDetailScreen() {
     return null;
   }
 
-  const { basic_info, education, services, finance, media, location } =
-    profile;
+  const {
+    basic_info = {},
+    education = {},
+    services = {},
+    finance = {},
+    media = {},
+    location = {},
+  } = profile || {};
+  const socialLinks = media?.social_links || {};
+  const socialRows = [
+    { key: 'instagram', labelKey: 'schoolDetail.field.social.instagram', symbol: 'IG' },
+    { key: 'tiktok', labelKey: 'schoolDetail.field.social.tiktok', symbol: 'TT' },
+    { key: 'youtube', labelKey: 'schoolDetail.field.social.youtube', symbol: 'YT' },
+    { key: 'facebook', labelKey: 'schoolDetail.field.social.facebook', symbol: 'FB' },
+    { key: 'vk', labelKey: 'schoolDetail.field.social.vk', symbol: 'VK' },
+    { key: 'telegram', labelKey: 'schoolDetail.field.social.telegram', symbol: 'TG' },
+  ].filter((item) => {
+    const value = socialLinks[item.key];
+    return value && typeof value === 'string' && /^https?:\/\//i.test(value.trim());
+  });
 
-  const languages = [
+  const dedupeList = (list) => Array.from(new Set(list.filter(Boolean)));
+  const languages = dedupeList([
     ...translateList(
       t,
       LANGUAGE_LABEL_KEYS,
       splitToList(education.languages)
     ),
     getLocalizedText(education.languages_other, locale),
-  ].filter(Boolean);
-  const programs = splitToList(getLocalizedText(education.programs, locale));
+  ]);
+  const programsRaw = splitToList(getLocalizedText(education.programs, locale));
+  const programs = dedupeList(
+    translateList(t, CURRICULA_LABEL_KEYS, programsRaw)
+  );
   const curricula = education.curricula || {};
   const curriculaList = [
     ...(curricula.national || []),
     ...(curricula.international || []),
     ...(curricula.additional || []),
   ];
-  const curriculaLocalized = [
+  const curriculaLocalized = dedupeList([
     ...translateList(t, CURRICULA_LABEL_KEYS, curriculaList),
     getLocalizedText(curricula.other, locale),
-  ].filter(Boolean);
-  const subjects = [
+  ]);
+  const programsToShow = programs.filter(
+    (item) => !curriculaLocalized.includes(item)
+  );
+  const subjects = dedupeList([
     ...translateList(
       t,
       SUBJECT_LABEL_KEYS,
       splitToList(education.advanced_subjects)
     ),
     getLocalizedText(education.advanced_subjects_other, locale),
-  ].filter(Boolean);
-  const specialists = [
+  ]);
+  const specialists = dedupeList([
     ...translateList(
       t,
       SPECIALIST_LABEL_KEYS,
       splitToList(services.specialists)
     ),
     getLocalizedText(services.specialists_other, locale),
-  ].filter(Boolean);
-  const clubs = [
+  ]);
+  const clubs = dedupeList([
     ...translateList(t, CLUB_LABEL_KEYS, splitToList(services.clubs)),
     getLocalizedMapText(services.clubs_other),
-  ].filter(Boolean);
+  ]);
   const photos = splitToList(media.photos).filter(isValidRemoteImage);
-  const serviceArea = Array.isArray(location.service_area)
-    ? location.service_area.join(', ')
-    : location.service_area;
+  const serviceArea = getLocalizedMapText(location.service_area);
 
-  const rawLatitude = parseFloat(basic_info.coordinates?.latitude);
-  const rawLongitude = parseFloat(basic_info.coordinates?.longitude);
-  const displayType = translateLabel(t, TYPE_LABEL_KEYS, basic_info.type) || basic_info.type || '—';
+  const rawLatitude = parseCoordinate(basic_info.coordinates?.latitude);
+  const rawLongitude = parseCoordinate(basic_info.coordinates?.longitude);
+  const displayType =
+    translateLabel(t, TYPE_LABEL_KEYS, basic_info.type) ||
+    normalizeDisplayValue(basic_info.type) ||
+    t('schoolDetail.value.unknown');
   const displayPayment = translateLabel(
     t,
     PAYMENT_LABEL_KEYS,
     finance?.payment_system
   );
-  const displayCity = translateLabel(t, CITY_LABEL_KEYS, basic_info.city) || basic_info.city || '—';
+  const displayCity =
+    translateLabel(t, CITY_LABEL_KEYS, basic_info.city) ||
+    normalizeDisplayValue(basic_info.city) ||
+    t('schoolDetail.value.unknown');
   const displayDistrict =
     DISTRICT_LABEL_KEYS[basic_info.city] && basic_info.district
       ? translateLabel(
@@ -367,29 +384,68 @@ export default function SchoolDetailScreen() {
           DISTRICT_LABEL_KEYS[basic_info.city],
           basic_info.district
         )
-      : basic_info.district || '—';
-  const displayAddress = getLocalizedText(basic_info.address, locale) || '—';
+      : normalizeDisplayValue(basic_info.district) || t('schoolDetail.value.unknown');
+  const displayAddress =
+    getLocalizedText(basic_info.address, locale) ||
+    t('schoolDetail.value.unknown');
+  const displayPaymentLabel =
+    displayPayment || normalizeDisplayValue(finance?.payment_system);
+  const mealsStatus = services.meals_status || services.meals;
+  const mealsBaseLabel =
+    translateLabel(t, MEAL_LABEL_KEYS, mealsStatus) ||
+    normalizeDisplayValue(mealsStatus) ||
+    '';
+  const mealsDetails = [];
+  const mealsTimes = Number(services.meals_times_per_day);
+  const mealsFreeUntil = Number(services.meals_free_until_grade);
+  if (Number.isFinite(mealsTimes) && mealsTimes > 0) {
+    mealsDetails.push(formatMealsTimes(mealsTimes, locale));
+  }
+  if (Number.isFinite(mealsFreeUntil) && mealsFreeUntil > 0) {
+    mealsDetails.push(formatMealsFreeUntil(mealsFreeUntil, locale));
+  }
+  const mealsNotes = getLocalizedText(services.meals_notes, locale);
+  if (mealsNotes) {
+    mealsDetails.push(mealsNotes);
+  }
+  const mealsLabel = mealsBaseLabel
+    ? mealsDetails.length
+      ? `${mealsBaseLabel} • ${mealsDetails.join(' • ')}`
+      : mealsBaseLabel
+    : t('schoolDetail.value.unknown');
+  const foreignTeachersNotes = getLocalizedText(
+    services.foreign_teachers_notes,
+    locale
+  );
+  const foreignTeachersLabel = services.foreign_teachers
+    ? foreignTeachersNotes
+      ? `${t('schoolDetail.value.yes')} • ${foreignTeachersNotes}`
+      : t('schoolDetail.value.yes')
+    : t('schoolDetail.value.no');
 
   const allMarkers = useMemo(() => {
     return profiles
       .map((item) => {
-        const lat = parseFloat(item.basic_info.coordinates?.latitude);
-        const lon = parseFloat(item.basic_info.coordinates?.longitude);
+        const lat = parseCoordinate(item.basic_info.coordinates?.latitude);
+        const lon = parseCoordinate(item.basic_info.coordinates?.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
           return null;
         }
+        const markerName =
+          getLocalizedText(item.basic_info.display_name, locale) ||
+          getLocalizedText(item.basic_info.name, locale) ||
+          '';
+        const markerAddress = getLocalizedText(item.basic_info.address, locale);
         return {
           id: item.school_id || item.basic_info.name,
-          name:
-            item.basic_info.display_name?.trim?.() ||
-            item.basic_info.name,
-          address: item.basic_info.address,
+          name: markerName,
+          address: markerAddress,
           latitude: lat,
           longitude: lon,
         };
       })
       .filter(Boolean);
-  }, [profiles]);
+  }, [profiles, locale]);
 
   const currentMarker = useMemo(() => {
     if (!profile) {
@@ -443,35 +499,60 @@ export default function SchoolDetailScreen() {
     null;
   const logoUri = media.logo || media.logo_local_uri;
   const hasLogo = Boolean(logoUri);
+  const addressText = getLocalizedText(basic_info.address, locale).trim();
+  const normalizedType = (basic_info.type || '').trim().toLowerCase();
+  const isAutonomousSchool =
+    normalizedType === 'autonomous' || normalizedType === 'автономная';
+  const isStateSchool =
+    normalizedType === 'state' ||
+    normalizedType === 'public' ||
+    normalizedType === 'гос' ||
+    normalizedType === 'государственная' ||
+    normalizedType === 'государственное';
+  const fundingState = Boolean(finance?.funding_state);
+  const fundingSelf = Boolean(finance?.funding_self);
+  const fundingLabel = (() => {
+    const parts = [];
+    if (fundingState) parts.push(t('schoolDetail.funding.state'));
+    if (fundingSelf) parts.push(t('schoolDetail.funding.self'));
+    return parts.length ? parts.join(' • ') : t('schoolDetail.value.unknown');
+  })();
+  const shouldShowPrice =
+    !isStateSchool && (!isAutonomousSchool || fundingSelf);
 
   const quickStats = [
-    { icon: '🏫', label: 'Type', value: displayType },
-    {
+    { icon: '🏫', label: t('schoolDetail.quick.type'), value: displayType },
+    isAutonomousSchool && {
+      icon: '🏛️',
+      label: t('schoolDetail.quick.funding'),
+      value: fundingLabel,
+    },
+    shouldShowPrice && {
       icon: '💰',
-      label: 'Price',
+      label: t('schoolDetail.quick.price'),
       value:
-        finance?.monthly_fee && finance?.payment_system
-          ? `${finance.monthly_fee}/${toEnglishPayment(finance.payment_system)}`
+        finance?.monthly_fee && displayPaymentLabel
+          ? `${finance.monthly_fee}/${displayPaymentLabel}`
           : finance?.monthly_fee
           ? `${finance.monthly_fee}`
-          : '—',
+          : t('schoolDetail.value.unknown'),
     },
     {
       icon: '📍',
-      label: 'Address',
-      value: basic_info.address || '—',
+      label: t('schoolDetail.quick.address'),
+      value: addressText || t('schoolDetail.value.unknown'),
     },
     {
       icon: '🏙️',
-      label: 'City',
-      value: toEnglishCity(basic_info.city),
+      label: t('schoolDetail.quick.city'),
+      value: displayCity,
     },
     {
       icon: '🗺️',
-      label: 'District',
-      value: toEnglishDistrict(basic_info.city, basic_info.district),
+      label: t('schoolDetail.quick.district'),
+      value: displayDistrict,
     },
-  ];
+  ].filter(Boolean);
 
   const toggle = (key) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -557,40 +638,68 @@ export default function SchoolDetailScreen() {
   }, [basic_info.whatsapp_phone, profile?.contact_info?.whatsapp]);
 
   const handleConsultSubmit = async () => {
+    if (isGuest) {
+      Alert.alert(
+        t('schoolDetail.consult.guestTitle'),
+        t('schoolDetail.consult.guestBody')
+      );
+      return;
+    }
     if (!isConsultValid || isSubmittingConsult) {
-      Alert.alert('Fill required fields', 'Parent name, phone and child details are required.');
+      Alert.alert(
+        t('schoolDetail.consult.alertMissingTitle'),
+        t('schoolDetail.consult.alertMissingBody')
+      );
       return;
     }
     setSubmittingConsult(true);
     Keyboard.dismiss();
     try {
-      await addConsultationRequest({
+      const emailValue = consultForm.parentEmail.trim();
+      const normalizedEmail = /.+@.+\..+/.test(emailValue) ? emailValue : '';
+      const schoolNameText =
+        getLocalizedText(basic_info.display_name, locale).trim() ||
+        getLocalizedText(basic_info.name, locale).trim() ||
+        '';
+      const requestBody = {
         schoolId: profile.school_id || basic_info.name,
-        schoolName:
-          basic_info.display_name?.trim?.() || basic_info.name,
+        schoolName: schoolNameText,
         parentName: consultForm.parentName.trim(),
         parentPhone: consultForm.parentPhone.trim(),
-        parentEmail: consultForm.parentEmail.trim(),
+        parentEmail: normalizedEmail,
         childName: consultForm.childName.trim(),
         childGrade: consultForm.childGrade.trim(),
         consultationType: consultForm.consultationType,
+        consultationTypeLabel: t(consultForm.consultationType),
         comment: consultForm.comment.trim(),
         whatsappPhone: schoolWhatsApp ? schoolWhatsApp.replace(/\s+/g, '') : '',
+      };
+      console.log('[consultation] requestBody', requestBody);
+      await addConsultationRequest(requestBody);
+      setConsultForm({
+        ...initialConsultForm,
+        consultationType: CONSULTATION_TYPE_KEYS[0],
       });
-      setConsultForm(initialConsultForm);
       setShowConsultationModal(false);
-      Alert.alert('Request sent', 'Thanks! Our team will contact you soon.');
+      Alert.alert(
+        t('schoolDetail.consult.alertSentTitle'),
+        t('schoolDetail.consult.alertSentBody')
+      );
     } catch (error) {
       console.warn('consultation submit error', error);
-      Alert.alert('Failed to send', 'Please try again later.');
+      const details = error?.message ? ` (${error.message})` : '';
+      Alert.alert(
+        t('schoolDetail.consult.alertFailTitle'),
+        `${t('schoolDetail.consult.alertFailBody')}${details}`
+      );
     } finally {
       setSubmittingConsult(false);
     }
   };
 
   const reviewCountLabel = localReviews.length
-    ? `${localReviews.length} review${localReviews.length === 1 ? '' : 's'}`
-    : 'No reviews yet';
+    ? `${localReviews.length} ${t('schoolDetail.reviews.count')}`
+    : t('schoolDetail.reviews.emptyCount');
 
   const resetReviewForm = () => {
     setReviewForm({ ...initialReviewForm });
@@ -613,7 +722,10 @@ export default function SchoolDetailScreen() {
   const handleSubmitReview = async () => {
     const trimmedText = reviewForm.text.trim();
     if (!trimmedText.length) {
-      Alert.alert('Write a review', 'Please share a short message about your experience.');
+      Alert.alert(
+        t('schoolDetail.reviews.alertTitle'),
+        t('schoolDetail.reviews.alertBody')
+      );
       return;
     }
     const normalizedRating = Math.max(1, Math.min(5, Number(reviewForm.rating) || 5));
@@ -621,7 +733,7 @@ export default function SchoolDetailScreen() {
     Keyboard.dismiss();
     const newReview = {
       id: `rev-${Date.now()}`,
-      author: reviewForm.author.trim() || 'Anonymous parent',
+      author: reviewForm.author.trim() || t('schoolDetail.reviews.anonymous'),
       rating: normalizedRating,
       text: trimmedText,
       created_at: new Date().toISOString(),
@@ -658,11 +770,19 @@ export default function SchoolDetailScreen() {
       resetReviewForm();
     } catch (error) {
       console.warn('review submit error', error);
-      Alert.alert('Failed to save', 'Please try again later.');
+      Alert.alert(
+        t('schoolDetail.reviews.alertFailTitle'),
+        t('schoolDetail.reviews.alertFailBody')
+      );
     } finally {
       setSubmittingReview(false);
     }
   };
+
+  const displayNameText =
+    getLocalizedText(basic_info.display_name, locale).trim() ||
+    getLocalizedText(basic_info.name, locale).trim() ||
+    '';
 
   return (
     <LinearGradient
@@ -674,7 +794,7 @@ export default function SchoolDetailScreen() {
       <SafeAreaView className="flex-1">
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>{'‹'} Back</Text>
+            <Text style={styles.backText}>{'‹'} {t('schoolDetail.back')}</Text>
           </Pressable>
         </View>
 
@@ -690,21 +810,17 @@ export default function SchoolDetailScreen() {
               ) : (
                 <View style={styles.logoPlaceholder}>
                   <Text style={styles.logoPlaceholderText}>
-                    {(basic_info.display_name || basic_info.name)
-                      ?.charAt(0)
-                      ?.toUpperCase() || 'S'}
+                    {displayNameText.charAt(0)?.toUpperCase() || 'S'}
                   </Text>
                 </View>
               )}
             </View>
-            <Text style={styles.summaryType}>
-              {basic_info.type || 'School'}
-            </Text>
+            <Text style={styles.summaryType}>{displayType}</Text>
             <Text style={styles.summaryTitle}>
-              {basic_info.display_name || basic_info.name}
+              {displayNameText || t('schoolDetail.value.school')}
             </Text>
             <Text style={styles.summaryCity}>
-              {basic_info.city || 'City not specified'}
+              {displayCity || t('schoolDetail.value.cityUnknown')}
             </Text>
           </View>
 
@@ -733,7 +849,9 @@ export default function SchoolDetailScreen() {
                   />
                 </View>
                 <View style={styles.mapPreviewOverlay}>
-                  <Text style={styles.mapPreviewText}>Tap to expand map</Text>
+                  <Text style={styles.mapPreviewText}>
+                    {t('schoolDetail.map.tapToExpand')}
+                  </Text>
                 </View>
               </Pressable>
             ) : (
@@ -743,110 +861,215 @@ export default function SchoolDetailScreen() {
                   openMaps(basic_info.address, rawLatitude, rawLongitude)
                 }
               >
-                <Text style={styles.mapPlaceholderText}>Open in Maps</Text>
+                <Text style={styles.mapPlaceholderText}>
+                  {t('schoolDetail.map.openInMaps')}
+                </Text>
               </Pressable>
             )}
           </View>
 
           <ExpandableSection
             icon="👩‍🏫"
-            title="Studying process"
+            title={t('schoolDetail.section.studying')}
             isOpen={expanded.studying}
             onToggle={() => toggle('studying')}
           >
-            <DetailRow label="Languages" value={languages.join(', ')} labelColor="#2563EB" />
-            <DetailRow label="Programs" value={programs.join(', ')} labelColor="#2563EB" />
+            <DetailRow
+              label={t('schoolDetail.field.languages')}
+              value={languages.join(', ')}
+              labelColor="#2563EB"
+            />
+            {programsToShow.length ? (
+              <DetailRow
+                label={t('schoolDetail.field.programs')}
+                value={programsToShow.join(', ')}
+                labelColor="#2563EB"
+              />
+            ) : null}
             {curriculaList.length ? (
-              <DetailRow label="Curricula" value={curriculaList.join(', ')} labelColor="#2563EB" />
+              <DetailRow
+                label={t('schoolDetail.field.curricula')}
+                value={curriculaLocalized.join(', ')}
+                labelColor="#2563EB"
+              />
             ) : null}
             <DetailRow
-              label="Advanced subjects"
+              label={t('schoolDetail.field.advancedSubjects')}
               value={subjects.join(', ')}
               labelColor="#2563EB"
             />
             <DetailRow
-              label="Average class size"
+              label={t('schoolDetail.field.averageClassSize')}
               value={education.average_class_size}
               labelColor="#2563EB"
             />
           </ExpandableSection>
 
           <ExpandableSection
-          icon="ℹ️"
-          title="Contact information"
-          isOpen={expanded.contacts}
-          onToggle={() => toggle('contacts')}
-        >
-          <DetailRow label="Phone 📞" value={basic_info.phone} labelColor="#2563EB" />
-          <DetailRow label="WhatsApp 💬" value={basic_info.whatsapp_phone} labelColor="#2563EB" />
-            <DetailRow label="Email ✉️" value={basic_info.email} labelColor="#2563EB" />
-            <DetailRow label="Website 🌐" value={basic_info.website} labelColor="#2563EB" />
-            <DetailRow label="Address 📍" value={basic_info.address} labelColor="#2563EB" />
-            <DetailRow label="District 🗺️" value={basic_info.district} labelColor="#2563EB" />
+            icon="ℹ️"
+            title={t('schoolDetail.section.contacts')}
+            isOpen={expanded.contacts}
+            onToggle={() => toggle('contacts')}
+          >
+            <DetailRow
+              label={t('schoolDetail.field.phone')}
+              value={basic_info.phone}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.whatsapp')}
+              value={basic_info.whatsapp_phone}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.email')}
+              value={basic_info.email}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.website')}
+              value={basic_info.website}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.address')}
+              value={displayAddress}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.district')}
+              value={displayDistrict}
+              labelColor="#2563EB"
+            />
           </ExpandableSection>
+
+          {socialRows.length ? (
+            <ExpandableSection
+              icon="🌐"
+              title={t('schoolDetail.section.socials')}
+              isOpen={expanded.socials}
+              onToggle={() => toggle('socials')}
+            >
+              <View style={styles.socialGrid}>
+                {socialRows.map((item) => (
+                  <Pressable
+                    key={item.key}
+                    style={styles.socialCard}
+                    onPress={() => openSocialLink(socialLinks[item.key])}
+                  >
+                    <View style={styles.socialBadge}>
+                      <Text style={styles.socialBadgeText}>{item.symbol}</Text>
+                    </View>
+                    <Text style={styles.socialLabel}>{t(item.labelKey)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ExpandableSection>
+          ) : null}
 
           <ExpandableSection
             icon="✅"
-            title="Service & Security"
+            title={t('schoolDetail.section.services')}
             isOpen={expanded.services}
             onToggle={() => toggle('services')}
           >
             <DetailRow
-              label="After school"
-              value={services.after_school ? 'Available' : 'Not available'}
-              labelColor="#2563EB"
-            />
-            <DetailRow label="Meals" value={services.meals} labelColor="#2563EB" />
-            <DetailRow
-              label="Transport"
-              value={services.transport ? 'Available' : 'Not available'}
-              labelColor="#2563EB"
-            />
-            <DetailRow
-              label="Inclusive education"
+              label={t('schoolDetail.field.afterSchool')}
               value={
-                services.inclusive_education ? 'Supported' : 'Not supported'
+                services.after_school
+                  ? t('schoolDetail.value.available')
+                  : t('schoolDetail.value.notAvailable')
               }
               labelColor="#2563EB"
             />
             <DetailRow
-              label="Specialists"
+              label={t('schoolDetail.field.meals')}
+              value={mealsLabel}
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.transport')}
+              value={
+                services.transport
+                  ? t('schoolDetail.value.available')
+                  : t('schoolDetail.value.notAvailable')
+              }
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.inclusiveEducation')}
+              value={
+                services.inclusive_education
+                  ? t('schoolDetail.value.supported')
+                  : t('schoolDetail.value.notSupported')
+              }
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.specialists')}
               value={specialists.join(', ')}
               labelColor="#2563EB"
             />
-            <DetailRow label="Clubs" value={clubs.join(', ')} labelColor="#2563EB" />
             <DetailRow
-              label="Security"
-              value={services.safety?.security ? 'Yes' : 'No'}
+              label={t('schoolDetail.field.clubs')}
+              value={clubs.join(', ')}
               labelColor="#2563EB"
             />
             <DetailRow
-              label="Cameras"
-              value={services.safety?.cameras ? 'Yes' : 'No'}
+              label={t('schoolDetail.field.foreignTeachers')}
+              value={foreignTeachersLabel}
               labelColor="#2563EB"
             />
             <DetailRow
-              label="Access control"
-              value={services.safety?.access_control ? 'Yes' : 'No'}
+              label={t('schoolDetail.field.security')}
+              value={
+                services.safety?.security
+                  ? t('schoolDetail.value.yes')
+                  : t('schoolDetail.value.no')
+              }
               labelColor="#2563EB"
             />
             <DetailRow
-              label="Medical office"
-              value={services.medical_office ? 'Available' : 'Not available'}
+              label={t('schoolDetail.field.cameras')}
+              value={
+                services.safety?.cameras
+                  ? t('schoolDetail.value.yes')
+                  : t('schoolDetail.value.no')
+              }
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.accessControl')}
+              value={
+                services.safety?.access_control
+                  ? t('schoolDetail.value.yes')
+                  : t('schoolDetail.value.no')
+              }
+              labelColor="#2563EB"
+            />
+            <DetailRow
+              label={t('schoolDetail.field.medicalOffice')}
+              value={
+                services.medical_office
+                  ? t('schoolDetail.value.available')
+                  : t('schoolDetail.value.notAvailable')
+              }
               labelColor="#2563EB"
             />
           </ExpandableSection>
 
           <ExpandableSection
             icon="💬"
-            title="Reviews"
+            title={t('schoolDetail.section.reviews')}
             isOpen={expanded.reviews}
             onToggle={() => toggle('reviews')}
           >
             <View style={styles.reviewsHeader}>
               <Text style={styles.reviewSummary}>{reviewCountLabel}</Text>
               <Pressable style={styles.reviewButton} onPress={handleOpenReviewModal}>
-                <Text style={styles.reviewButtonText}>Write a review</Text>
+                <Text style={styles.reviewButtonText}>
+                  {t('schoolDetail.reviews.write')}
+                </Text>
               </Pressable>
             </View>
             {localReviews.length ? (
@@ -859,7 +1082,7 @@ export default function SchoolDetailScreen() {
                   >
                     <View style={styles.reviewCardHeader}>
                       <Text style={styles.reviewAuthor}>
-                        {review.author || 'Anonymous parent'}
+                        {review.author || t('schoolDetail.reviews.anonymous')}
                       </Text>
                       {review.created_at ? (
                         <Text style={styles.reviewDate}>
@@ -881,14 +1104,16 @@ export default function SchoolDetailScreen() {
               })
             ) : (
               <Text style={styles.reviewEmptyText}>
-                Be the first to share your experience with this school.
+                {t('schoolDetail.reviews.emptyText')}
               </Text>
             )}
           </ExpandableSection>
 
           {photos.length ? (
             <View style={styles.mediaSection}>
-              <Text style={styles.mediaSectionTitle}>Photos</Text>
+              <Text style={styles.mediaSectionTitle}>
+                {t('schoolDetail.media.photos')}
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -909,7 +1134,9 @@ export default function SchoolDetailScreen() {
 
           {media.videos ? (
             <View style={styles.mediaSection}>
-              <Text style={styles.mediaSectionTitle}>Videos</Text>
+              <Text style={styles.mediaSectionTitle}>
+                {t('schoolDetail.media.videos')}
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -934,7 +1161,9 @@ export default function SchoolDetailScreen() {
                           />
                         ) : (
                           <View style={[styles.mediaThumb, styles.mediaThumbFallback]}>
-                            <Text style={styles.mediaFallbackText}>Video</Text>
+                            <Text style={styles.mediaFallbackText}>
+                              {t('schoolDetail.media.video')}
+                            </Text>
                           </View>
                         )}
                         <Text style={styles.mediaLinkText} numberOfLines={1}>
@@ -948,20 +1177,31 @@ export default function SchoolDetailScreen() {
           ) : null}
 
           <View style={styles.descriptionCard}>
-            <Text style={styles.descriptionTitle}>Description</Text>
+            <Text style={styles.descriptionTitle}>
+              {t('schoolDetail.description.title')}
+            </Text>
             <Text style={styles.descriptionText}>
-              {basic_info?.description?.trim?.() ||
+              {getLocalizedText(basic_info?.description, locale).trim() ||
                 profile.system?.description ||
-                'Administrators can add a description of the school here: mission, values, achievements and other important details.'}
+                t('schoolDetail.description.empty')}
             </Text>
           </View>
 
           <Pressable
             style={styles.primaryButton}
-            onPress={() => setShowConsultationModal(true)}
+            onPress={() => {
+              if (isGuest) {
+                Alert.alert(
+                  t('schoolDetail.consult.guestTitle'),
+                  t('schoolDetail.consult.guestBody')
+                );
+                return;
+              }
+              setShowConsultationModal(true);
+            }}
           >
             <Text style={styles.primaryButtonText}>
-              Request a consultation
+              {t('schoolDetail.consult.request')}
             </Text>
           </Pressable>
 
@@ -977,7 +1217,9 @@ export default function SchoolDetailScreen() {
         <View style={styles.reviewModalBackdrop}>
           <View style={styles.reviewModalCard}>
             <View style={styles.reviewModalHeader}>
-              <Text style={styles.reviewModalTitle}>Write a review</Text>
+              <Text style={styles.reviewModalTitle}>
+                {t('schoolDetail.reviews.write')}
+              </Text>
               <Pressable
                 style={styles.reviewModalClose}
                 onPress={handleCloseReviewModal}
@@ -986,17 +1228,21 @@ export default function SchoolDetailScreen() {
               </Pressable>
             </View>
             <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>Your name</Text>
+              <Text style={styles.reviewModalLabel}>
+                {t('schoolDetail.reviews.modal.name')}
+              </Text>
               <TextInput
                 style={styles.reviewModalInput}
-                placeholder="Parent full name"
+                placeholder={t('schoolDetail.reviews.modal.namePlaceholder')}
                 placeholderTextColor="rgba(71,85,105,0.6)"
                 value={reviewForm.author}
                 onChangeText={(text) => updateReviewField('author', text)}
               />
             </View>
             <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>Rating</Text>
+              <Text style={styles.reviewModalLabel}>
+                {t('schoolDetail.reviews.modal.rating')}
+              </Text>
               <View style={styles.reviewStarsRow}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <Pressable
@@ -1017,10 +1263,12 @@ export default function SchoolDetailScreen() {
               </View>
             </View>
             <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>Your feedback *</Text>
+              <Text style={styles.reviewModalLabel}>
+                {t('schoolDetail.reviews.modal.feedback')}
+              </Text>
               <TextInput
                 style={[styles.reviewModalInput, styles.reviewModalTextarea]}
-                placeholder="What do you like about this school?"
+                placeholder={t('schoolDetail.reviews.modal.feedbackPlaceholder')}
                 placeholderTextColor="rgba(71,85,105,0.6)"
                 multiline
                 value={reviewForm.text}
@@ -1032,7 +1280,9 @@ export default function SchoolDetailScreen() {
                 style={styles.reviewModalSecondary}
                 onPress={handleCloseReviewModal}
               >
-                <Text style={styles.reviewModalSecondaryText}>Cancel</Text>
+                <Text style={styles.reviewModalSecondaryText}>
+                  {t('schoolDetail.reviews.modal.cancel')}
+                </Text>
               </Pressable>
               <Pressable
                 style={[
@@ -1043,7 +1293,9 @@ export default function SchoolDetailScreen() {
                 disabled={isSubmittingReview}
               >
                 <Text style={styles.reviewModalPrimaryText}>
-                  {isSubmittingReview ? 'Sending…' : 'Submit'}
+                  {isSubmittingReview
+                    ? t('schoolDetail.reviews.modal.sending')
+                    : t('schoolDetail.reviews.modal.submit')}
                 </Text>
               </Pressable>
             </View>
@@ -1100,16 +1352,16 @@ export default function SchoolDetailScreen() {
                   >
                     <XMarkIcon color="#4F46E5" size={20} />
                   </Pressable>
-                  <TextInput
-                    style={styles.fullMapSearchInput}
-                    placeholder="Search by name or address"
-                    placeholderTextColor="rgba(71,85,105,0.8)"
-                    value={mapSearchQuery}
-                    onChangeText={handleMapSearchChange}
-                    autoCorrect={false}
-                    returnKeyType="search"
-                    onSubmitEditing={handleMapSearchSubmit}
-                  />
+                <TextInput
+                  style={styles.fullMapSearchInput}
+                  placeholder={t('schoolDetail.map.searchPlaceholder')}
+                  placeholderTextColor="rgba(71,85,105,0.8)"
+                  value={mapSearchQuery}
+                  onChangeText={handleMapSearchChange}
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  onSubmitEditing={handleMapSearchSubmit}
+                />
                   {mapSearchQuery.length ? (
                     <Pressable
                       style={styles.fullMapClearButton}
@@ -1149,7 +1401,7 @@ export default function SchoolDetailScreen() {
                 {mapNoMatches ? (
                   <View style={styles.fullMapNoResultsPill}>
                     <Text style={styles.fullMapNoResultsText}>
-                      {`No schools found for "${mapSearchQuery.trim()}"`}
+                      {`${t('schoolDetail.map.noResults')} "${mapSearchQuery.trim()}"`}
                     </Text>
                   </View>
                 ) : null}
@@ -1171,7 +1423,9 @@ export default function SchoolDetailScreen() {
               style={styles.videoModalClose}
               onPress={handleCloseVideo}
             >
-              <Text style={styles.videoModalCloseText}>Close</Text>
+              <Text style={styles.videoModalCloseText}>
+                {t('schoolDetail.close')}
+              </Text>
             </Pressable>
             <WebView
               source={{ uri: videoModal.url }}
@@ -1192,7 +1446,9 @@ export default function SchoolDetailScreen() {
         <View style={styles.consultModalBackdrop}>
           <View style={styles.consultModalCard}>
             <View style={styles.consultHeader}>
-              <Text style={styles.consultTitle}>Request a consultation</Text>
+              <Text style={styles.consultTitle}>
+                {t('schoolDetail.consult.title')}
+              </Text>
               <Pressable
                 style={styles.consultCloseButton}
                 onPress={() => setShowConsultationModal(false)}
@@ -1207,51 +1463,65 @@ export default function SchoolDetailScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.consultSection}>
-                <Text style={styles.consultSectionTitle}>Parent</Text>
+                <Text style={styles.consultSectionTitle}>
+                  {t('schoolDetail.consult.parentSection')}
+                </Text>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Parent name *</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.parentName')} *
+                  </Text>
                   <TextInput
                     style={styles.consultInput}
                     value={consultForm.parentName}
                     onChangeText={(text) => updateConsultField('parentName', text)}
-                    placeholder="Full name"
+                    placeholder={t('schoolDetail.consult.fullName')}
                   />
                 </View>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Phone *</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.phone')} *
+                  </Text>
                   <TextInput
                     style={styles.consultInput}
                     value={consultForm.parentPhone}
                     onChangeText={(text) => updateConsultField('parentPhone', text)}
-                    placeholder="+7 (___) ___-__-__"
+                    placeholder={t('schoolDetail.consult.phonePlaceholder')}
                     keyboardType="phone-pad"
                   />
                 </View>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Email (optional)</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.emailOptional')}
+                  </Text>
                   <TextInput
                     style={styles.consultInput}
                     value={consultForm.parentEmail}
                     onChangeText={(text) => updateConsultField('parentEmail', text)}
-                    placeholder="name@example.com"
+                    placeholder={t('schoolDetail.consult.emailPlaceholder')}
                     keyboardType="email-address"
                   />
                 </View>
               </View>
 
               <View style={styles.consultSection}>
-                <Text style={styles.consultSectionTitle}>Child</Text>
+                <Text style={styles.consultSectionTitle}>
+                  {t('schoolDetail.consult.childSection')}
+                </Text>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Child name *</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.childName')} *
+                  </Text>
                   <TextInput
                     style={styles.consultInput}
                     value={consultForm.childName}
                     onChangeText={(text) => updateConsultField('childName', text)}
-                    placeholder="Full name"
+                    placeholder={t('schoolDetail.consult.fullName')}
                   />
                 </View>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Grade *</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.grade')} *
+                  </Text>
                   <View style={styles.consultChipsContainer}>
                     {GRADE_CHOICES.map((grade) => (
                       <Pressable
@@ -1277,38 +1547,48 @@ export default function SchoolDetailScreen() {
               </View>
 
               <View style={styles.consultSection}>
-                <Text style={styles.consultSectionTitle}>Extra</Text>
+                <Text style={styles.consultSectionTitle}>
+                  {t('schoolDetail.consult.extraSection')}
+                </Text>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Consultation type</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.type')}
+                  </Text>
                   <View style={styles.consultChipsContainer}>
-                    {CONSULTATION_TYPES.map((type) => (
+                    {CONSULTATION_TYPE_KEYS.map((typeKey) => (
                       <Pressable
-                        key={type}
+                        key={typeKey}
                         style={[
                           styles.consultChip,
-                          consultForm.consultationType === type && styles.consultChipActive,
+                          consultForm.consultationType === typeKey &&
+                            styles.consultChipActive,
                         ]}
-                        onPress={() => updateConsultField('consultationType', type)}
+                        onPress={() =>
+                          updateConsultField('consultationType', typeKey)
+                        }
                       >
                         <Text
                           style={[
                             styles.consultChipLabel,
-                            consultForm.consultationType === type && styles.consultChipLabelActive,
+                            consultForm.consultationType === typeKey &&
+                              styles.consultChipLabelActive,
                           ]}
                         >
-                          {type}
+                          {t(typeKey)}
                         </Text>
                       </Pressable>
                     ))}
                   </View>
                 </View>
                 <View style={styles.consultField}>
-                  <Text style={styles.consultLabel}>Comment</Text>
+                  <Text style={styles.consultLabel}>
+                    {t('schoolDetail.consult.comment')}
+                  </Text>
                   <TextInput
                     style={[styles.consultInput, styles.consultTextarea]}
                     value={consultForm.comment}
                     onChangeText={(text) => updateConsultField('comment', text)}
-                    placeholder="Tell us more about your request"
+                    placeholder={t('schoolDetail.consult.commentPlaceholder')}
                     multiline
                   />
                 </View>
@@ -1324,7 +1604,9 @@ export default function SchoolDetailScreen() {
               onPress={handleConsultSubmit}
             >
               <Text style={styles.consultSubmitLabel}>
-                {isSubmittingConsult ? 'Sending…' : 'Send request'}
+                {isSubmittingConsult
+                  ? t('schoolDetail.consult.sending')
+                  : t('schoolDetail.consult.send')}
               </Text>
             </Pressable>
           </View>
@@ -1617,6 +1899,41 @@ const styles = StyleSheet.create({
     fontFamily: 'exo',
     fontSize: 14,
     color: '#475569',
+  },
+  socialGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  socialCard: {
+    width: 86,
+    height: 86,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFF',
+    borderWidth: 1,
+    borderColor: 'rgba(79,70,229,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  socialBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialBadgeText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#4F46E5',
+  },
+  socialLabel: {
+    fontFamily: 'exoSemibold',
+    fontSize: 10,
+    color: '#1F2937',
+    textAlign: 'center',
   },
   primaryButton: {
     marginTop: 12,
