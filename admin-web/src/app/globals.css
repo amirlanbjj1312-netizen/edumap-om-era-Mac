@@ -109,6 +109,26 @@ a {
   font-family: inherit;
 }
 
+.input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.input-wrap .input {
+  padding-right: 44px;
+}
+
+.input-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 .form-row {
   display: grid;
   gap: 16px;

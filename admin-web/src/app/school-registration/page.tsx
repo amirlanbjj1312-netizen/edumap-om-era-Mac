@@ -100,6 +100,7 @@ function SchoolRegistrationContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [organization, setOrganization] = useState('');
@@ -278,25 +279,43 @@ function SchoolRegistrationContent() {
             </div>
             <div className="field">
               <label>Пароль</label>
-              <input
-                className="input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                placeholder="••••••••"
-                required
-              />
+              <div className="input-wrap">
+                <input
+                  className="input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="input-eye"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             <div className="field">
               <label>Повторите пароль</label>
-              <input
-                className="input"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                type="password"
-                placeholder="••••••••"
-                required
-              />
+              <div className="input-wrap">
+                <input
+                  className="input"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="input-eye"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
             <div className="field">
               <label>Школа / организация</label>
