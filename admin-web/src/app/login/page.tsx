@@ -69,6 +69,11 @@ export default function LoginPage() {
               {loading ? 'Входим...' : 'Войти'}
             </button>
           </form>
+          <div style={{ marginTop: 16 }}>
+            <a className="muted" href="/school-registration">
+              Нет аккаунта? Зарегистрироваться
+            </a>
+          </div>
         </div>
       </div>
     </div>
