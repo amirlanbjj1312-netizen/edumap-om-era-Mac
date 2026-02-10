@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Status = 'idle' | 'submitting' | 'sent' | 'verifying' | 'error';
 
+const normalizeEmail = (value: string) => (value ? value.trim().toLowerCase() : '');
+
 function SchoolRegistrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,6 +18,16 @@ function SchoolRegistrationContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [organization, setOrganization] = useState('');
+  const [bin, setBin] = useState('');
+  const [iin, setIin] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [licenseIssuedAt, setLicenseIssuedAt] = useState('');
+  const [licenseExpiresAt, setLicenseExpiresAt] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
 
@@ -67,12 +79,35 @@ function SchoolRegistrationContent() {
       setMessage('Пароли не совпадают.');
       return;
     }
+    const emailInput = normalizeEmail(email);
+    if (!emailInput || !password) {
+      setStatus('error');
+      setMessage('Укажите email и пароль.');
+      return;
+    }
     setStatus('submitting');
     setMessage('');
     const { error } = await supabase.auth.signUp({
-      email,
+      email: emailInput,
       password,
       options: {
+        data: {
+          role: 'admin',
+          firstName: firstName || undefined,
+          name: firstName || undefined,
+          lastName: lastName || undefined,
+          organization: organization || undefined,
+          bin: bin || undefined,
+          iin: iin || undefined,
+          licenseNumber: licenseNumber || undefined,
+          licenseIssuedAt: licenseIssuedAt || undefined,
+          licenseExpiresAt: licenseExpiresAt || undefined,
+          contactPhone: contactPhone || undefined,
+          website: website || undefined,
+          schoolVerified: false,
+          verificationStatus: 'pending',
+          verificationSource: 'web',
+        },
         emailRedirectTo: redirectTo,
       },
     });
@@ -94,6 +129,26 @@ function SchoolRegistrationContent() {
             Зарегистрируйтесь, подтвердите email по ссылке из письма и перейдите в личный кабинет.
           </p>
           <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label>Имя</label>
+              <input
+                className="input"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                type="text"
+                placeholder="Имя"
+              />
+            </div>
+            <div className="field">
+              <label>Фамилия</label>
+              <input
+                className="input"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                type="text"
+                placeholder="Фамилия"
+              />
+            </div>
             <div className="field">
               <label>Email</label>
               <input
@@ -125,6 +180,84 @@ function SchoolRegistrationContent() {
                 type="password"
                 placeholder="••••••••"
                 required
+              />
+            </div>
+            <div className="field">
+              <label>Школа / организация</label>
+              <input
+                className="input"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                type="text"
+                placeholder="Название школы"
+              />
+            </div>
+            <div className="field">
+              <label>БИН</label>
+              <input
+                className="input"
+                value={bin}
+                onChange={(e) => setBin(e.target.value)}
+                type="text"
+                placeholder="12 цифр"
+              />
+            </div>
+            <div className="field">
+              <label>ИИН представителя</label>
+              <input
+                className="input"
+                value={iin}
+                onChange={(e) => setIin(e.target.value)}
+                type="text"
+                placeholder="12 цифр"
+              />
+            </div>
+            <div className="field">
+              <label>Номер лицензии</label>
+              <input
+                className="input"
+                value={licenseNumber}
+                onChange={(e) => setLicenseNumber(e.target.value)}
+                type="text"
+                placeholder="Лицензия"
+              />
+            </div>
+            <div className="field">
+              <label>Дата выдачи лицензии</label>
+              <input
+                className="input"
+                value={licenseIssuedAt}
+                onChange={(e) => setLicenseIssuedAt(e.target.value)}
+                type="date"
+              />
+            </div>
+            <div className="field">
+              <label>Срок действия лицензии</label>
+              <input
+                className="input"
+                value={licenseExpiresAt}
+                onChange={(e) => setLicenseExpiresAt(e.target.value)}
+                type="date"
+              />
+            </div>
+            <div className="field">
+              <label>Контактный телефон</label>
+              <input
+                className="input"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                type="tel"
+                placeholder="+7..."
+              />
+            </div>
+            <div className="field">
+              <label>Сайт</label>
+              <input
+                className="input"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                type="url"
+                placeholder="https://"
               />
             </div>
             {message ? <p style={{ color: status === 'error' ? '#b91c1c' : '#1d4ed8' }}>{message}</p> : null}
