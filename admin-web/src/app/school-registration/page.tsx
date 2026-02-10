@@ -1,13 +1,11 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type Status = 'idle' | 'submitting' | 'sent' | 'verifying' | 'error';
 
-export default function SchoolRegistrationPage() {
+function SchoolRegistrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get('code');
@@ -140,5 +138,24 @@ export default function SchoolRegistrationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SchoolRegistrationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="page">
+          <div className="container">
+            <div className="card" style={{ maxWidth: 560, margin: '40px auto' }}>
+              <h1 style={{ marginTop: 0 }}>Регистрация школы</h1>
+              <p className="muted">Загрузка...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <SchoolRegistrationContent />
+    </Suspense>
   );
 }
