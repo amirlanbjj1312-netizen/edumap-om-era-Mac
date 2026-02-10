@@ -626,7 +626,11 @@ export default function SchoolInfoPage() {
       setTimeout(() => setState('idle'), 1500);
     } catch (error) {
       setState('error');
-      setMessage(t('Ошибка сохранения.'));
+      const detail =
+        (error as any)?.message ||
+        (error as any)?.error ||
+        t('Ошибка сохранения.');
+      setMessage(detail);
     }
   };
 
