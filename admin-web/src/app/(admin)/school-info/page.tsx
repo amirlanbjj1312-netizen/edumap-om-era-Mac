@@ -460,6 +460,7 @@ export default function SchoolInfoPage() {
     if (!profile?.school_id) return '';
     return profile.school_id;
   }, [profile?.school_id]);
+  const [fallbackSchoolId, setFallbackSchoolId] = useState('');
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
   const availableDistricts = useMemo(() => {
@@ -555,6 +556,7 @@ export default function SchoolInfoPage() {
       const fallbackId = buildFallbackSchoolId(
         `${session.user.email || ''} ${session.user.user_metadata?.full_name || ''}`.trim()
       );
+      setFallbackSchoolId(fallbackId);
 
       try {
         const result = await loadSchools();
@@ -572,6 +574,9 @@ export default function SchoolInfoPage() {
             if (!kkName) {
               nextProfile.basic_info.name.kk = ruName;
             }
+          }
+          if (!nextProfile.school_id) {
+            nextProfile.school_id = fallbackId;
           }
           setProfile(nextProfile);
           setState('idle');
@@ -615,8 +620,10 @@ export default function SchoolInfoPage() {
     try {
       const education = currentProfile.education || ({} as SchoolProfile['education']);
       const curricula = education.curricula || ({} as SchoolProfile['education']['curricula']);
+      const ensuredId = currentProfile.school_id || schoolId || fallbackSchoolId || 'local-school';
       const payload = {
         ...currentProfile,
+        school_id: ensuredId,
         education: {
           ...education,
           curricula: {
