@@ -113,10 +113,7 @@ function SchoolRegistrationContent() {
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
 
-  const redirectTo = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/school-registration`;
-  }, []);
+  const redirectTo = useMemo(() => 'https://ed-kappa-one.vercel.app/school-registration', []);
 
   useEffect(() => {
     let active = true;
