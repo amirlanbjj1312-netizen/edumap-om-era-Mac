@@ -7,10 +7,8 @@ import { supabase } from '@/lib/supabaseClient';
 
 const NAV_ITEMS = [
   { href: '/school-info', label: 'Информация о школе' },
-  { href: '/media', label: 'Медиа' },
   { href: '/requests', label: 'Заявки' },
   { href: '/statistics', label: 'Статистика' },
-  { href: '/verification', label: 'Верификация' },
   { href: '/profile', label: 'Профиль' },
 ];
 
