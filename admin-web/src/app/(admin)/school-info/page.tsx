@@ -530,9 +530,13 @@ export default function SchoolInfoPage() {
     return results;
   };
 
-  const appendMediaUrls = (field: string, urls: string[]) => {
+  const appendMediaUrls = (
+    field: string,
+    urls: string[],
+    baseProfile?: SchoolProfile | null
+  ) => {
     if (!urls.length) return;
-    const existing = normalizeListValue(getDeep(profile, field, ''));
+    const existing = normalizeListValue(getDeep(baseProfile ?? profile, field, ''));
     const next = [...existing, ...urls].filter(Boolean);
     updateField(field, next.join(', '));
   };
@@ -591,20 +595,28 @@ export default function SchoolInfoPage() {
     setProfile((prev: SchoolProfile | null) => (prev ? setDeep(prev, path, value) : prev));
   };
 
-  const save = async () => {
+  const applyAndSave = (path: string, value: any) => {
     if (!profile) return;
+    const nextProfile = setDeep(profile, path, value);
+    setProfile(nextProfile);
+    save(nextProfile);
+  };
+
+  const save = async (nextProfile?: SchoolProfile | null) => {
+    const currentProfile = nextProfile ?? profile;
+    if (!currentProfile) return;
     setState('saving');
     setMessage('');
     try {
       const payload = {
-        ...profile,
+        ...currentProfile,
         education: {
-          ...profile.education,
+          ...currentProfile.education,
           curricula: {
-            ...profile.education.curricula,
-            national: profile.education.curricula.national || [],
-            international: profile.education.curricula.international || [],
-            additional: profile.education.curricula.additional || [],
+            ...currentProfile.education.curricula,
+            national: currentProfile.education.curricula.national || [],
+            international: currentProfile.education.curricula.international || [],
+            additional: currentProfile.education.curricula.additional || [],
           },
         },
       };
@@ -1146,7 +1158,7 @@ export default function SchoolInfoPage() {
                   setMediaMessage('');
                   const urls = await uploadMediaFiles([file], 'logo');
                   if (urls[0]) {
-                    updateField('media.logo', urls[0]);
+                    applyAndSave('media.logo', urls[0]);
                   }
                 } catch (error: any) {
                   setMediaMessage(
@@ -1178,7 +1190,15 @@ export default function SchoolInfoPage() {
                 try {
                   setMediaMessage('');
                   const urls = await uploadMediaFiles(files, 'photos');
-                  appendMediaUrls('media.photos', urls);
+                  if (profile) {
+                    const existing = normalizeListValue(
+                      getDeep(profile, 'media.photos', '')
+                    );
+                    const next = [...existing, ...urls].filter(Boolean);
+                    const nextProfile = setDeep(profile, 'media.photos', next.join(', '));
+                    setProfile(nextProfile);
+                    save(nextProfile);
+                  }
                 } catch (error: any) {
                   setMediaMessage(
                     error?.message ||
@@ -1216,7 +1236,15 @@ export default function SchoolInfoPage() {
                 try {
                   setMediaMessage('');
                   const urls = await uploadMediaFiles(files, 'videos');
-                  appendMediaUrls('media.videos', urls);
+                  if (profile) {
+                    const existing = normalizeListValue(
+                      getDeep(profile, 'media.videos', '')
+                    );
+                    const next = [...existing, ...urls].filter(Boolean);
+                    const nextProfile = setDeep(profile, 'media.videos', next.join(', '));
+                    setProfile(nextProfile);
+                    save(nextProfile);
+                  }
                 } catch (error: any) {
                   setMediaMessage(
                     error?.message ||
