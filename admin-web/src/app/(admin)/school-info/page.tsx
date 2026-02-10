@@ -597,7 +597,7 @@ export default function SchoolInfoPage() {
 
   const applyAndSave = (path: string, value: any) => {
     let nextProfile: SchoolProfile | null = null;
-    setProfile((prev) => {
+    setProfile((prev: SchoolProfile | null) => {
       if (!prev) return prev;
       nextProfile = setDeep(prev, path, value);
       return nextProfile;
