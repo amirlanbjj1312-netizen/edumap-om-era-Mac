@@ -15,6 +15,17 @@ export async function requestJson<T>(path: string, options: RequestInit = {}): P
   return payload as T;
 }
 
+const safeStringify = (value: any) => {
+  const seen = new WeakSet();
+  return JSON.stringify(value, (_key, val) => {
+    if (val && typeof val === 'object') {
+      if (seen.has(val)) return undefined;
+      seen.add(val);
+    }
+    return val;
+  });
+};
+
 export async function loadSchools() {
   return requestJson<{ data: any[] }>('/schools');
 }
@@ -22,6 +33,6 @@ export async function loadSchools() {
 export async function upsertSchool(profile: any) {
   return requestJson<{ data: any }>('/schools', {
     method: 'POST',
-    body: JSON.stringify(profile),
+    body: safeStringify(profile),
   });
 }
