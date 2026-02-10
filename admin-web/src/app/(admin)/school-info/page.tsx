@@ -596,10 +596,15 @@ export default function SchoolInfoPage() {
   };
 
   const applyAndSave = (path: string, value: any) => {
-    if (!profile) return;
-    const nextProfile = setDeep(profile, path, value);
-    setProfile(nextProfile);
-    save(nextProfile);
+    let nextProfile: SchoolProfile | null = null;
+    setProfile((prev) => {
+      if (!prev) return prev;
+      nextProfile = setDeep(prev, path, value);
+      return nextProfile;
+    });
+    if (nextProfile) {
+      save(nextProfile);
+    }
   };
 
   const save = async (nextProfile?: SchoolProfile | null) => {
@@ -1201,9 +1206,7 @@ export default function SchoolInfoPage() {
                       getDeep(profile, 'media.photos', '')
                     );
                     const next = [...existing, ...urls].filter(Boolean);
-                    const nextProfile = setDeep(profile, 'media.photos', next.join(', '));
-                    setProfile(nextProfile);
-                    save(nextProfile);
+                    applyAndSave('media.photos', next.join(', '));
                   }
                 } catch (error: any) {
                   setMediaMessage(
@@ -1247,9 +1250,7 @@ export default function SchoolInfoPage() {
                       getDeep(profile, 'media.videos', '')
                     );
                     const next = [...existing, ...urls].filter(Boolean);
-                    const nextProfile = setDeep(profile, 'media.videos', next.join(', '));
-                    setProfile(nextProfile);
-                    save(nextProfile);
+                    applyAndSave('media.videos', next.join(', '));
                   }
                 } catch (error: any) {
                   setMediaMessage(
