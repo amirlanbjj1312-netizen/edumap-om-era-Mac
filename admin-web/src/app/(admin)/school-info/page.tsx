@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { loadSchools, upsertSchool } from '@/lib/api';
@@ -19,6 +19,220 @@ const parseArrayValue = (value: string) =>
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+
+const LocaleContext = createContext<'ru' | 'en' | 'kk'>('ru');
+
+const LABELS: Record<string, { en: string; kk: string }> = {
+  Основное: { en: 'Basic', kk: 'Негізгі' },
+  Контакты: { en: 'Contacts', kk: 'Байланыс' },
+  Образование: { en: 'Education', kk: 'Білім' },
+  Поступление: { en: 'Admission', kk: 'Қабылдау' },
+  Сервисы: { en: 'Services', kk: 'Қызметтер' },
+  Финансы: { en: 'Finance', kk: 'Қаржы' },
+  Медиа: { en: 'Media', kk: 'Медиа' },
+  Локация: { en: 'Location', kk: 'Орналасуы' },
+  'Основная информация': { en: 'Basic information', kk: 'Негізгі ақпарат' },
+  Лицензия: { en: 'License', kk: 'Лицензия' },
+  'Учебный процесс': { en: 'Learning process', kk: 'Оқу процесі' },
+  'Требуется вступительный экзамен': {
+    en: 'Entrance exam required',
+    kk: 'Қабылдау емтиханы қажет',
+  },
+  'Отображаемое имя': { en: 'Display name', kk: 'Көрсетілетін атау' },
+  'Тип школы': { en: 'School type', kk: 'Мектеп түрі' },
+  Город: { en: 'City', kk: 'Қала' },
+  Район: { en: 'District', kk: 'Аудан' },
+  Адрес: { en: 'Address', kk: 'Мекенжай' },
+  Описание: { en: 'Description', kk: 'Сипаттама' },
+  Широта: { en: 'Latitude', kk: 'Ендік' },
+  Долгота: { en: 'Longitude', kk: 'Бойлық' },
+  Телефон: { en: 'Phone', kk: 'Телефон' },
+  WhatsApp: { en: 'WhatsApp', kk: 'WhatsApp' },
+  Email: { en: 'Email', kk: 'Email' },
+  Сайт: { en: 'Website', kk: 'Сайт' },
+  'Номер лицензии': { en: 'License number', kk: 'Лицензия нөмірі' },
+  'Дата выдачи': { en: 'Issued at', kk: 'Берілген күні' },
+  'Срок действия': { en: 'Valid until', kk: 'Жарамдылық мерзімі' },
+  Аккредитация: { en: 'Accreditation', kk: 'Аккредитация' },
+  'Языки обучения': { en: 'Teaching languages', kk: 'Оқыту тілдері' },
+  'Языки (доп.)': { en: 'Other languages', kk: 'Қосымша тілдер' },
+  Программы: { en: 'Programs', kk: 'Бағдарламалар' },
+  'Учебные планы (национальные)': { en: 'Curricula (national)', kk: 'Оқу жоспарлары (ұлттық)' },
+  'Учебные планы (международные)': { en: 'Curricula (international)', kk: 'Оқу жоспарлары (халықаралық)' },
+  'Учебные планы (дополнительные)': { en: 'Curricula (additional)', kk: 'Оқу жоспарлары (қосымша)' },
+  'Учебные планы (другое)': { en: 'Curricula (other)', kk: 'Оқу жоспарлары (басқа)' },
+  'Углубленные предметы': { en: 'Advanced subjects', kk: 'Тереңдетілген пәндер' },
+  'Углубленные (доп.)': { en: 'Advanced (other)', kk: 'Тереңдетілген (басқа)' },
+  Классы: { en: 'Grades', kk: 'Сыныптар' },
+  'Средний размер класса': { en: 'Average class size', kk: 'Сыныптың орташа көлемі' },
+  Формат: { en: 'Format', kk: 'Формат' },
+  'Формат (доп.)': { en: 'Format (other)', kk: 'Формат (басқа)' },
+  Предметы: { en: 'Subjects', kk: 'Пәндер' },
+  'Предметы (доп.)': { en: 'Subjects (other)', kk: 'Пәндер (басқа)' },
+  Этапы: { en: 'Stages', kk: 'Кезеңдер' },
+  Питание: { en: 'Meals', kk: 'Тамақтану' },
+  'Разов в день': { en: 'Times per day', kk: 'Күніне қанша рет' },
+  'Бесплатно до класса': { en: 'Free until grade', kk: 'Тегін қай сыныпқа дейін' },
+  'Примечание по питанию': { en: 'Meals notes', kk: 'Тамақтану туралы ескертпе' },
+  'Иностранные преподаватели': { en: 'Foreign teachers', kk: 'Шетелдік мұғалімдер' },
+  Комментарий: { en: 'Comment', kk: 'Түсініктеме' },
+  Транспорт: { en: 'Transport', kk: 'Көлік' },
+  Инклюзив: { en: 'Inclusive', kk: 'Инклюзивті' },
+  Продленка: { en: 'After-school', kk: 'Ұзартылған топ' },
+  'Гос финансирование': { en: 'State funding', kk: 'Мемлекеттік қаржыландыру' },
+  Самоокупаемость: { en: 'Self-funded', kk: 'Өзін-өзі қаржыландыру' },
+  'Бесплатные места': { en: 'Free places', kk: 'Тегін орындар' },
+  'Стоимость / мес': { en: 'Monthly fee', kk: 'Айлық төлем' },
+  'Система оплаты': { en: 'Payment system', kk: 'Төлем жүйесі' },
+  'Скидки / гранты': { en: 'Grants / discounts', kk: 'Гранттар / жеңілдіктер' },
+  'Логотип URL': { en: 'Logo URL', kk: 'Логотип URL' },
+  'Логотип (файл)': { en: 'Logo (file)', kk: 'Логотип (файл)' },
+  'Фото (URL, через запятую)': { en: 'Photos (URLs)', kk: 'Фотолар (URL)' },
+  'Фото (файлы)': { en: 'Photos (files)', kk: 'Фотолар (файл)' },
+  'Видео (URL, через запятую)': { en: 'Videos (URLs)', kk: 'Бейнелер (URL)' },
+  'Видео (файлы)': { en: 'Videos (files)', kk: 'Бейнелер (файл)' },
+  'Сертификаты (URL)': { en: 'Certificates (URL)', kk: 'Сертификаттар (URL)' },
+  Instagram: { en: 'Instagram', kk: 'Instagram' },
+  TikTok: { en: 'TikTok', kk: 'TikTok' },
+  YouTube: { en: 'YouTube', kk: 'YouTube' },
+  Facebook: { en: 'Facebook', kk: 'Facebook' },
+  VK: { en: 'VK', kk: 'VK' },
+  Telegram: { en: 'Telegram', kk: 'Telegram' },
+  'Ближайшее метро': { en: 'Nearest метро', kk: 'Жақын метро' },
+  'Ближайшая остановка': { en: 'Nearest stop', kk: 'Жақын аялдама' },
+  'Дистанция до метро (км)': { en: 'Distance to метро (km)', kk: 'Метроға дейінгі қашықтық (км)' },
+  'Зона обслуживания': { en: 'Service area', kk: 'Қызмет көрсету аумағы' },
+  'Не выбрано': { en: 'Not selected', kk: 'Таңдалмаған' },
+  'Сначала выберите город': { en: 'Select city first', kk: 'Әуелі қаланы таңдаңыз' },
+  'Сохранить': { en: 'Save', kk: 'Сақтау' },
+  'Сохраняем...': { en: 'Saving...', kk: 'Сақталуда...' },
+  'Сохранено.': { en: 'Saved.', kk: 'Сақталды.' },
+  'Ошибка сохранения.': { en: 'Save failed.', kk: 'Сақтау қатесі.' },
+  'Не удалось загрузить данные.': {
+    en: 'Failed to load data.',
+    kk: 'Деректерді жүктеу мүмкін болмады.',
+  },
+  'Загрузка...': { en: 'Loading...', kk: 'Жүктелуде...' },
+  Тест: { en: 'Test', kk: 'Тест' },
+  Экзамен: { en: 'Exam', kk: 'Емтихан' },
+  Собеседование: { en: 'Interview', kk: 'Сұхбат' },
+  Нет: { en: 'No', kk: 'Жоқ' },
+  Другое: { en: 'Other', kk: 'Басқа' },
+};
+
+const translateLabel = (label: string, locale: 'ru' | 'en' | 'kk') => {
+  const entry = LABELS[label];
+  if (!entry) return label;
+  if (locale === 'en') return entry.en;
+  if (locale === 'kk') return entry.kk;
+  return label;
+};
+
+const OPTION_LABELS: Record<
+  string,
+  { ru: string; en: string; kk: string }
+> = {
+  State: { ru: 'Государственная', en: 'State', kk: 'Мемлекеттік' },
+  Private: { ru: 'Частная', en: 'Private', kk: 'Жеке' },
+  International: { ru: 'Международная', en: 'International', kk: 'Халықаралық' },
+  Autonomous: { ru: 'Автономная', en: 'Autonomous', kk: 'Автономды' },
+  Almaty: { ru: 'Алматы', en: 'Almaty', kk: 'Алматы' },
+  Almaly: { ru: 'Алмалы', en: 'Almaly', kk: 'Алмалы' },
+  Auezov: { ru: 'Ауэзов', en: 'Auezov', kk: 'Әуезов' },
+  Bostandyk: { ru: 'Бостандык', en: 'Bostandyk', kk: 'Бостандық' },
+  Zhetysu: { ru: 'Жетысу', en: 'Zhetysu', kk: 'Жетісу' },
+  Medeu: { ru: 'Медеу', en: 'Medeu', kk: 'Медеу' },
+  Nauryzbay: { ru: 'Наурызбай', en: 'Nauryzbay', kk: 'Наурызбай' },
+  Astana: { ru: 'Астана', en: 'Astana', kk: 'Астана' },
+  'Almaty District': { ru: 'Алматы ауданы', en: 'Almaty District', kk: 'Алматы ауданы' },
+  Baikonyr: { ru: 'Байконур', en: 'Baikonyr', kk: 'Байқоңыр' },
+  Yesil: { ru: 'Есиль', en: 'Yesil', kk: 'Есіл' },
+  Saryarka: { ru: 'Сарыарка', en: 'Saryarka', kk: 'Сарыарқа' },
+  Nura: { ru: 'Нура', en: 'Nura', kk: 'Нұра' },
+  Karaganda: { ru: 'Караганда', en: 'Karaganda', kk: 'Қарағанды' },
+  City: { ru: 'Город', en: 'City', kk: 'Қала' },
+  Maikuduk: { ru: 'Майкудук', en: 'Maikuduk', kk: 'Майқұдық' },
+  'Yugo-Vostok': { ru: 'Юго-Восток', en: 'Yugo-Vostok', kk: 'Оңтүстік-Шығыс' },
+  Prishakhtinsk: { ru: 'Пришахтинск', en: 'Prishakhtinsk', kk: 'Пришахтинск' },
+  Sortirovka: { ru: 'Сортировка', en: 'Sortirovka', kk: 'Сортировка' },
+  'Per month': { ru: 'В месяц', en: 'Per month', kk: 'Айына' },
+  'Per semester': { ru: 'В семестр', en: 'Per semester', kk: 'Семестрге' },
+  'Per year': { ru: 'В год', en: 'Per year', kk: 'Жылына' },
+  Free: { ru: 'Бесплатно', en: 'Free', kk: 'Тегін' },
+  Paid: { ru: 'Платно', en: 'Paid', kk: 'Ақылы' },
+  Included: { ru: 'Включено', en: 'Included', kk: 'Қамтылған' },
+  'No meals': { ru: 'Без питания', en: 'No meals', kk: 'Тамақсыз' },
+  Kazakh: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ тілі' },
+  Russian: { ru: 'Русский', en: 'Russian', kk: 'Орыс тілі' },
+  English: { ru: 'Английский', en: 'English', kk: 'Ағылшын тілі' },
+  Chinese: { ru: 'Китайский', en: 'Chinese', kk: 'Қытай тілі' },
+  French: { ru: 'Французский', en: 'French', kk: 'Француз тілі' },
+  German: { ru: 'Немецкий', en: 'German', kk: 'Неміс тілі' },
+  'State program (Kazakhstan)': {
+    ru: 'Госпрограмма (Казахстан)',
+    en: 'State program (Kazakhstan)',
+    kk: 'Мемлекеттік бағдарлама (Қазақстан)',
+  },
+  'Updated content': { ru: 'Обновленное содержание', en: 'Updated content', kk: 'Жаңартылған мазмұн' },
+  'NIS Integrated Program': {
+    ru: 'Интегрированная программа НИШ',
+    en: 'NIS Integrated Program',
+    kk: 'НЗМ интеграцияланған бағдарламасы',
+  },
+  'Cambridge Primary': { ru: 'Cambridge Primary', en: 'Cambridge Primary', kk: 'Cambridge Primary' },
+  'Cambridge Lower Secondary': {
+    ru: 'Cambridge Lower Secondary',
+    en: 'Cambridge Lower Secondary',
+    kk: 'Cambridge Lower Secondary',
+  },
+  'Cambridge IGCSE': { ru: 'Cambridge IGCSE', en: 'Cambridge IGCSE', kk: 'Cambridge IGCSE' },
+  'Cambridge A-Level': { ru: 'Cambridge A-Level', en: 'Cambridge A-Level', kk: 'Cambridge A-Level' },
+  'IB PYP': { ru: 'IB PYP', en: 'IB PYP', kk: 'IB PYP' },
+  STEAM: { ru: 'STEAM', en: 'STEAM', kk: 'STEAM' },
+  STEM: { ru: 'STEM', en: 'STEM', kk: 'STEM' },
+  Montessori: { ru: 'Монтессори', en: 'Montessori', kk: 'Монтессори' },
+  Waldorf: { ru: 'Вальдорф', en: 'Waldorf', kk: 'Вальдорф' },
+  'American Curriculum': {
+    ru: 'Американская программа',
+    en: 'American Curriculum',
+    kk: 'Америкалық бағдарлама',
+  },
+  'British National Curriculum': {
+    ru: 'Британская национальная программа',
+    en: 'British National Curriculum',
+    kk: 'Британ ұлттық бағдарламасы',
+  },
+  'Bilingual Program': { ru: 'Билингвальная программа', en: 'Bilingual Program', kk: 'Қостілді бағдарлама' },
+  'Author program': { ru: 'Авторская программа', en: 'Author program', kk: 'Авторлық бағдарлама' },
+  Mathematics: { ru: 'Математика', en: 'Mathematics', kk: 'Математика' },
+  Physics: { ru: 'Физика', en: 'Physics', kk: 'Физика' },
+  Chemistry: { ru: 'Химия', en: 'Chemistry', kk: 'Химия' },
+  Biology: { ru: 'Биология', en: 'Biology', kk: 'Биология' },
+  'Computer Science': { ru: 'Информатика', en: 'Computer Science', kk: 'Информатика' },
+  Robotics: { ru: 'Робототехника', en: 'Robotics', kk: 'Робототехника' },
+  Engineering: { ru: 'Инженерия', en: 'Engineering', kk: 'Инженерия' },
+  'Artificial Intelligence': { ru: 'Искусственный интеллект', en: 'Artificial Intelligence', kk: 'Жасанды интеллект' },
+  'Data Science': { ru: 'Наука о данных', en: 'Data Science', kk: 'Деректер ғылымы' },
+  Economics: { ru: 'Экономика', en: 'Economics', kk: 'Экономика' },
+  Business: { ru: 'Бизнес', en: 'Business', kk: 'Бизнес' },
+  Entrepreneurship: { ru: 'Предпринимательство', en: 'Entrepreneurship', kk: 'Кәсіпкерлік' },
+  'English Language': { ru: 'Английский язык', en: 'English Language', kk: 'Ағылшын тілі' },
+  'World History': { ru: 'Всемирная история', en: 'World History', kk: 'Әлем тарихы' },
+  Geography: { ru: 'География', en: 'Geography', kk: 'География' },
+  'Design & Technology': { ru: 'Дизайн и технологии', en: 'Design & Technology', kk: 'Дизайн және технология' },
+  'Art & Design': { ru: 'Искусство и дизайн', en: 'Art & Design', kk: 'Өнер және дизайн' },
+  Music: { ru: 'Музыка', en: 'Music', kk: 'Музыка' },
+  'Media Studies': { ru: 'Медиазнание', en: 'Media Studies', kk: 'Медиа зерттеулері' },
+  Psychology: { ru: 'Психология', en: 'Psychology', kk: 'Психология' },
+};
+
+const translateOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
+  const entry = OPTION_LABELS[value];
+  if (!entry) return value;
+  if (locale === 'ru') return entry.ru;
+  if (locale === 'kk') return entry.kk;
+  return entry.en;
+};
 
 const normalizeListValue = (value: unknown) => {
   if (Array.isArray(value)) return value;
@@ -135,51 +349,65 @@ const setDeep = (obj: any, path: string, value: any) => {
   return next;
 };
 
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <section className="card">
-    <h2>{title}</h2>
-    {children}
-  </section>
-);
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <section className="card">
+      <h2>{translateLabel(title, locale)}</h2>
+      {children}
+    </section>
+  );
+};
 
 const FieldRow = ({ children }: { children: React.ReactNode }) => (
   <div className="form-row">{children}</div>
 );
 
-const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => (
-  <label className="field">
-    <span>{label}</span>
+const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <label className="field">
+      <span>{translateLabel(label, locale)}</span>
     <input
       type={type}
       value={value}
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
     />
-  </label>
-);
+    </label>
+  );
+};
 
-const TextArea = ({ label, value, onChange, placeholder, rows = 3 }: any) => (
-  <label className="field">
-    <span>{label}</span>
+const TextArea = ({ label, value, onChange, placeholder, rows = 3 }: any) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <label className="field">
+      <span>{translateLabel(label, locale)}</span>
     <textarea
       value={value}
       placeholder={placeholder}
       rows={rows}
       onChange={(event) => onChange(event.target.value)}
     />
-  </label>
-);
+    </label>
+  );
+};
 
-const Toggle = ({ label, checked, onChange }: any) => (
-  <label className="toggle">
-    <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-    <span>{label}</span>
-  </label>
-);
+const Toggle = ({ label, checked, onChange }: any) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <span>{translateLabel(label, locale)}</span>
+    </label>
+  );
+};
 
-const Select = ({ label, value, onChange, options }: any) => (
-  <label className="field">
-    <span>{label}</span>
+const Select = ({ label, value, onChange, options }: any) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <label className="field">
+      <span>{translateLabel(label, locale)}</span>
     <select value={value} onChange={(event) => onChange(event.target.value)}>
       {options.map((option: any) => (
         <option key={option.value} value={option.value}>
@@ -187,12 +415,15 @@ const Select = ({ label, value, onChange, options }: any) => (
         </option>
       ))}
     </select>
-  </label>
-);
+    </label>
+  );
+};
 
-const CheckboxGroup = ({ label, options, values, onChange }: any) => (
-  <div className="field">
-    <span>{label}</span>
+const CheckboxGroup = ({ label, options, values, onChange }: any) => {
+  const locale = useContext(LocaleContext);
+  return (
+    <div className="field">
+      <span>{translateLabel(label, locale)}</span>
     <div className="option-grid">
       {options.map((option: string) => {
         const checked = values.includes(option);
@@ -206,13 +437,14 @@ const CheckboxGroup = ({ label, options, values, onChange }: any) => (
               checked={checked}
               onChange={() => onChange(toggleListValue(values, option))}
             />
-            <span>{option}</span>
+            <span>{translateOption(option, locale)}</span>
           </label>
         );
       })}
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 export default function SchoolInfoPage() {
   const router = useRouter();
@@ -253,6 +485,7 @@ export default function SchoolInfoPage() {
   };
 
   const localePath = (path: string) => `${path}.${contentLocale}`;
+  const t = (label: string) => translateLabel(label, contentLocale);
 
   const updateLocalizedField = (pathBase: string, value: string) => {
     updateField(`${pathBase}.${contentLocale}`, value);
@@ -343,7 +576,7 @@ export default function SchoolInfoPage() {
         if (!ignore) {
           setProfile(createEmptySchoolProfile({ school_id: fallbackId }));
           setState('error');
-          setMessage('Не удалось загрузить данные.');
+          setMessage(t('Не удалось загрузить данные.'));
         }
       }
     };
@@ -377,19 +610,20 @@ export default function SchoolInfoPage() {
       };
       await upsertSchool(payload);
       setState('saved');
-      setMessage('Сохранено.');
+      setMessage(t('Сохранено.'));
       setTimeout(() => setState('idle'), 1500);
     } catch (error) {
       setState('error');
-      setMessage('Ошибка сохранения.');
+      setMessage(t('Ошибка сохранения.'));
     }
   };
 
   if (!profile) {
-    return <div className="card">Загрузка...</div>;
+    return <div className="card">{t('Загрузка...')}</div>;
   }
 
   return (
+    <LocaleContext.Provider value={contentLocale}>
     <div className="page">
       <div className="locale-toggle">
         {(['ru', 'en', 'kk'] as const).map((lang) => (
@@ -410,56 +644,56 @@ export default function SchoolInfoPage() {
             className={activeTab === 'basic' ? 'active' : ''}
             onClick={() => setActiveTab('basic')}
           >
-            Основное
+            {t('Основное')}
           </button>
           <button
             type="button"
             className={activeTab === 'contacts' ? 'active' : ''}
             onClick={() => setActiveTab('contacts')}
           >
-            Контакты
+            {t('Контакты')}
           </button>
           <button
             type="button"
             className={activeTab === 'education' ? 'active' : ''}
             onClick={() => setActiveTab('education')}
           >
-            Образование
+            {t('Образование')}
           </button>
           <button
             type="button"
             className={activeTab === 'admission' ? 'active' : ''}
             onClick={() => setActiveTab('admission')}
           >
-            Поступление
+            {t('Поступление')}
           </button>
           <button
             type="button"
             className={activeTab === 'services' ? 'active' : ''}
             onClick={() => setActiveTab('services')}
           >
-            Сервисы
+            {t('Сервисы')}
           </button>
           <button
             type="button"
             className={activeTab === 'finance' ? 'active' : ''}
             onClick={() => setActiveTab('finance')}
           >
-            Финансы
+            {t('Финансы')}
           </button>
           <button
             type="button"
             className={activeTab === 'media' ? 'active' : ''}
             onClick={() => setActiveTab('media')}
           >
-            Медиа
+            {t('Медиа')}
           </button>
           <button
             type="button"
             className={activeTab === 'location' ? 'active' : ''}
             onClick={() => setActiveTab('location')}
           >
-            Локация
+            {t('Локация')}
           </button>
         </aside>
         <div className="panel">
@@ -481,8 +715,11 @@ export default function SchoolInfoPage() {
                     value={getDeep(profile, 'basic_info.type')}
                     onChange={(value: string) => updateField('basic_info.type', value)}
                     options={[
-                      { value: '', label: 'Не выбрано' },
-                      ...SCHOOL_TYPES.map((item) => ({ value: item, label: item })),
+                      { value: '', label: t('Не выбрано') },
+                      ...SCHOOL_TYPES.map((item) => ({
+                        value: item,
+                        label: translateOption(item, contentLocale),
+                      })),
                     ]}
                   />
                   <Select
@@ -490,8 +727,11 @@ export default function SchoolInfoPage() {
                     value={getDeep(profile, 'basic_info.city')}
                     onChange={(value: string) => updateField('basic_info.city', value)}
                     options={[
-                      { value: '', label: 'Не выбрано' },
-                      ...CITY_NAMES.map((item) => ({ value: item, label: item })),
+                      { value: '', label: t('Не выбрано') },
+                      ...CITY_NAMES.map((item) => ({
+                        value: item,
+                        label: translateOption(item, contentLocale),
+                      })),
                     ]}
                   />
                   <Select
@@ -501,13 +741,13 @@ export default function SchoolInfoPage() {
                     options={
                       availableDistricts.length
                         ? [
-                            { value: '', label: 'Не выбрано' },
+                            { value: '', label: t('Не выбрано') },
                             ...availableDistricts.map((item) => ({
                               value: item,
-                              label: item,
+                              label: translateOption(item, contentLocale),
                             })),
                           ]
-                        : [{ value: '', label: 'Сначала выберите город' }]
+                        : [{ value: '', label: t('Сначала выберите город') }]
                     }
                   />
                 </FieldRow>
@@ -695,16 +935,16 @@ export default function SchoolInfoPage() {
           onChange={(next: string[]) => updateListField('education.grades', next)}
         />
         <FieldRow>
-          <Select
-            label="Средний размер класса"
-            value={getDeep(profile, 'education.average_class_size')}
-            onChange={(value: string) => updateField('education.average_class_size', value)}
-            options={[
-              { value: '', label: 'Не выбрано' },
-              ...CLASS_SIZE_OPTIONS.map((item) => ({ value: item, label: item })),
-            ]}
-          />
-        </FieldRow>
+                  <Select
+                    label="Средний размер класса"
+                    value={getDeep(profile, 'education.average_class_size')}
+                    onChange={(value: string) => updateField('education.average_class_size', value)}
+                    options={[
+                      { value: '', label: t('Не выбрано') },
+                      ...CLASS_SIZE_OPTIONS.map((item) => ({ value: item, label: item })),
+                    ]}
+                  />
+                </FieldRow>
             </Section>
           )}
 
@@ -721,12 +961,12 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'education.entrance_exam.format')}
             onChange={(value: string) => updateField('education.entrance_exam.format', value)}
             options={[
-              { value: '', label: 'Не выбрано' },
-              { value: 'test', label: 'Тест' },
-              { value: 'exam', label: 'Экзамен' },
-              { value: 'interview', label: 'Собеседование' },
-              { value: 'none', label: 'Нет' },
-              { value: 'other', label: 'Другое' },
+              { value: '', label: t('Не выбрано') },
+              { value: 'test', label: t('Тест') },
+              { value: 'exam', label: t('Экзамен') },
+              { value: 'interview', label: t('Собеседование') },
+              { value: 'none', label: t('Нет') },
+              { value: 'other', label: t('Другое') },
             ]}
           />
           <Input
@@ -771,8 +1011,11 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'services.meals_status')}
             onChange={(value: string) => updateField('services.meals_status', value)}
             options={[
-              { value: '', label: 'Не выбрано' },
-              ...MEAL_OPTIONS.map((item) => ({ value: item, label: item })),
+              { value: '', label: t('Не выбрано') },
+              ...MEAL_OPTIONS.map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
             ]}
           />
           <Select
@@ -780,7 +1023,7 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'services.meals_times_per_day')}
             onChange={(value: string) => updateField('services.meals_times_per_day', value)}
             options={[
-              { value: '', label: 'Не выбрано' },
+              { value: '', label: t('Не выбрано') },
               ...MEAL_TIMES_OPTIONS.map((item) => ({ value: item, label: item })),
             ]}
           />
@@ -789,7 +1032,7 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'services.meals_free_until_grade')}
             onChange={(value: string) => updateField('services.meals_free_until_grade', value)}
             options={[
-              { value: '', label: 'Не выбрано' },
+              { value: '', label: t('Не выбрано') },
               ...MEAL_GRADE_OPTIONS.map((item) => ({ value: item, label: item })),
             ]}
           />
@@ -867,8 +1110,11 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'finance.payment_system')}
             onChange={(value: string) => updateField('finance.payment_system', value)}
             options={[
-              { value: '', label: 'Не выбрано' },
-              ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({ value: item, label: item })),
+              { value: '', label: t('Не выбрано') },
+              ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
             ]}
           />
         </FieldRow>
@@ -889,7 +1135,7 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.logo', value)}
           />
           <label className="field">
-            <span>Логотип (файл)</span>
+            <span>{t('Логотип (файл)')}</span>
             <input
               type="file"
               accept="image/*"
@@ -921,7 +1167,7 @@ export default function SchoolInfoPage() {
         </FieldRow>
         <FieldRow>
           <label className="field">
-            <span>Фото (файлы)</span>
+            <span>{t('Фото (файлы)')}</span>
             <input
               type="file"
               accept="image/*"
@@ -959,7 +1205,7 @@ export default function SchoolInfoPage() {
         </FieldRow>
         <FieldRow>
           <label className="field">
-            <span>Видео (файлы)</span>
+            <span>{t('Видео (файлы)')}</span>
             <input
               type="file"
               accept="video/*"
@@ -1062,11 +1308,12 @@ export default function SchoolInfoPage() {
 
       <div className="actions">
         <button className="primary" onClick={save} disabled={state === 'saving'}>
-          {state === 'saving' ? 'Сохраняем...' : 'Сохранить'}
+          {state === 'saving' ? t('Сохраняем...') : t('Сохранить')}
         </button>
         {message && <span className={`status ${state}`}>{message}</span>}
         {schoolId && <span className="muted">ID: {schoolId}</span>}
       </div>
     </div>
+    </LocaleContext.Provider>
   );
 }
