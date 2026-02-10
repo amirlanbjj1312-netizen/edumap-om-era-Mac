@@ -33,7 +33,9 @@ const SchoolsContext = createContext({
 
 const toNumberOrNull = (value) => {
   if (value === null || value === undefined) return null;
-  const parsed = Number(value);
+  const normalized =
+    typeof value === 'string' ? value.trim().replace(',', '.') : value;
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -59,40 +61,41 @@ const getLocalizedMapText = (value, locale) => {
 };
 
 const toSchoolCard = (profile, locale, t) => {
-  const { basic_info, media, school_id } = profile;
+  const safeProfile = profile || {};
+  const basic_info = safeProfile.basic_info || {};
+  const media = safeProfile.media || {};
+  const school_id = safeProfile.school_id || '';
   const displayName =
     getLocalizedText(basic_info.display_name, locale).trim() ||
     getLocalizedText(basic_info.name, locale).trim() ||
     '';
-  const serviceArea = profile.location?.service_area;
-  let region = '';
-  if (Array.isArray(serviceArea)) {
-    region = serviceArea.join(', ');
-  } else if (typeof serviceArea === 'string') {
-    region = serviceArea;
-  }
+  const serviceArea = safeProfile.location?.service_area;
+  const region = getLocalizedMapText(serviceArea, locale);
 
   const ratingValue =
-    toNumberOrNull(profile.reviews?.average_rating) ??
-    toNumberOrNull(profile.system?.rating);
+    toNumberOrNull(safeProfile.reviews?.average_rating) ??
+    toNumberOrNull(safeProfile.system?.rating);
   const reviewsCountValue =
-    toIntegerOrZero(profile.reviews?.count) ??
-    toIntegerOrZero(profile.system?.reviews_count) ??
+    toIntegerOrZero(safeProfile.reviews?.count) ??
+    toIntegerOrZero(safeProfile.system?.reviews_count) ??
     0;
   const highlightReview =
-    profile.reviews?.highlight ||
-    profile.reviews?.items?.[0]?.text ||
-    profile.system?.highlight_review ||
+    safeProfile.reviews?.highlight ||
+    safeProfile.reviews?.items?.[0]?.text ||
+    safeProfile.system?.highlight_review ||
     '';
-  const licenseDetails = profile.basic_info?.license_details || {};
+  const licenseDetails = safeProfile.basic_info?.license_details || {};
   const hasLicense =
-    Boolean(profile.basic_info?.license_accreditation?.trim?.()) ||
+    Boolean(safeProfile.basic_info?.license_accreditation?.trim?.()) ||
     Boolean(licenseDetails?.number?.trim?.()) ||
     Boolean(licenseDetails?.issued_at?.trim?.()) ||
     Boolean(licenseDetails?.valid_until?.trim?.());
-  const hasCertificates = Boolean(profile.media?.certificates?.trim());
-  const entranceExamRequired = Boolean(profile.education?.entrance_exam?.required);
-  const curricula = profile.education?.curricula || {};
+  const hasCertificates = Boolean(safeProfile.media?.certificates?.trim());
+  const entranceExamRequired = Boolean(
+    safeProfile.education?.entrance_exam?.format &&
+      safeProfile.education?.entrance_exam?.format !== 'None'
+  ) || Boolean(safeProfile.education?.entrance_exam?.required);
+  const curricula = safeProfile.education?.curricula || {};
   const curriculaList = [
     ...(curricula.national || []),
     ...(curricula.international || []),
@@ -106,35 +109,35 @@ const toSchoolCard = (profile, locale, t) => {
     .filter(Boolean)
     .join(', ');
   const languagesValue = [
-    profile.education?.languages,
-    getLocalizedText(profile.education?.languages_other, locale),
+    safeProfile.education?.languages,
+    getLocalizedText(safeProfile.education?.languages_other, locale),
   ]
     .filter(Boolean)
     .join(', ');
   const subjectsValue = [
-    profile.education?.advanced_subjects,
-    getLocalizedText(profile.education?.advanced_subjects_other, locale),
+    safeProfile.education?.advanced_subjects,
+    getLocalizedText(safeProfile.education?.advanced_subjects_other, locale),
   ]
     .filter(Boolean)
     .join(', ');
   const specialistsValue = [
-    profile.services?.specialists,
-    getLocalizedText(profile.services?.specialists_other, locale),
+    safeProfile.services?.specialists,
+    getLocalizedText(safeProfile.services?.specialists_other, locale),
   ]
     .filter(Boolean)
     .join(', ');
   const clubsValue = [
-    profile.services?.clubs,
-    getLocalizedMapText(profile.services?.clubs_other, locale),
+    safeProfile.services?.clubs,
+    getLocalizedMapText(safeProfile.services?.clubs_other, locale),
   ]
     .filter(Boolean)
     .join(', ');
-  const latitude = toNumberOrNull(profile.basic_info?.coordinates?.latitude);
-  const longitude = toNumberOrNull(profile.basic_info?.coordinates?.longitude);
+  const latitude = toNumberOrNull(safeProfile.basic_info?.coordinates?.latitude);
+  const longitude = toNumberOrNull(safeProfile.basic_info?.coordinates?.longitude);
   const updatedAtRaw =
-    profile.system?.updated_at ||
-    profile.basic_info?.updated_at ||
-    profile.updated_at;
+    safeProfile.system?.updated_at ||
+    safeProfile.basic_info?.updated_at ||
+    safeProfile.updated_at;
   const updatedAt = updatedAtRaw ? new Date(updatedAtRaw).getTime() : null;
 
   const cityValue = basic_info.city || '';
@@ -162,7 +165,7 @@ const toSchoolCard = (profile, locale, t) => {
     coordinates: latitude != null && longitude != null ? { latitude, longitude } : null,
     languages: languagesValue,
     advancedSubjects: subjectsValue,
-    averageClassSize: profile.education?.average_class_size || '',
+    averageClassSize: safeProfile.education?.average_class_size || '',
     clubs: clubsValue,
     curricula: curriculaValue,
     entranceExamRequired,
@@ -182,7 +185,7 @@ const toSchoolCard = (profile, locale, t) => {
       access_control: Boolean(profile.services?.safety?.access_control),
       medical_office: Boolean(profile.services?.medical_office),
     },
-    meals: profile.services?.meals || '',
+    meals: profile.services?.meals_status || profile.services?.meals || '',
     specialists: specialistsValue,
   };
 };
