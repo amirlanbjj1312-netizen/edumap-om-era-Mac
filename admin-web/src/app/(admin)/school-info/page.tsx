@@ -608,16 +608,17 @@ export default function SchoolInfoPage() {
     setState('saving');
     setMessage('');
     try {
-      const safeProfile = createEmptySchoolProfile(currentProfile);
+      const education = currentProfile.education || ({} as SchoolProfile['education']);
+      const curricula = education.curricula || ({} as SchoolProfile['education']['curricula']);
       const payload = {
-        ...safeProfile,
+        ...currentProfile,
         education: {
-          ...safeProfile.education,
+          ...education,
           curricula: {
-            ...safeProfile.education.curricula,
-            national: safeProfile.education.curricula.national || [],
-            international: safeProfile.education.curricula.international || [],
-            additional: safeProfile.education.curricula.additional || [],
+            ...curricula,
+            national: curricula.national || [],
+            international: curricula.international || [],
+            additional: curricula.additional || [],
           },
         },
       };
