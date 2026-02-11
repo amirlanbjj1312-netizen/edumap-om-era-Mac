@@ -507,6 +507,7 @@ export default function SchoolInfoPage() {
   const uploadMediaFiles = async (files: File[], folder: string) => {
     if (!files.length) return [];
     const bucket = process.env.NEXT_PUBLIC_MEDIA_BUCKET || 'school-media';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const baseId = schoolId || 'school';
     const results: string[] = [];
 
@@ -524,8 +525,15 @@ export default function SchoolInfoPage() {
         throw error;
       }
       const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      if (data?.publicUrl) {
-        results.push(data.publicUrl);
+      const publicUrl =
+        data?.publicUrl ||
+        (supabaseUrl
+          ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(
+              bucket
+            )}/${path}`
+          : '');
+      if (publicUrl) {
+        results.push(publicUrl);
       }
     }
     return results;
