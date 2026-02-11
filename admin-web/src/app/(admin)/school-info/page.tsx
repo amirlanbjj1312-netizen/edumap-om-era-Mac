@@ -613,7 +613,13 @@ export default function SchoolInfoPage() {
   };
 
   const save = async (nextProfile?: SchoolProfile | null) => {
-    const currentProfile = nextProfile ?? profile;
+    const candidate = nextProfile ?? profile;
+    const currentProfile =
+      candidate &&
+      typeof candidate === 'object' &&
+      'basic_info' in candidate
+        ? candidate
+        : profile;
     if (!currentProfile) return;
     setState('saving');
     setMessage('');
@@ -1349,7 +1355,11 @@ export default function SchoolInfoPage() {
       </div>
 
       <div className="actions">
-        <button className="primary" onClick={save} disabled={state === 'saving'}>
+        <button
+          className="primary"
+          onClick={() => save()}
+          disabled={state === 'saving'}
+        >
           {state === 'saving' ? t('Сохраняем...') : t('Сохранить')}
         </button>
         {message && <span className={`status ${state}`}>{message}</span>}
