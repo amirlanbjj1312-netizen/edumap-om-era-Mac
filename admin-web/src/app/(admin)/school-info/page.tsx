@@ -577,6 +577,14 @@ export default function SchoolInfoPage() {
         const base = createEmptySchoolProfile({ school_id: fallbackId });
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
+          const meta = session.user?.user_metadata || {};
+          const setIfEmpty = (path: string, value?: string) => {
+            if (!value) return;
+            const current = getDeep(nextProfile, path);
+            if (!current) {
+              setDeep(nextProfile, path, value);
+            }
+          };
           const ruName = getDeep(nextProfile, 'basic_info.name.ru', '');
           const enName = getDeep(nextProfile, 'basic_info.name.en', '');
           const kkName = getDeep(nextProfile, 'basic_info.name.kk', '');
@@ -591,6 +599,19 @@ export default function SchoolInfoPage() {
           if (!nextProfile.school_id) {
             nextProfile.school_id = fallbackId;
           }
+
+          setIfEmpty('basic_info.display_name.ru', meta.organization);
+          setIfEmpty('basic_info.display_name.en', meta.organization);
+          setIfEmpty('basic_info.display_name.kk', meta.organization);
+          setIfEmpty('basic_info.name.ru', meta.organization);
+          setIfEmpty('basic_info.name.en', meta.organization);
+          setIfEmpty('basic_info.name.kk', meta.organization);
+          setIfEmpty('basic_info.phone', meta.contactPhone);
+          setIfEmpty('basic_info.website', meta.website);
+          setIfEmpty('basic_info.license_details.number', meta.licenseNumber);
+          setIfEmpty('basic_info.license_details.issued_at', meta.licenseIssuedAt);
+          setIfEmpty('basic_info.license_details.valid_until', meta.licenseExpiresAt);
+
           setProfile(nextProfile);
           setState('idle');
         }
