@@ -463,6 +463,11 @@ export default function SchoolInfoPage() {
   const [fallbackSchoolId, setFallbackSchoolId] = useState('');
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
+  const schoolType = useMemo(() => getDeep(profile, 'basic_info.type', ''), [profile]);
+  const showFinance = useMemo(
+    () => ['Private', 'Autonomous', 'International'].includes(schoolType),
+    [schoolType]
+  );
   const availableDistricts = useMemo(() => {
     const match = CITY_OPTIONS.find((option) => option.name === cityValue);
     return match?.districts ?? [];
@@ -720,13 +725,6 @@ export default function SchoolInfoPage() {
           </button>
           <button
             type="button"
-            className={activeTab === 'finance' ? 'active' : ''}
-            onClick={() => setActiveTab('finance')}
-          >
-            {t('Финансы')}
-          </button>
-          <button
-            type="button"
             className={activeTab === 'media' ? 'active' : ''}
             onClick={() => setActiveTab('media')}
           >
@@ -866,6 +864,64 @@ export default function SchoolInfoPage() {
                   }
                 />
               </Section>
+
+              {showFinance && (
+                <Section title="Финансы">
+                  <FieldRow>
+                    <Toggle
+                      label="Гос финансирование"
+                      checked={Boolean(getDeep(profile, 'finance.funding_state'))}
+                      onChange={(value: boolean) =>
+                        updateField('finance.funding_state', value)
+                      }
+                    />
+                    <Toggle
+                      label="Самоокупаемость"
+                      checked={Boolean(getDeep(profile, 'finance.funding_self'))}
+                      onChange={(value: boolean) =>
+                        updateField('finance.funding_self', value)
+                      }
+                    />
+                    <Toggle
+                      label="Бесплатные места"
+                      checked={Boolean(getDeep(profile, 'finance.free_places'))}
+                      onChange={(value: boolean) =>
+                        updateField('finance.free_places', value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Стоимость / мес"
+                      value={getDeep(profile, 'finance.monthly_fee')}
+                      onChange={(value: string) =>
+                        updateField('finance.monthly_fee', value)
+                      }
+                    />
+                    <Select
+                      label="Система оплаты"
+                      value={getDeep(profile, 'finance.payment_system')}
+                      onChange={(value: string) =>
+                        updateField('finance.payment_system', value)
+                      }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({
+                          value: item,
+                          label: translateOption(item, contentLocale),
+                        })),
+                      ]}
+                    />
+                  </FieldRow>
+                  <Input
+                    label="Скидки / гранты"
+                    value={getDeep(profile, 'finance.grants_discounts')}
+                    onChange={(value: string) =>
+                      updateField('finance.grants_discounts', value)
+                    }
+                  />
+                </Section>
+              )}
             </>
           )}
 
@@ -1121,52 +1177,6 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.after_school', value)}
           />
         </FieldRow>
-            </Section>
-          )}
-
-          {activeTab === 'finance' && (
-            <Section title="Финансы">
-        <FieldRow>
-          <Toggle
-            label="Гос финансирование"
-            checked={Boolean(getDeep(profile, 'finance.funding_state'))}
-            onChange={(value: boolean) => updateField('finance.funding_state', value)}
-          />
-          <Toggle
-            label="Самоокупаемость"
-            checked={Boolean(getDeep(profile, 'finance.funding_self'))}
-            onChange={(value: boolean) => updateField('finance.funding_self', value)}
-          />
-          <Toggle
-            label="Бесплатные места"
-            checked={Boolean(getDeep(profile, 'finance.free_places'))}
-            onChange={(value: boolean) => updateField('finance.free_places', value)}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Стоимость / мес"
-            value={getDeep(profile, 'finance.monthly_fee')}
-            onChange={(value: string) => updateField('finance.monthly_fee', value)}
-          />
-          <Select
-            label="Система оплаты"
-            value={getDeep(profile, 'finance.payment_system')}
-            onChange={(value: string) => updateField('finance.payment_system', value)}
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({
-                value: item,
-                label: translateOption(item, contentLocale),
-              })),
-            ]}
-          />
-        </FieldRow>
-        <Input
-          label="Скидки / гранты"
-          value={getDeep(profile, 'finance.grants_discounts')}
-          onChange={(value: string) => updateField('finance.grants_discounts', value)}
-        />
             </Section>
           )}
 
