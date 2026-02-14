@@ -652,6 +652,8 @@ export default function SchoolInfoPage() {
           const nestedLicenseNumber = fromMeta('license.number', 'license.licenseNumber');
           const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
 
+          const email = fromMeta('email') || session.user?.email || '';
+
           setIfEmpty('basic_info.display_name.ru', organization);
           setIfEmpty('basic_info.display_name.en', organization);
           setIfEmpty('basic_info.display_name.kk', organization);
@@ -659,18 +661,28 @@ export default function SchoolInfoPage() {
           setIfEmpty('basic_info.name.en', organization);
           setIfEmpty('basic_info.name.kk', organization);
           setIfEmpty('basic_info.phone', contactPhone);
+          setIfEmpty('basic_info.email', email);
           setIfEmpty('basic_info.website', website);
           setIfEmpty('basic_info.license_details.number', resolvedLicenseNumber);
           setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
           setIfEmpty('basic_info.license_details.valid_until', licenseExpiresAt);
 
-          // If metadata has fresh license values, force-sync them into school profile.
-          const licenseChanged =
+          // Keep web admin in sync with registration metadata.
+          const profileChanged =
+            setIfDifferent('basic_info.display_name.ru', organization) ||
+            setIfDifferent('basic_info.display_name.en', organization) ||
+            setIfDifferent('basic_info.display_name.kk', organization) ||
+            setIfDifferent('basic_info.name.ru', organization) ||
+            setIfDifferent('basic_info.name.en', organization) ||
+            setIfDifferent('basic_info.name.kk', organization) ||
+            setIfDifferent('basic_info.phone', contactPhone) ||
+            setIfDifferent('basic_info.email', email) ||
+            setIfDifferent('basic_info.website', website) ||
             setIfDifferent('basic_info.license_details.number', resolvedLicenseNumber) ||
             setIfDifferent('basic_info.license_details.issued_at', licenseIssuedAt) ||
             setIfDifferent('basic_info.license_details.valid_until', licenseExpiresAt);
 
-          if (licenseChanged) {
+          if (profileChanged) {
             try {
               await upsertSchool(nextProfile);
             } catch {
