@@ -27,19 +27,28 @@ const normalizeText = (value: unknown) => (typeof value === 'string' ? value.tri
 
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
+  const fromMeta = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = meta?.[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+    return '';
+  };
   return {
-    firstName: normalizeText(meta.firstName || meta.first_name),
-    lastName: normalizeText(meta.lastName || meta.last_name),
-    name: normalizeText(meta.name),
+    firstName: normalizeText(fromMeta('firstName', 'first_name', 'name')),
+    lastName: normalizeText(fromMeta('lastName', 'last_name')),
+    name: normalizeText(fromMeta('name', 'full_name')),
     email: normalizeText(user?.email || meta.email),
-    organization: normalizeText(meta.organization),
-    contactPhone: normalizeText(meta.contactPhone || meta.contact_phone),
-    website: normalizeText(meta.website),
-    bin: normalizeText(meta.bin),
-    iin: normalizeText(meta.iin),
-    licenseNumber: normalizeText(meta.licenseNumber || meta.license_number),
-    licenseIssuedAt: normalizeText(meta.licenseIssuedAt || meta.license_issued_at),
-    licenseExpiresAt: normalizeText(meta.licenseExpiresAt || meta.license_expires_at),
+    organization: normalizeText(fromMeta('organization', 'schoolName', 'school_name')),
+    contactPhone: normalizeText(fromMeta('contactPhone', 'contact_phone', 'phone')),
+    website: normalizeText(fromMeta('website', 'site', 'url')),
+    bin: normalizeText(fromMeta('bin')),
+    iin: normalizeText(fromMeta('iin')),
+    licenseNumber: normalizeText(fromMeta('licenseNumber', 'license_number', 'licenseNo', 'license_no')),
+    licenseIssuedAt: normalizeText(fromMeta('licenseIssuedAt', 'license_issued_at', 'licenseIssueDate', 'license_issue_date')),
+    licenseExpiresAt: normalizeText(fromMeta('licenseExpiresAt', 'license_expires_at', 'licenseExpiryDate', 'license_expiry_date', 'licenseValidUntil', 'license_valid_until')),
   };
 };
 

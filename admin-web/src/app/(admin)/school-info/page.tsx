@@ -579,6 +579,15 @@ export default function SchoolInfoPage() {
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
           const meta = session.user?.user_metadata || {};
+          const fromMeta = (...keys: string[]) => {
+            for (const key of keys) {
+              const value = (meta as any)?.[key];
+              if (typeof value === 'string' && value.trim()) {
+                return value.trim();
+              }
+            }
+            return '';
+          };
           const setIfEmpty = (path: string, value?: string) => {
             if (!value) return;
             const current = getDeep(nextProfile, path);
@@ -601,17 +610,42 @@ export default function SchoolInfoPage() {
             nextProfile.school_id = fallbackId;
           }
 
-          setIfEmpty('basic_info.display_name.ru', meta.organization);
-          setIfEmpty('basic_info.display_name.en', meta.organization);
-          setIfEmpty('basic_info.display_name.kk', meta.organization);
-          setIfEmpty('basic_info.name.ru', meta.organization);
-          setIfEmpty('basic_info.name.en', meta.organization);
-          setIfEmpty('basic_info.name.kk', meta.organization);
-          setIfEmpty('basic_info.phone', meta.contactPhone);
-          setIfEmpty('basic_info.website', meta.website);
-          setIfEmpty('basic_info.license_details.number', meta.licenseNumber);
-          setIfEmpty('basic_info.license_details.issued_at', meta.licenseIssuedAt);
-          setIfEmpty('basic_info.license_details.valid_until', meta.licenseExpiresAt);
+          const organization = fromMeta(
+            'organization',
+            'schoolName',
+            'school_name',
+            'companyName',
+            'company_name'
+          );
+          const contactPhone = fromMeta('contactPhone', 'contact_phone', 'phone');
+          const website = fromMeta('website', 'site', 'url');
+          const licenseNumber = fromMeta('licenseNumber', 'license_number', 'licenseNo', 'license_no');
+          const licenseIssuedAt = fromMeta(
+            'licenseIssuedAt',
+            'license_issued_at',
+            'licenseIssueDate',
+            'license_issue_date'
+          );
+          const licenseExpiresAt = fromMeta(
+            'licenseExpiresAt',
+            'license_expires_at',
+            'licenseExpiryDate',
+            'license_expiry_date',
+            'licenseValidUntil',
+            'license_valid_until'
+          );
+
+          setIfEmpty('basic_info.display_name.ru', organization);
+          setIfEmpty('basic_info.display_name.en', organization);
+          setIfEmpty('basic_info.display_name.kk', organization);
+          setIfEmpty('basic_info.name.ru', organization);
+          setIfEmpty('basic_info.name.en', organization);
+          setIfEmpty('basic_info.name.kk', organization);
+          setIfEmpty('basic_info.phone', contactPhone);
+          setIfEmpty('basic_info.website', website);
+          setIfEmpty('basic_info.license_details.number', licenseNumber);
+          setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
+          setIfEmpty('basic_info.license_details.valid_until', licenseExpiresAt);
 
           setProfile(nextProfile);
           setState('idle');
