@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { deleteSchool } from '@/lib/api';
+import { deleteSchool, loadSchools, upsertSchool } from '@/lib/api';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
+import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { supabase } from '@/lib/supabaseClient';
 
 type ProfileForm = {
@@ -24,6 +25,8 @@ type ProfileForm = {
 type StatusState = 'idle' | 'saving' | 'saved' | 'error' | 'deleting' | 'deleted';
 
 const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const normalizeEmail = (value: unknown) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
 
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
@@ -134,6 +137,53 @@ export default function ProfilePage() {
       return;
     }
 
+    // Sync key profile fields into school profile used by school-info/parent views.
+    try {
+      const email = normalizeEmail(form.email);
+      const schoolId = buildFallbackSchoolId(email);
+      const result = await loadSchools();
+      const existing =
+        result.data.find((item: any) => item.school_id === schoolId) ||
+        result.data.find((item: any) => normalizeEmail(item?.basic_info?.email) === email);
+      const nextProfile = existing
+        ? createEmptySchoolProfile(existing)
+        : createEmptySchoolProfile({ school_id: schoolId });
+      const targetSchoolId = existing?.school_id || schoolId;
+
+      const org = form.organization.trim();
+      if (org) {
+        nextProfile.basic_info.display_name.ru = org;
+        nextProfile.basic_info.display_name.en = org;
+        nextProfile.basic_info.display_name.kk = org;
+        nextProfile.basic_info.name.ru = org;
+        nextProfile.basic_info.name.en = org;
+        nextProfile.basic_info.name.kk = org;
+      }
+      if (form.contactPhone.trim()) {
+        nextProfile.basic_info.phone = form.contactPhone.trim();
+      }
+      if (form.email.trim()) {
+        nextProfile.basic_info.email = form.email.trim();
+      }
+      if (form.website.trim()) {
+        nextProfile.basic_info.website = form.website.trim();
+      }
+      if (form.licenseNumber.trim()) {
+        nextProfile.basic_info.license_details.number = form.licenseNumber.trim();
+      }
+      if (form.licenseIssuedAt.trim()) {
+        nextProfile.basic_info.license_details.issued_at = form.licenseIssuedAt.trim();
+      }
+      if (form.licenseExpiresAt.trim()) {
+        nextProfile.basic_info.license_details.valid_until = form.licenseExpiresAt.trim();
+      }
+
+      nextProfile.school_id = targetSchoolId;
+      await upsertSchool(nextProfile);
+    } catch {
+      // Keep profile save successful even if school profile sync fails.
+    }
+
     setStatus('saved');
     setMessage(t('saved'));
     setTimeout(() => setStatus('idle'), 1500);
@@ -146,7 +196,7 @@ export default function ProfilePage() {
     setStatus('deleting');
     setMessage('');
 
-    const schoolId = buildFallbackSchoolId(`${form.email} ${form.name || computedFullName}`.trim());
+    const schoolId = buildFallbackSchoolId(normalizeEmail(form.email));
     try {
       await deleteSchool(schoolId);
       setStatus('deleted');

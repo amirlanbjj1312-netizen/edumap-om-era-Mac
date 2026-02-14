@@ -21,6 +21,9 @@ const parseArrayValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const normalizeEmail = (value: unknown) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
+
 const LocaleContext = createContext<'ru' | 'en' | 'kk'>('ru');
 
 const LABELS: Record<string, { en: string; kk: string }> = {
@@ -567,14 +570,19 @@ export default function SchoolInfoPage() {
         return;
       }
 
-      const fallbackId = buildFallbackSchoolId(
-        `${session.user.email || ''} ${session.user.user_metadata?.full_name || ''}`.trim()
-      );
+      const sessionEmail = normalizeEmail(session.user.email || '');
+      const fallbackId = buildFallbackSchoolId(sessionEmail);
       setFallbackSchoolId(fallbackId);
 
       try {
         const result = await loadSchools();
-        const existing = result.data.find((item: any) => item.school_id === fallbackId);
+        const existing =
+          result.data.find((item: any) => item.school_id === fallbackId) ||
+          result.data.find(
+            (item: any) =>
+              normalizeEmail(item?.basic_info?.email) &&
+              normalizeEmail(item?.basic_info?.email) === sessionEmail
+          );
         const base = createEmptySchoolProfile({ school_id: fallbackId });
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
