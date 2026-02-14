@@ -1,20 +1,23 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 
 const NAV_ITEMS = [
-  { href: '/school-info', label: 'Информация о школе' },
-  { href: '/requests', label: 'Заявки' },
-  { href: '/statistics', label: 'Статистика' },
-  { href: '/profile', label: 'Профиль' },
-];
+  { href: '/school-info', labelKey: 'navSchoolInfo' },
+  { href: '/requests', labelKey: 'navRequests' },
+  { href: '/statistics', labelKey: 'navStatistics' },
+  { href: '/profile', labelKey: 'navProfile' },
+] as const;
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { locale, setLocale, t } = useAdminLocale();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
       <div className="page">
         <div className="container">
-          <div className="card">Проверяем сессию...</div>
+          <div className="card">{t('checkingSession')}</div>
         </div>
       </div>
     );
@@ -58,6 +61,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="container">
         <header className="topbar">
           <div className="brand">EDUMAP Admin</div>
+          <div className="locale-toggle" style={{ marginLeft: 'auto' }}>
+            {(['ru', 'en', 'kk'] as const).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                className={`locale-chip${locale === lang ? ' active' : ''}`}
+                onClick={() => setLocale(lang)}
+              >
+                {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <nav className="topnav">
             {NAV_ITEMS.map((item) => (
               <Link
@@ -65,16 +80,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={pathname === item.href ? 'active' : ''}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             ))}
             <button type="button" className="topnav-logout" onClick={handleSignOut}>
-              Выйти
+              {t('logout')}
             </button>
           </nav>
         </header>
         <main>{children}</main>
       </div>
     </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <AdminLocaleProvider>
+      <AdminLayoutBody>{children}</AdminLayoutBody>
+    </AdminLocaleProvider>
   );
 }

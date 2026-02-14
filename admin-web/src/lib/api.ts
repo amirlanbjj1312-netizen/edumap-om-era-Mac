@@ -36,3 +36,9 @@ export async function upsertSchool(profile: any) {
     body: safeStringify(profile),
   });
 }
+
+export async function deleteSchool(schoolId: string) {
+  return requestJson<{ data: any[] }>(`/schools/${encodeURIComponent(schoolId)}`, {
+    method: 'DELETE',
+  });
+}

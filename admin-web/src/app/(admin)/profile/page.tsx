@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { deleteSchool } from '@/lib/api';
+import { buildFallbackSchoolId } from '@/lib/auth';
+import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
 
-type ProfileView = {
+type ProfileForm = {
   firstName: string;
   lastName: string;
   name: string;
@@ -18,12 +21,11 @@ type ProfileView = {
   licenseExpiresAt: string;
 };
 
-const normalizeText = (value: unknown) => {
-  if (typeof value === 'string') return value.trim();
-  return '';
-};
+type StatusState = 'idle' | 'saving' | 'saved' | 'error' | 'deleting' | 'deleted';
 
-const toProfileView = (user: any): ProfileView => {
+const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
   return {
     firstName: normalizeText(meta.firstName || meta.first_name),
@@ -41,23 +43,44 @@ const toProfileView = (user: any): ProfileView => {
   };
 };
 
-const ReadonlyField = ({ label, value }: { label: string; value: string }) => (
+const EditableField = ({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  readOnly = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  readOnly?: boolean;
+}) => (
   <label className="field">
     <span>{label}</span>
-    <input className="input" value={value || '—'} readOnly />
+    <input
+      className="input"
+      value={value}
+      type={type}
+      readOnly={readOnly}
+      onChange={(event) => onChange(event.target.value)}
+    />
   </label>
 );
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfileView | null>(null);
+  const { t } = useAdminLocale();
+  const [form, setForm] = useState<ProfileForm | null>(null);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<StatusState>('idle');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      setProfile(toProfileView(data.session?.user));
+      setForm(toProfileForm(data.session?.user));
       setLoading(false);
     };
     load();
@@ -66,50 +89,181 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const fullName = useMemo(() => {
-    if (!profile) return '';
-    const parts = [profile.firstName, profile.lastName].filter(Boolean);
-    return parts.join(' ').trim() || profile.name || profile.organization;
-  }, [profile]);
+  const computedFullName = useMemo(() => {
+    if (!form) return '';
+    const parts = [form.firstName, form.lastName].filter(Boolean);
+    return parts.join(' ').trim() || form.name;
+  }, [form]);
+
+  const updateField = (field: keyof ProfileForm, value: string) => {
+    setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const saveProfile = async () => {
+    if (!form) return;
+    setStatus('saving');
+    setMessage('');
+    const metadata = {
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      name: (form.name || computedFullName).trim(),
+      email: form.email.trim(),
+      organization: form.organization.trim(),
+      contactPhone: form.contactPhone.trim(),
+      website: form.website.trim(),
+      bin: form.bin.trim(),
+      iin: form.iin.trim(),
+      licenseNumber: form.licenseNumber.trim(),
+      licenseIssuedAt: form.licenseIssuedAt.trim(),
+      licenseExpiresAt: form.licenseExpiresAt.trim(),
+    };
+
+    const { error } = await supabase.auth.updateUser({ data: metadata });
+    if (error) {
+      setStatus('error');
+      setMessage(error.message || t('saveError'));
+      return;
+    }
+
+    setStatus('saved');
+    setMessage(t('saved'));
+    setTimeout(() => setStatus('idle'), 1500);
+  };
+
+  const removeSchoolProfile = async () => {
+    if (!form) return;
+    if (!window.confirm(t('confirmDelete'))) return;
+
+    setStatus('deleting');
+    setMessage('');
+
+    const schoolId = buildFallbackSchoolId(`${form.email} ${form.name || computedFullName}`.trim());
+    try {
+      await deleteSchool(schoolId);
+      setStatus('deleted');
+      setMessage(t('deleted'));
+    } catch (error) {
+      setStatus('error');
+      setMessage((error as Error)?.message || t('deleteError'));
+    }
+  };
 
   if (loading) {
-    return <div className="card">Загрузка профиля...</div>;
+    return <div className="card">{t('loadingProfile')}</div>;
   }
 
-  if (!profile) {
-    return <div className="card">Профиль недоступен.</div>;
+  if (!form) {
+    return <div className="card">{t('profileUnavailable')}</div>;
   }
 
   return (
     <div className="card">
-      <h2 style={{ marginTop: 0 }}>Профиль школы</h2>
+      <h2 style={{ marginTop: 0 }}>{t('profileTitle')}</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Данные подтягиваются из регистрации и профиля аккаунта.
+        {t('profileHint')}
       </p>
 
       <div className="form-row">
-        <ReadonlyField label="ФИО" value={fullName} />
-        <ReadonlyField label="Email" value={profile.email} />
+        <EditableField
+          label={t('firstName')}
+          value={form.firstName}
+          onChange={(value) => updateField('firstName', value)}
+        />
+        <EditableField
+          label={t('lastName')}
+          value={form.lastName}
+          onChange={(value) => updateField('lastName', value)}
+        />
       </div>
 
       <div className="form-row">
-        <ReadonlyField label="Организация" value={profile.organization} />
-        <ReadonlyField label="Контактный телефон" value={profile.contactPhone} />
+        <EditableField
+          label={t('fullName')}
+          value={form.name}
+          onChange={(value) => updateField('name', value)}
+        />
+        <EditableField
+          label={t('email')}
+          value={form.email}
+          readOnly
+          onChange={() => {}}
+        />
       </div>
 
       <div className="form-row">
-        <ReadonlyField label="Сайт" value={profile.website} />
-        <ReadonlyField label="БИН" value={profile.bin} />
+        <EditableField
+          label={t('organization')}
+          value={form.organization}
+          onChange={(value) => updateField('organization', value)}
+        />
+        <EditableField
+          label={t('contactPhone')}
+          value={form.contactPhone}
+          onChange={(value) => updateField('contactPhone', value)}
+        />
       </div>
 
       <div className="form-row">
-        <ReadonlyField label="ИИН представителя" value={profile.iin} />
-        <ReadonlyField label="Номер лицензии" value={profile.licenseNumber} />
+        <EditableField
+          label={t('website')}
+          value={form.website}
+          onChange={(value) => updateField('website', value)}
+        />
+        <EditableField
+          label={t('bin')}
+          value={form.bin}
+          onChange={(value) => updateField('bin', value)}
+        />
       </div>
 
       <div className="form-row">
-        <ReadonlyField label="Дата выдачи лицензии" value={profile.licenseIssuedAt} />
-        <ReadonlyField label="Срок действия лицензии" value={profile.licenseExpiresAt} />
+        <EditableField
+          label={t('iin')}
+          value={form.iin}
+          onChange={(value) => updateField('iin', value)}
+        />
+        <EditableField
+          label={t('licenseNumber')}
+          value={form.licenseNumber}
+          onChange={(value) => updateField('licenseNumber', value)}
+        />
+      </div>
+
+      <div className="form-row">
+        <EditableField
+          label={t('licenseIssuedAt')}
+          value={form.licenseIssuedAt}
+          type="date"
+          onChange={(value) => updateField('licenseIssuedAt', value)}
+        />
+        <EditableField
+          label={t('licenseExpiresAt')}
+          value={form.licenseExpiresAt}
+          type="date"
+          onChange={(value) => updateField('licenseExpiresAt', value)}
+        />
+      </div>
+
+      <div className="actions">
+        <button
+          type="button"
+          className="primary"
+          disabled={status === 'saving' || status === 'deleting'}
+          onClick={saveProfile}
+        >
+          {status === 'saving' ? t('saving') : t('save')}
+        </button>
+        <button
+          type="button"
+          className="button secondary"
+          disabled={status === 'saving' || status === 'deleting'}
+          onClick={removeSchoolProfile}
+        >
+          {status === 'deleting' ? t('deleting') : t('deleteSchoolProfile')}
+        </button>
+        <span className={`status ${status === 'error' ? 'error' : status === 'saved' ? 'saved' : ''}`}>
+          {message}
+        </span>
       </div>
     </div>
   );

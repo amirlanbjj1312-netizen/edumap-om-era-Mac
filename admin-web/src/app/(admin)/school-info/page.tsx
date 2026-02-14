@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { loadSchools, upsertSchool } from '@/lib/api';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { buildFallbackSchoolId } from '@/lib/auth';
+import { useAdminLocale } from '@/lib/adminLocale';
 
 type SchoolProfile = ReturnType<typeof createEmptySchoolProfile>;
 
@@ -448,10 +449,10 @@ const CheckboxGroup = ({ label, options, values, onChange }: any) => {
 
 export default function SchoolInfoPage() {
   const router = useRouter();
+  const { locale: contentLocale, setLocale: setContentLocale } = useAdminLocale();
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
-  const [contentLocale, setContentLocale] = useState<'ru' | 'en' | 'kk'>('ru');
   const [activeTab, setActiveTab] = useState<
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media' | 'location'
   >('basic');
