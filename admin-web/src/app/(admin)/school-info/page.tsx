@@ -581,7 +581,9 @@ export default function SchoolInfoPage() {
           const meta = session.user?.user_metadata || {};
           const fromMeta = (...keys: string[]) => {
             for (const key of keys) {
-              const value = (meta as any)?.[key];
+              const value = key.includes('.')
+                ? key.split('.').reduce((acc, part) => (acc ? acc[part] : undefined), meta as any)
+                : (meta as any)?.[key];
               if (typeof value === 'string' && value.trim()) {
                 return value.trim();
               }
@@ -594,6 +596,13 @@ export default function SchoolInfoPage() {
             if (!current) {
               setDeep(nextProfile, path, value);
             }
+          };
+          const setIfDifferent = (path: string, value?: string) => {
+            if (!value) return false;
+            const current = String(getDeep(nextProfile, path, '') || '').trim();
+            if (current === value) return false;
+            setDeep(nextProfile, path, value);
+            return true;
           };
           const ruName = getDeep(nextProfile, 'basic_info.name.ru', '');
           const enName = getDeep(nextProfile, 'basic_info.name.en', '');
@@ -624,7 +633,9 @@ export default function SchoolInfoPage() {
             'licenseIssuedAt',
             'license_issued_at',
             'licenseIssueDate',
-            'license_issue_date'
+            'license_issue_date',
+            'license.issuedAt',
+            'license.issued_at'
           );
           const licenseExpiresAt = fromMeta(
             'licenseExpiresAt',
@@ -632,8 +643,14 @@ export default function SchoolInfoPage() {
             'licenseExpiryDate',
             'license_expiry_date',
             'licenseValidUntil',
-            'license_valid_until'
+            'license_valid_until',
+            'license.expiresAt',
+            'license.expires_at',
+            'license.validUntil',
+            'license.valid_until'
           );
+          const nestedLicenseNumber = fromMeta('license.number', 'license.licenseNumber');
+          const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
 
           setIfEmpty('basic_info.display_name.ru', organization);
           setIfEmpty('basic_info.display_name.en', organization);
@@ -643,9 +660,23 @@ export default function SchoolInfoPage() {
           setIfEmpty('basic_info.name.kk', organization);
           setIfEmpty('basic_info.phone', contactPhone);
           setIfEmpty('basic_info.website', website);
-          setIfEmpty('basic_info.license_details.number', licenseNumber);
+          setIfEmpty('basic_info.license_details.number', resolvedLicenseNumber);
           setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
           setIfEmpty('basic_info.license_details.valid_until', licenseExpiresAt);
+
+          // If metadata has fresh license values, force-sync them into school profile.
+          const licenseChanged =
+            setIfDifferent('basic_info.license_details.number', resolvedLicenseNumber) ||
+            setIfDifferent('basic_info.license_details.issued_at', licenseIssuedAt) ||
+            setIfDifferent('basic_info.license_details.valid_until', licenseExpiresAt);
+
+          if (licenseChanged) {
+            try {
+              await upsertSchool(nextProfile);
+            } catch {
+              // Keep UI working even if background sync fails.
+            }
+          }
 
           setProfile(nextProfile);
           setState('idle');
