@@ -1342,6 +1342,12 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'media.logo')}
             onChange={(value: string) => updateField('media.logo', value)}
           />
+        </FieldRow>
+        <p className="upload-choice-note">
+          <span className="or-badge">{t('ИЛИ')}</span>{' '}
+          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+        </p>
+        <FieldRow>
           <label className="field">
             <span>{t('Логотип (файл)')}</span>
             <input
@@ -1368,11 +1374,6 @@ export default function SchoolInfoPage() {
             />
           </label>
         </FieldRow>
-        <p className="upload-choice-note">
-          <span className="or-badge">{t('ИЛИ')}</span>{' '}
-          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-        </p>
-        <p className="logo-or-inline">{t('ИЛИ')}</p>
         <div className="media-divider" />
         <FieldRow>
           <Input
