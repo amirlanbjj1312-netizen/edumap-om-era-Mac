@@ -80,6 +80,13 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Примечание по питанию': { en: 'Meals notes', kk: 'Тамақтану туралы ескертпе' },
   'Иностранные преподаватели': { en: 'Foreign teachers', kk: 'Шетелдік мұғалімдер' },
   Комментарий: { en: 'Comment', kk: 'Түсініктеме' },
+  'Наш преподавательский состав': { en: 'Our teaching staff', kk: 'Біздің педагогикалық құрам' },
+  'Фото преподавателя URL': { en: 'Teacher photo URL', kk: 'Мұғалім фотосы URL' },
+  'Фото преподавателя (файл)': { en: 'Teacher photo (file)', kk: 'Мұғалім фотосы (файл)' },
+  'Описание / опыт преподавателя': {
+    en: 'Teacher description / experience',
+    kk: 'Мұғалімнің сипаттамасы / тәжірибесі',
+  },
   Транспорт: { en: 'Transport', kk: 'Көлік' },
   Инклюзив: { en: 'Inclusive', kk: 'Инклюзивті' },
   Продленка: { en: 'After-school', kk: 'Ұзартылған топ' },
@@ -1233,28 +1240,55 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <TextArea
-            label="Примечание по питанию"
-            value={getDeep(profile, localePath('services.meals_notes'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.meals_notes'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
           <Toggle
             label="Иностранные преподаватели"
             checked={Boolean(getDeep(profile, 'services.foreign_teachers'))}
             onChange={(value: boolean) => updateField('services.foreign_teachers', value)}
           />
-          <TextArea
-            label="Комментарий"
-            value={getDeep(profile, localePath('services.foreign_teachers_notes'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.foreign_teachers_notes'), value)
-            }
-          />
         </FieldRow>
+        <Section title="Наш преподавательский состав">
+          <FieldRow>
+            <Input
+              label="Фото преподавателя URL"
+              value={getDeep(profile, 'services.teaching_staff.photo')}
+              onChange={(value: string) => updateField('services.teaching_staff.photo', value)}
+            />
+            <label className="field">
+              <span>{t('Фото преподавателя (файл)')}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    setMediaMessage('');
+                    const urls = await uploadMediaFiles([file], 'teachers');
+                    if (urls[0]) {
+                      applyAndSave('services.teaching_staff.photo', urls[0]);
+                    }
+                  } catch (error: any) {
+                    setMediaMessage(
+                      error?.message ||
+                        'Не удалось загрузить фото преподавателя. Проверьте bucket в Supabase.'
+                    );
+                  } finally {
+                    event.currentTarget.value = '';
+                  }
+                }}
+              />
+            </label>
+          </FieldRow>
+          <FieldRow>
+            <TextArea
+              label="Описание / опыт преподавателя"
+              value={getDeep(profile, localePath('services.teaching_staff.description'))}
+              onChange={(value: string) =>
+                updateField(localePath('services.teaching_staff.description'), value)
+              }
+            />
+          </FieldRow>
+        </Section>
         <FieldRow>
           <Toggle
             label="Транспорт"

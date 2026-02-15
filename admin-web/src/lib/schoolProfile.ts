@@ -66,6 +66,10 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       meals_notes: { ru: '', en: '', kk: '' },
       foreign_teachers: false,
       foreign_teachers_notes: { ru: '', en: '', kk: '' },
+      teaching_staff: {
+        photo: '',
+        description: { ru: '', en: '', kk: '' },
+      },
       transport: false,
       inclusive_education: false,
       specialists: '',
