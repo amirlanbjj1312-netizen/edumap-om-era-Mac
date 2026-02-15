@@ -1367,6 +1367,13 @@ export default function SchoolInfoPage() {
               }}
             />
           </label>
+        </FieldRow>
+        <p className="upload-choice-note">
+          <span className="or-badge">{t('ИЛИ')}</span>{' '}
+          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+        </p>
+        <div className="media-divider" />
+        <FieldRow>
           <Input
             label="Фото (URL, через запятую)"
             value={getDeep(profile, 'media.photos')}
@@ -1409,6 +1416,7 @@ export default function SchoolInfoPage() {
             />
           </label>
         </FieldRow>
+        <div className="media-divider" />
         <FieldRow>
           <Input
             label="Видео (URL, через запятую)"
@@ -1458,6 +1466,7 @@ export default function SchoolInfoPage() {
           </label>
         </FieldRow>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
+        <div className="media-divider" />
         <FieldRow>
           <Input
             label="Instagram"

@@ -331,6 +331,11 @@ a {
   letter-spacing: 0.04em;
 }
 
+.media-divider {
+  border-top: 1px solid rgba(120, 106, 255, 0.2);
+  margin: 10px 0 16px;
+}
+
 .locale-toggle {
   display: flex;
   justify-content: flex-end;
