@@ -46,8 +46,10 @@ a {
 }
 
 .container {
-  max-width: 1800px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
+  padding: 0 24px;
 }
 
 .card {
@@ -257,9 +259,10 @@ a {
 
 .tabs-layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+  width: 100%;
 }
 
 .side-tabs {
