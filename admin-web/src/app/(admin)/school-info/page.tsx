@@ -107,7 +107,14 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Фото (файлы)': { en: 'Photos (files)', kk: 'Фотолар (файл)' },
   'Видео (URL, через запятую)': { en: 'Videos (URLs)', kk: 'Бейнелер (URL)' },
   'Видео (файлы)': { en: 'Videos (files)', kk: 'Бейнелер (файл)' },
-  'Сертификаты (URL)': { en: 'Certificates (URL)', kk: 'Сертификаттар (URL)' },
+  'Аккредитация (URL, через запятую)': {
+    en: 'Accreditation (URLs)',
+    kk: 'Аккредитация (URL)',
+  },
+  'Аккредитация (файлы)': {
+    en: 'Accreditation (files)',
+    kk: 'Аккредитация (файлдар)',
+  },
   Instagram: { en: 'Instagram', kk: 'Instagram' },
   TikTok: { en: 'TikTok', kk: 'TikTok' },
   YouTube: { en: 'YouTube', kk: 'YouTube' },
@@ -1425,11 +1432,6 @@ export default function SchoolInfoPage() {
             value={getDeep(profile, 'media.videos')}
             onChange={(value: string) => updateField('media.videos', value)}
           />
-          <Input
-            label="Сертификаты (URL)"
-            value={getDeep(profile, 'media.certificates')}
-            onChange={(value: string) => updateField('media.certificates', value)}
-          />
         </FieldRow>
         <p className="upload-choice-note">
           <span className="or-badge">{t('ИЛИ')}</span>{' '}
@@ -1459,6 +1461,51 @@ export default function SchoolInfoPage() {
                   setMediaMessage(
                     error?.message ||
                       'Не удалось загрузить видео. Проверьте bucket в Supabase.'
+                  );
+                } finally {
+                  event.currentTarget.value = '';
+                }
+              }}
+            />
+          </label>
+        </FieldRow>
+        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
+        <div className="media-divider" />
+        <FieldRow>
+          <Input
+            label="Аккредитация (URL, через запятую)"
+            value={getDeep(profile, 'media.certificates')}
+            onChange={(value: string) => updateField('media.certificates', value)}
+          />
+        </FieldRow>
+        <p className="upload-choice-note">
+          <span className="or-badge">{t('ИЛИ')}</span>{' '}
+          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+        </p>
+        <FieldRow>
+          <label className="field">
+            <span>{t('Аккредитация (файлы)')}</span>
+            <input
+              type="file"
+              accept="image/*,.pdf,.doc,.docx"
+              multiple
+              onChange={async (event) => {
+                const files = Array.from(event.target.files || []);
+                if (!files.length) return;
+                try {
+                  setMediaMessage('');
+                  const urls = await uploadMediaFiles(files, 'certificates');
+                  if (profile) {
+                    const existing = normalizeListValue(
+                      getDeep(profile, 'media.certificates', '')
+                    );
+                    const next = [...existing, ...urls].filter(Boolean);
+                    applyAndSave('media.certificates', next.join(', '));
+                  }
+                } catch (error: any) {
+                  setMediaMessage(
+                    error?.message ||
+                      'Не удалось загрузить аккредитацию. Проверьте bucket в Supabase.'
                   );
                 } finally {
                   event.currentTarget.value = '';
