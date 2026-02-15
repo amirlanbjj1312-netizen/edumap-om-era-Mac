@@ -1075,13 +1075,6 @@ export default function SchoolInfoPage() {
             }
           />
         </FieldRow>
-        <FieldRow>
-          <Input
-            label="Программы"
-            value={getDeep(profile, localePath('education.programs'))}
-            onChange={(value: string) => updateField(localePath('education.programs'), value)}
-          />
-        </FieldRow>
         <CheckboxGroup
           label="Учебные планы (национальные)"
           options={CURRICULA_GROUPS.national}
