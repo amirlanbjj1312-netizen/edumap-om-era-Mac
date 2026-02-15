@@ -332,8 +332,18 @@ a {
 }
 
 .media-divider {
-  border-top: 1px solid rgba(120, 106, 255, 0.2);
+  border-top: 2px solid var(--accent);
   margin: 10px 0 16px;
+  opacity: 0.55;
+}
+
+.logo-or-inline {
+  margin: -2px 0 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .locale-toggle {

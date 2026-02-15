@@ -1372,6 +1372,7 @@ export default function SchoolInfoPage() {
           <span className="or-badge">{t('ИЛИ')}</span>{' '}
           {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
         </p>
+        <p className="logo-or-inline">{t('ИЛИ')}</p>
         <div className="media-divider" />
         <FieldRow>
           <Input
