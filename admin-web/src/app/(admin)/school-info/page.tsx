@@ -87,6 +87,11 @@ const LABELS: Record<string, { en: string; kk: string }> = {
     en: 'Teacher description / experience',
     kk: 'Мұғалімнің сипаттамасы / тәжірибесі',
   },
+  ИЛИ: { en: 'OR', kk: 'НЕМЕСЕ' },
+  'Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.': {
+    en: 'You can provide a URL or upload a file. If both are set, file has priority.',
+    kk: 'URL көрсетуге немесе файл жүктеуге болады. Екеуі де толса, файлға басымдық беріледі.',
+  },
   Транспорт: { en: 'Transport', kk: 'Көлік' },
   Инклюзив: { en: 'Inclusive', kk: 'Инклюзивті' },
   Продленка: { en: 'After-school', kk: 'Ұзартылған топ' },
@@ -1294,6 +1299,10 @@ export default function SchoolInfoPage() {
               />
             </label>
           </FieldRow>
+          <p className="upload-choice-note">
+            <span className="or-badge">{t('ИЛИ')}</span>{' '}
+            {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+          </p>
           <FieldRow>
             <TextArea
               label="Описание / опыт преподавателя"
@@ -1364,6 +1373,10 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.photos', value)}
           />
         </FieldRow>
+        <p className="upload-choice-note">
+          <span className="or-badge">{t('ИЛИ')}</span>{' '}
+          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+        </p>
         <FieldRow>
           <label className="field">
             <span>{t('Фото (файлы)')}</span>
@@ -1408,6 +1421,10 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.certificates', value)}
           />
         </FieldRow>
+        <p className="upload-choice-note">
+          <span className="or-badge">{t('ИЛИ')}</span>{' '}
+          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+        </p>
         <FieldRow>
           <label className="field">
             <span>{t('Видео (файлы)')}</span>
