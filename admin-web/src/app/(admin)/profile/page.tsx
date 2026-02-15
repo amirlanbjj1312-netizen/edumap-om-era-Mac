@@ -142,9 +142,10 @@ export default function ProfilePage() {
       const email = normalizeEmail(form.email);
       const schoolId = buildFallbackSchoolId(email);
       const result = await loadSchools();
-      const existing =
-        result.data.find((item: any) => item.school_id === schoolId) ||
-        result.data.find((item: any) => normalizeEmail(item?.basic_info?.email) === email);
+      const existing = result.data.find((item: any) => {
+        const itemEmail = normalizeEmail(item?.basic_info?.email);
+        return item?.school_id === schoolId || (itemEmail && itemEmail === email);
+      });
       const nextProfile = existing
         ? createEmptySchoolProfile(existing)
         : createEmptySchoolProfile({ school_id: schoolId });

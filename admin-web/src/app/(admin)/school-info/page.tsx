@@ -583,13 +583,10 @@ export default function SchoolInfoPage() {
 
       try {
         const result = await loadSchools();
-        const existing =
-          result.data.find((item: any) => item.school_id === fallbackId) ||
-          result.data.find(
-            (item: any) =>
-              normalizeEmail(item?.basic_info?.email) &&
-              normalizeEmail(item?.basic_info?.email) === sessionEmail
-          );
+        const existing = result.data.find((item: any) => {
+          const itemEmail = normalizeEmail(item?.basic_info?.email);
+          return item?.school_id === fallbackId || (itemEmail && itemEmail === sessionEmail);
+        });
         const base = createEmptySchoolProfile({ school_id: fallbackId });
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
