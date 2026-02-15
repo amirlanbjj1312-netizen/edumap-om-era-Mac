@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { locale, setLocale, t } = useAdminLocale();
+  const { t } = useAdminLocale();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -61,18 +61,6 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
       <div className="container">
         <header className="topbar">
           <div className="brand">EDUMAP Admin</div>
-          <div className="locale-toggle" style={{ marginLeft: 'auto' }}>
-            {(['ru', 'en', 'kk'] as const).map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                className={`locale-chip${locale === lang ? ' active' : ''}`}
-                onClick={() => setLocale(lang)}
-              >
-                {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
-              </button>
-            ))}
-          </div>
           <nav className="topnav">
             {NAV_ITEMS.map((item) => (
               <Link

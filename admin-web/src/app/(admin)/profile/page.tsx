@@ -81,7 +81,7 @@ const EditableField = ({
 );
 
 export default function ProfilePage() {
-  const { t } = useAdminLocale();
+  const { locale, setLocale, t } = useAdminLocale();
   const [form, setForm] = useState<ProfileForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<StatusState>('idle');
@@ -217,6 +217,18 @@ export default function ProfilePage() {
 
   return (
     <div className="card">
+      <div className="locale-toggle" style={{ marginBottom: 8 }}>
+        {(['ru', 'en', 'kk'] as const).map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            className={`locale-chip${locale === lang ? ' active' : ''}`}
+            onClick={() => setLocale(lang)}
+          >
+            {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
+          </button>
+        ))}
+      </div>
       <h2 style={{ marginTop: 0 }}>{t('profileTitle')}</h2>
       <p className="muted" style={{ marginTop: 0 }}>
         {t('profileHint')}
