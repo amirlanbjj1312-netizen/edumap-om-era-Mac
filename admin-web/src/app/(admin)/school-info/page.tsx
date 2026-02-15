@@ -522,10 +522,14 @@ export default function SchoolInfoPage() {
 
   const uploadMediaFiles = async (files: File[], folder: string) => {
     if (!files.length) return [];
-    const bucket = process.env.NEXT_PUBLIC_MEDIA_BUCKET || 'school-media';
+    const configuredBucket = (process.env.NEXT_PUBLIC_MEDIA_BUCKET || '').trim();
+    const buckets = Array.from(
+      new Set([configuredBucket, 'school media', 'school-media'].filter(Boolean))
+    );
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const baseId = schoolId || 'school';
     const results: string[] = [];
+    let lastError: any = null;
 
     for (const file of files) {
       const safeName = file.name.replace(/\s+/g, '-').toLowerCase();
@@ -533,23 +537,37 @@ export default function SchoolInfoPage() {
       const baseName = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
       const ext = dotIndex > 0 ? safeName.slice(dotIndex + 1) : 'bin';
       const path = `schools/${baseId}/${folder}/${Date.now()}-${baseName}.${ext}`;
-      const { error } = await supabase.storage.from(bucket).upload(path, file, {
-        upsert: true,
-        contentType: file.type || undefined,
-      });
-      if (error) {
-        throw error;
+
+      let uploaded = false;
+      for (const bucket of buckets) {
+        const { error } = await supabase.storage.from(bucket).upload(path, file, {
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+        if (error) {
+          lastError = error;
+          if (/bucket not found/i.test(error.message || '')) {
+            continue;
+          }
+          throw error;
+        }
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        const publicUrl =
+          data?.publicUrl ||
+          (supabaseUrl
+            ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(
+                bucket
+              )}/${path}`
+            : '');
+        if (publicUrl) {
+          results.push(publicUrl);
+        }
+        uploaded = true;
+        break;
       }
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      const publicUrl =
-        data?.publicUrl ||
-        (supabaseUrl
-          ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(
-              bucket
-            )}/${path}`
-          : '');
-      if (publicUrl) {
-        results.push(publicUrl);
+
+      if (!uploaded) {
+        throw lastError || new Error('Bucket not found');
       }
     }
     return results;
