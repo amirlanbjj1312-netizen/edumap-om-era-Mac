@@ -1303,6 +1303,7 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.after_school', value)}
           />
         </FieldRow>
+        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
             </Section>
           )}
 
