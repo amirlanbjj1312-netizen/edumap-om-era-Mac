@@ -8,10 +8,25 @@ const {
 const buildSchoolsRouter = () => {
   const router = express.Router();
 
+  const isTrue = (value) =>
+    value === true ||
+    value === 'true' ||
+    value === '1' ||
+    value === 1;
+
   router.get('/', async (req, res, next) => {
     try {
       const data = await readStore();
-      res.json({ data });
+      const includeInactive = isTrue(req.query.include_inactive);
+      const includeHidden = isTrue(req.query.include_hidden);
+      const filtered = data.filter((item) => {
+        const isActive = item?.system?.is_active !== false;
+        const isVisible = item?.system?.hidden_from_users !== true;
+        if (!includeInactive && !isActive) return false;
+        if (!includeHidden && !isVisible) return false;
+        return true;
+      });
+      res.json({ data: filtered });
     } catch (error) {
       next(error);
     }

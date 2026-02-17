@@ -37,6 +37,46 @@ const buildAuthRouter = (config) => {
     return null;
   };
 
+  const getUserRole = (user) =>
+    user?.user_metadata?.role || user?.app_metadata?.role || '';
+
+  const resolveUserByEmail = async (email) => {
+    const target = String(email || '').trim().toLowerCase();
+    if (!target) return null;
+    let page = 1;
+    while (page <= 10) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (error) throw error;
+      const users = data?.users || [];
+      const found = users.find(
+        (item) => String(item.email || '').trim().toLowerCase() === target
+      );
+      if (found) return found;
+      if (users.length < 200) break;
+      page += 1;
+    }
+    return null;
+  };
+
+  const getActor = async (req) => {
+    const token = getBearerToken(req);
+    if (!token) {
+      const error = new Error('Authorization token is required');
+      error.status = 401;
+      throw error;
+    }
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData?.user) {
+      const error = new Error('Invalid token');
+      error.status = 401;
+      throw error;
+    }
+    return userData.user;
+  };
+
   router.post('/send-code', async (req, res, next) => {
     try {
       const { email } = req.body || {};
@@ -111,6 +151,86 @@ const buildAuthRouter = (config) => {
       }
 
       return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/users', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      if (getUserRole(actor) !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can manage roles' });
+      }
+
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 500,
+      });
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      const users = (data?.users || []).map((user) => ({
+        id: user.id,
+        email: user.email || '',
+        createdAt: user.created_at || '',
+        role: getUserRole(user) || 'user',
+      }));
+      return res.json({ data: users });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/set-role', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      if (getUserRole(actor) !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can manage roles' });
+      }
+
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const role = String(req.body?.role || '').trim();
+      const allowedRoles = ['moderator', 'superadmin', 'admin', 'user'];
+      if (!email) {
+        return res.status(400).json({ error: 'Field "email" is required' });
+      }
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ error: 'Invalid role value' });
+      }
+
+      const user = await resolveUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const nextUserMetadata = { ...(user.user_metadata || {}), role };
+      const nextAppMetadata = { ...(user.app_metadata || {}), role };
+
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        user_metadata: nextUserMetadata,
+        app_metadata: nextAppMetadata,
+      });
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      return res.json({
+        data: {
+          id: data?.user?.id || user.id,
+          email,
+          role,
+        },
+      });
     } catch (error) {
       next(error);
     }
