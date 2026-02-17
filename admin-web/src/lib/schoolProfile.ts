@@ -135,6 +135,9 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       rating: 0,
       updated_at: '',
       created_at: '',
+      is_active: true,
+      hidden_from_users: false,
+      audit_log: [],
     },
   };
 

@@ -27,7 +27,7 @@ const safeStringify = (value: any) => {
 };
 
 export async function loadSchools() {
-  return requestJson<{ data: any[] }>('/schools');
+  return requestJson<{ data: any[] }>('/schools?include_inactive=1&include_hidden=1');
 }
 
 export async function upsertSchool(profile: any) {
@@ -41,4 +41,35 @@ export async function deleteSchool(schoolId: string) {
   return requestJson<{ data: any[] }>(`/schools/${encodeURIComponent(schoolId)}`, {
     method: 'DELETE',
   });
+}
+
+type AuthRequestOptions = RequestInit & { token: string };
+
+async function authRequestJson<T>(path: string, options: AuthRequestOptions): Promise<T> {
+  const { token, headers, ...rest } = options;
+  return requestJson<T>(path, {
+    ...rest,
+    headers: {
+      ...(headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function loadAuthUsers(token: string) {
+  return authRequestJson<{ data: Array<{ id: string; email: string; role: string; createdAt: string }> }>(
+    '/auth/users',
+    { token }
+  );
+}
+
+export async function setUserRole(token: string, email: string, role: string) {
+  return authRequestJson<{ data: { id: string; email: string; role: string } }>(
+    '/auth/set-role',
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }
+  );
 }

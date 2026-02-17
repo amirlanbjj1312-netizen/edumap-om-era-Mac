@@ -23,6 +23,7 @@ const parseArrayValue = (value: string) =>
 
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
+const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
 
 const LocaleContext = createContext<'ru' | 'en' | 'kk'>('ru');
 
@@ -609,17 +610,26 @@ export default function SchoolInfoPage() {
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
-      setFallbackSchoolId(fallbackId);
+      const selectedSchoolId =
+        typeof window !== 'undefined'
+          ? localStorage.getItem(SELECTED_SCHOOL_STORAGE_KEY) || ''
+          : '';
+      const targetId = selectedSchoolId || fallbackId;
+      setFallbackSchoolId(targetId);
 
       try {
         const result = await loadSchools();
-        const existing = result.data.find((item: any) => {
+        const existing =
+          result.data.find((item: any) => item?.school_id === selectedSchoolId) ||
+          result.data.find((item: any) => {
           const itemEmail = normalizeEmail(item?.basic_info?.email);
           return item?.school_id === fallbackId || (itemEmail && itemEmail === sessionEmail);
         });
-        const base = createEmptySchoolProfile({ school_id: fallbackId });
+        const base = createEmptySchoolProfile({ school_id: targetId });
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
+          const isCustomSchoolContext =
+            Boolean(selectedSchoolId) && selectedSchoolId !== fallbackId;
           const meta = session.user?.user_metadata || {};
           const fromMeta = (...keys: string[]) => {
             for (const key of keys) {
@@ -661,74 +671,90 @@ export default function SchoolInfoPage() {
             nextProfile.school_id = fallbackId;
           }
 
-          const organization = fromMeta(
-            'organization',
-            'schoolName',
-            'school_name',
-            'companyName',
-            'company_name'
-          );
-          const contactPhone = fromMeta('contactPhone', 'contact_phone', 'phone');
-          const website = fromMeta('website', 'site', 'url');
-          const licenseNumber = fromMeta('licenseNumber', 'license_number', 'licenseNo', 'license_no');
-          const licenseIssuedAt = fromMeta(
-            'licenseIssuedAt',
-            'license_issued_at',
-            'licenseIssueDate',
-            'license_issue_date',
-            'license.issuedAt',
-            'license.issued_at'
-          );
-          const licenseExpiresAt = fromMeta(
-            'licenseExpiresAt',
-            'license_expires_at',
-            'licenseExpiryDate',
-            'license_expiry_date',
-            'licenseValidUntil',
-            'license_valid_until',
-            'license.expiresAt',
-            'license.expires_at',
-            'license.validUntil',
-            'license.valid_until'
-          );
-          const nestedLicenseNumber = fromMeta('license.number', 'license.licenseNumber');
-          const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
+          if (!isCustomSchoolContext) {
+            const organization = fromMeta(
+              'organization',
+              'schoolName',
+              'school_name',
+              'companyName',
+              'company_name'
+            );
+            const contactPhone = fromMeta('contactPhone', 'contact_phone', 'phone');
+            const website = fromMeta('website', 'site', 'url');
+            const licenseNumber = fromMeta(
+              'licenseNumber',
+              'license_number',
+              'licenseNo',
+              'license_no'
+            );
+            const licenseIssuedAt = fromMeta(
+              'licenseIssuedAt',
+              'license_issued_at',
+              'licenseIssueDate',
+              'license_issue_date',
+              'license.issuedAt',
+              'license.issued_at'
+            );
+            const licenseExpiresAt = fromMeta(
+              'licenseExpiresAt',
+              'license_expires_at',
+              'licenseExpiryDate',
+              'license_expiry_date',
+              'licenseValidUntil',
+              'license_valid_until',
+              'license.expiresAt',
+              'license.expires_at',
+              'license.validUntil',
+              'license.valid_until'
+            );
+            const nestedLicenseNumber = fromMeta(
+              'license.number',
+              'license.licenseNumber'
+            );
+            const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
 
-          const email = fromMeta('email') || session.user?.email || '';
+            const email = fromMeta('email') || session.user?.email || '';
 
-          setIfEmpty('basic_info.display_name.ru', organization);
-          setIfEmpty('basic_info.display_name.en', organization);
-          setIfEmpty('basic_info.display_name.kk', organization);
-          setIfEmpty('basic_info.name.ru', organization);
-          setIfEmpty('basic_info.name.en', organization);
-          setIfEmpty('basic_info.name.kk', organization);
-          setIfEmpty('basic_info.phone', contactPhone);
-          setIfEmpty('basic_info.email', email);
-          setIfEmpty('basic_info.website', website);
-          setIfEmpty('basic_info.license_details.number', resolvedLicenseNumber);
-          setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
-          setIfEmpty('basic_info.license_details.valid_until', licenseExpiresAt);
+            setIfEmpty('basic_info.display_name.ru', organization);
+            setIfEmpty('basic_info.display_name.en', organization);
+            setIfEmpty('basic_info.display_name.kk', organization);
+            setIfEmpty('basic_info.name.ru', organization);
+            setIfEmpty('basic_info.name.en', organization);
+            setIfEmpty('basic_info.name.kk', organization);
+            setIfEmpty('basic_info.phone', contactPhone);
+            setIfEmpty('basic_info.email', email);
+            setIfEmpty('basic_info.website', website);
+            setIfEmpty('basic_info.license_details.number', resolvedLicenseNumber);
+            setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
+            setIfEmpty('basic_info.license_details.valid_until', licenseExpiresAt);
 
-          // Keep web admin in sync with registration metadata.
-          const profileChanged =
-            setIfDifferent('basic_info.display_name.ru', organization) ||
-            setIfDifferent('basic_info.display_name.en', organization) ||
-            setIfDifferent('basic_info.display_name.kk', organization) ||
-            setIfDifferent('basic_info.name.ru', organization) ||
-            setIfDifferent('basic_info.name.en', organization) ||
-            setIfDifferent('basic_info.name.kk', organization) ||
-            setIfDifferent('basic_info.phone', contactPhone) ||
-            setIfDifferent('basic_info.email', email) ||
-            setIfDifferent('basic_info.website', website) ||
-            setIfDifferent('basic_info.license_details.number', resolvedLicenseNumber) ||
-            setIfDifferent('basic_info.license_details.issued_at', licenseIssuedAt) ||
-            setIfDifferent('basic_info.license_details.valid_until', licenseExpiresAt);
+            // Keep web admin in sync with registration metadata.
+            const profileChanged =
+              setIfDifferent('basic_info.display_name.ru', organization) ||
+              setIfDifferent('basic_info.display_name.en', organization) ||
+              setIfDifferent('basic_info.display_name.kk', organization) ||
+              setIfDifferent('basic_info.name.ru', organization) ||
+              setIfDifferent('basic_info.name.en', organization) ||
+              setIfDifferent('basic_info.name.kk', organization) ||
+              setIfDifferent('basic_info.phone', contactPhone) ||
+              setIfDifferent('basic_info.email', email) ||
+              setIfDifferent('basic_info.website', website) ||
+              setIfDifferent(
+                'basic_info.license_details.number',
+                resolvedLicenseNumber
+              ) ||
+              setIfDifferent('basic_info.license_details.issued_at', licenseIssuedAt) ||
+              setIfDifferent(
+                'basic_info.license_details.valid_until',
+                licenseExpiresAt
+              );
 
-          if (profileChanged) {
-            try {
-              await upsertSchool(nextProfile);
-            } catch {
-              // Keep UI working even if background sync fails.
+            if (profileChanged) {
+              try {
+                await upsertSchool(nextProfile);
+              } catch {
+                // Keep UI working even if background sync fails.
+              }
             }
           }
 
@@ -992,13 +1018,6 @@ export default function SchoolInfoPage() {
                     }
                   />
                 </FieldRow>
-                <Input
-                  label="Аккредитация"
-                  value={getDeep(profile, 'basic_info.license_accreditation')}
-                  onChange={(value: string) =>
-                    updateField('basic_info.license_accreditation', value)
-                  }
-                />
               </Section>
 
               {showFinance && (

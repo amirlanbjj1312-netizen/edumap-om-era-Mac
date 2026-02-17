@@ -34,6 +34,16 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Profile',
     kk: 'Профиль',
   },
+  navUsers: {
+    ru: 'Пользователи',
+    en: 'Users',
+    kk: 'Пайдаланушылар',
+  },
+  navSchools: {
+    ru: 'Школы',
+    en: 'Schools',
+    kk: 'Мектептер',
+  },
   logout: {
     ru: 'Выйти',
     en: 'Sign out',
@@ -80,9 +90,9 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Сақтау қатесі.',
   },
   deleteSchoolProfile: {
-    ru: 'Удалить профиль школы',
-    en: 'Delete school profile',
-    kk: 'Мектеп профилін жою',
+    ru: 'Деактивировать школу',
+    en: 'Deactivate school',
+    kk: 'Мектепті өшіру',
   },
   deleting: {
     ru: 'Удаляем...',
@@ -90,9 +100,9 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Жойылуда...',
   },
   deleted: {
-    ru: 'Профиль школы удален.',
-    en: 'School profile deleted.',
-    kk: 'Мектеп профилі жойылды.',
+    ru: 'Школа деактивирована.',
+    en: 'School deactivated.',
+    kk: 'Мектеп өшірілді.',
   },
   deleteError: {
     ru: 'Не удалось удалить профиль школы.',
@@ -100,9 +110,9 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Мектеп профилін жою мүмкін болмады.',
   },
   confirmDelete: {
-    ru: 'Удалить профиль школы? Действие необратимо.',
-    en: 'Delete school profile? This cannot be undone.',
-    kk: 'Мектеп профилін жоясыз ба? Бұл әрекет қайтарылмайды.',
+    ru: 'Деактивировать школу? Ее можно будет снова активировать в разделе "Школы".',
+    en: 'Deactivate school? You can activate it again in "Schools".',
+    kk: 'Мектепті өшіру керек пе? Кейін "Мектептер" бөлімінде қайта іске қоса аласыз.',
   },
   fullName: {
     ru: 'ФИО',
@@ -165,14 +175,169 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Лицензия мерзімі',
   },
   requestsTitle: {
-    ru: 'Запросы',
+    ru: 'Заявки',
     en: 'Requests',
     kk: 'Өтінімдер',
   },
-  requestsStub: {
-    ru: 'Список заявок появится здесь.',
-    en: 'Requests list will appear here.',
-    kk: 'Өтінімдер тізімі осында көрсетіледі.',
+  requestsRefresh: {
+    ru: 'Обновить',
+    en: 'Refresh',
+    kk: 'Жаңарту',
+  },
+  requestsLoading: {
+    ru: 'Загрузка заявок...',
+    en: 'Loading requests...',
+    kk: 'Өтінімдер жүктелуде...',
+  },
+  requestsEmpty: {
+    ru: 'Пока нет заявок.',
+    en: 'No requests yet.',
+    kk: 'Әзірге өтінімдер жоқ.',
+  },
+  requestsPhone: {
+    ru: 'Телефон:',
+    en: 'Phone:',
+    kk: 'Телефон:',
+  },
+  requestsEmail: {
+    ru: 'Email:',
+    en: 'Email:',
+    kk: 'Email:',
+  },
+  requestsComment: {
+    ru: 'Комментарий:',
+    en: 'Comment:',
+    kk: 'Пікір:',
+  },
+  requestsSchool: {
+    ru: 'Школа:',
+    en: 'School:',
+    kk: 'Мектеп:',
+  },
+  schoolsTitle: {
+    ru: 'Управление школами',
+    en: 'Schools management',
+    kk: 'Мектептерді басқару',
+  },
+  schoolsHint: {
+    ru: 'Модератор может деактивировать школу и скрывать ее из пользовательского кабинета.',
+    en: 'Moderator can deactivate schools and hide them from user cabinet.',
+    kk: 'Модератор мектепті өшіріп, пайдаланушы кабинетінен жасыра алады.',
+  },
+  schoolsRefresh: {
+    ru: 'Обновить',
+    en: 'Refresh',
+    kk: 'Жаңарту',
+  },
+  schoolsLoading: {
+    ru: 'Загрузка школ...',
+    en: 'Loading schools...',
+    kk: 'Мектептер жүктелуде...',
+  },
+  schoolsEmpty: {
+    ru: 'Школы не найдены.',
+    en: 'No schools found.',
+    kk: 'Мектептер табылмады.',
+  },
+  schoolsSearch: {
+    ru: 'Поиск по названию, email, school_id',
+    en: 'Search by name, email, school_id',
+    kk: 'Атауы, email, school_id бойынша іздеу',
+  },
+  schoolsDeactivate: {
+    ru: 'Деактивировать',
+    en: 'Deactivate',
+    kk: 'Өшіру',
+  },
+  schoolsActivate: {
+    ru: 'Активировать',
+    en: 'Activate',
+    kk: 'Іске қосу',
+  },
+  schoolsHide: {
+    ru: 'Скрыть из ЛК',
+    en: 'Hide from LK',
+    kk: 'ЛК-дан жасыру',
+  },
+  schoolsShow: {
+    ru: 'Показать в ЛК',
+    en: 'Show in LK',
+    kk: 'ЛК-да көрсету',
+  },
+  schoolsEdit: {
+    ru: 'Редактировать',
+    en: 'Edit',
+    kk: 'Өңдеу',
+  },
+  schoolsStatusActive: {
+    ru: 'Активна',
+    en: 'Active',
+    kk: 'Белсенді',
+  },
+  schoolsStatusInactive: {
+    ru: 'Деактивирована',
+    en: 'Inactive',
+    kk: 'Өшірілген',
+  },
+  schoolsStatusHidden: {
+    ru: 'Скрыта из ЛК',
+    en: 'Hidden from LK',
+    kk: 'ЛК-дан жасырылған',
+  },
+  schoolsStatusVisible: {
+    ru: 'Видна в ЛК',
+    en: 'Visible in LK',
+    kk: 'ЛК-да көрінеді',
+  },
+  schoolsAudit: {
+    ru: 'История действий',
+    en: 'Audit log',
+    kk: 'Әрекет журналы',
+  },
+  usersTitle: {
+    ru: 'Пользователи и роли',
+    en: 'Users and roles',
+    kk: 'Пайдаланушылар және рөлдер',
+  },
+  usersHint: {
+    ru: 'Только superadmin может назначать роли.',
+    en: 'Only superadmin can assign roles.',
+    kk: 'Тек superadmin рөл тағайындай алады.',
+  },
+  usersEmail: {
+    ru: 'Email',
+    en: 'Email',
+    kk: 'Email',
+  },
+  usersRole: {
+    ru: 'Роль',
+    en: 'Role',
+    kk: 'Рөл',
+  },
+  usersSetRole: {
+    ru: 'Назначить роль',
+    en: 'Set role',
+    kk: 'Рөл беру',
+  },
+  usersLoading: {
+    ru: 'Загрузка пользователей...',
+    en: 'Loading users...',
+    kk: 'Пайдаланушылар жүктелуде...',
+  },
+  usersForbidden: {
+    ru: 'Доступ только для superadmin.',
+    en: 'Access only for superadmin.',
+    kk: 'Қолжетімділік тек superadmin үшін.',
+  },
+  usersSaved: {
+    ru: 'Роль обновлена.',
+    en: 'Role updated.',
+    kk: 'Рөл жаңартылды.',
+  },
+  usersRefresh: {
+    ru: 'Обновить',
+    en: 'Refresh',
+    kk: 'Жаңарту',
   },
   statisticsTitle: {
     ru: 'Статистика',

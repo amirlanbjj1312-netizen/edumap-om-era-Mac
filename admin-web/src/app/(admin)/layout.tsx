@@ -8,7 +8,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 
 const NAV_ITEMS = [
-  { href: '/school-info', labelKey: 'navSchoolInfo' },
+  { href: '/school-info', labelKey: 'navSchoolInfo', resetSelectedSchool: true },
+  { href: '/schools', labelKey: 'navSchools' },
+  { href: '/users', labelKey: 'navUsers' },
   { href: '/requests', labelKey: 'navRequests' },
   { href: '/statistics', labelKey: 'navStatistics' },
   { href: '/profile', labelKey: 'navProfile' },
@@ -67,6 +69,11 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={pathname === item.href ? 'active' : ''}
+                onClick={() => {
+                  if (item.resetSelectedSchool) {
+                    localStorage.removeItem('EDUMAP_ADMIN_SELECTED_SCHOOL_ID');
+                  }
+                }}
               >
                 {t(item.labelKey)}
               </Link>

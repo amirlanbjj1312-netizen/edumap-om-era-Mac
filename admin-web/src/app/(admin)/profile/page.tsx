@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { deleteSchool, loadSchools, upsertSchool } from '@/lib/api';
+import { loadSchools, upsertSchool } from '@/lib/api';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
@@ -197,11 +197,26 @@ export default function ProfilePage() {
     setStatus('deleting');
     setMessage('');
 
-    const schoolId = buildFallbackSchoolId(normalizeEmail(form.email));
     try {
-      await deleteSchool(schoolId);
+      const email = normalizeEmail(form.email);
+      const schoolId = buildFallbackSchoolId(email);
+      const result = await loadSchools();
+      const existing = result.data.find((item: any) => {
+        const itemEmail = normalizeEmail(item?.basic_info?.email);
+        return item?.school_id === schoolId || (itemEmail && itemEmail === email);
+      });
+      const profile = existing
+        ? createEmptySchoolProfile(existing)
+        : createEmptySchoolProfile({ school_id: schoolId });
+      profile.school_id = profile.school_id || schoolId;
+      profile.system = {
+        ...(profile.system || {}),
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      };
+      await upsertSchool(profile);
       setStatus('deleted');
-      setMessage(t('deleted'));
+      setMessage('Профиль деактивирован.');
     } catch (error) {
       setStatus('error');
       setMessage((error as Error)?.message || t('deleteError'));
