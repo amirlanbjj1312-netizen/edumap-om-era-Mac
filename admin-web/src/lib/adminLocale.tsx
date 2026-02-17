@@ -305,9 +305,9 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Пайдаланушылар және рөлдер',
   },
   usersHint: {
-    ru: 'Только superadmin может назначать роли.',
-    en: 'Only superadmin can assign roles.',
-    kk: 'Тек superadmin рөл тағайындай алады.',
+    ru: 'Moderator и superadmin могут управлять пользователями и отзывами.',
+    en: 'Moderator and superadmin can manage users and reviews.',
+    kk: 'Moderator мен superadmin пайдаланушылар мен пікірлерді басқара алады.',
   },
   usersEmail: {
     ru: 'Email',
@@ -330,9 +330,9 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Пайдаланушылар жүктелуде...',
   },
   usersForbidden: {
-    ru: 'Доступ только для superadmin.',
-    en: 'Access only for superadmin.',
-    kk: 'Қолжетімділік тек superadmin үшін.',
+    ru: 'Доступ только для moderator или superadmin.',
+    en: 'Access only for moderator or superadmin.',
+    kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
   },
   usersSaved: {
     ru: 'Роль обновлена.',

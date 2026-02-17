@@ -12,6 +12,11 @@ import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
 
 const ROLE_OPTIONS = ['user', 'admin', 'moderator', 'superadmin'];
+const CAN_MANAGE_ROLES = new Set(['moderator', 'superadmin']);
+const CAN_ASSIGNABLE_ROLES: Record<string, string[]> = {
+  superadmin: ROLE_OPTIONS,
+  moderator: ['user', 'admin', 'moderator'],
+};
 
 export default function UsersPage() {
   const { t } = useAdminLocale();
@@ -43,6 +48,7 @@ export default function UsersPage() {
   const [targetEmail, setTargetEmail] = useState('');
   const [targetRole, setTargetRole] = useState('moderator');
   const [message, setMessage] = useState('');
+  const canManageUsers = CAN_MANAGE_ROLES.has(actorRole);
 
   useEffect(() => {
     let mounted = true;
@@ -53,7 +59,7 @@ export default function UsersPage() {
       const role =
         session?.user?.user_metadata?.role || session?.user?.app_metadata?.role || '';
       setActorRole(role);
-      setForbidden(role !== 'superadmin');
+      setForbidden(!CAN_MANAGE_ROLES.has(role));
     });
     return () => {
       mounted = false;
@@ -61,7 +67,7 @@ export default function UsersPage() {
   }, []);
 
   const reload = useCallback(async () => {
-    if (!token || actorRole !== 'superadmin') {
+    if (!token || !canManageUsers) {
       setLoading(false);
       return;
     }
@@ -79,14 +85,22 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [actorRole, token]);
+  }, [canManageUsers, token]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
+  useEffect(() => {
+    const allowedRoles = CAN_ASSIGNABLE_ROLES[actorRole] || [];
+    if (!allowedRoles.length) return;
+    if (!allowedRoles.includes(targetRole)) {
+      setTargetRole(allowedRoles[0]);
+    }
+  }, [actorRole, targetRole]);
+
   const submitRole = useCallback(async () => {
-    if (!token || actorRole !== 'superadmin') return;
+    if (!token || !canManageUsers) return;
     if (!targetEmail.trim()) return;
     setMessage('');
     try {
@@ -103,11 +117,11 @@ export default function UsersPage() {
     } catch (error) {
       setMessage((error as Error)?.message || t('saveError'));
     }
-  }, [actorRole, targetEmail, targetRole, t, token]);
+  }, [canManageUsers, targetEmail, targetRole, t, token]);
 
   const toggleUserStatus = useCallback(
     async (userId: string, active: boolean) => {
-      if (!token || actorRole !== 'superadmin') return;
+      if (!token || !canManageUsers) return;
       setMessage('');
       try {
         await setAuthUserStatus(token, userId, active);
@@ -130,12 +144,12 @@ export default function UsersPage() {
         setMessage((error as Error)?.message || t('saveError'));
       }
     },
-    [actorRole, t, token]
+    [canManageUsers, t, token]
   );
 
   const handleDeleteReview = useCallback(
     async (reviewId: string) => {
-      if (!token || actorRole !== 'superadmin') return;
+      if (!token || !canManageUsers) return;
       setMessage('');
       try {
         await deleteReviewById(token, reviewId);
@@ -144,7 +158,7 @@ export default function UsersPage() {
         setMessage((error as Error)?.message || t('saveError'));
       }
     },
-    [actorRole, t, token]
+    [canManageUsers, t, token]
   );
 
   const sorted = useMemo(
@@ -185,7 +199,7 @@ export default function UsersPage() {
             value={targetRole}
             onChange={(event) => setTargetRole(event.target.value)}
           >
-            {ROLE_OPTIONS.map((role) => (
+            {(CAN_ASSIGNABLE_ROLES[actorRole] || []).map((role) => (
               <option key={role} value={role}>
                 {role}
               </option>

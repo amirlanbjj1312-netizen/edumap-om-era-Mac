@@ -31,7 +31,17 @@ const buildSchoolsRouter = () => {
     return null;
   };
 
-  const requireSuperadmin = async (req, res) => {
+  const ROLE_PRIORITY = {
+    user: 0,
+    admin: 1,
+    moderator: 2,
+    superadmin: 3,
+  };
+
+  const hasMinRole = (role, minRole) =>
+    (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[minRole] || 0);
+
+  const requireModerator = async (req, res) => {
     if (!supabaseAdmin) {
       res.status(500).json({ error: 'Supabase admin is not configured' });
       return null;
@@ -48,8 +58,10 @@ const buildSchoolsRouter = () => {
     }
     const role =
       data.user?.user_metadata?.role || data.user?.app_metadata?.role || '';
-    if (role !== 'superadmin') {
-      res.status(403).json({ error: 'Only superadmin can manage reviews' });
+    if (!hasMinRole(role, 'moderator')) {
+      res
+        .status(403)
+        .json({ error: 'Only moderator or superadmin can manage reviews' });
       return null;
     }
     return data.user;
@@ -120,7 +132,7 @@ const buildSchoolsRouter = () => {
 
   router.get('/reviews/all', async (req, res, next) => {
     try {
-      const actor = await requireSuperadmin(req, res);
+      const actor = await requireModerator(req, res);
       if (!actor) return;
       const schools = await readStore();
       const rows = [];
@@ -157,7 +169,7 @@ const buildSchoolsRouter = () => {
 
   router.delete('/reviews/:reviewId', async (req, res, next) => {
     try {
-      const actor = await requireSuperadmin(req, res);
+      const actor = await requireModerator(req, res);
       if (!actor) return;
       const reviewId = String(req.params?.reviewId || '').trim();
       if (!reviewId) {

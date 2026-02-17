@@ -40,6 +40,16 @@ const buildAuthRouter = (config) => {
   const getUserRole = (user) =>
     user?.user_metadata?.role || user?.app_metadata?.role || '';
 
+  const ROLE_PRIORITY = {
+    user: 0,
+    admin: 1,
+    moderator: 2,
+    superadmin: 3,
+  };
+
+  const hasMinRole = (role, minRole) =>
+    (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[minRole] || 0);
+
   const resolveUserByEmail = async (email) => {
     const target = String(email || '').trim().toLowerCase();
     if (!target) return null;
@@ -163,8 +173,11 @@ const buildAuthRouter = (config) => {
       }
 
       const actor = await getActor(req);
-      if (getUserRole(actor) !== 'superadmin') {
-        return res.status(403).json({ error: 'Only superadmin can manage roles' });
+      const actorRole = getUserRole(actor);
+      if (!hasMinRole(actorRole, 'moderator')) {
+        return res
+          .status(403)
+          .json({ error: 'Only moderator or superadmin can manage users' });
       }
 
       const { data, error } = await supabaseAdmin.auth.admin.listUsers({
@@ -196,13 +209,19 @@ const buildAuthRouter = (config) => {
       }
 
       const actor = await getActor(req);
-      if (getUserRole(actor) !== 'superadmin') {
-        return res.status(403).json({ error: 'Only superadmin can manage roles' });
+      const actorRole = getUserRole(actor);
+      if (!hasMinRole(actorRole, 'moderator')) {
+        return res
+          .status(403)
+          .json({ error: 'Only moderator or superadmin can manage roles' });
       }
 
       const email = String(req.body?.email || '').trim().toLowerCase();
       const role = String(req.body?.role || '').trim();
-      const allowedRoles = ['moderator', 'superadmin', 'admin', 'user'];
+      const allowedRoles =
+        actorRole === 'superadmin'
+          ? ['moderator', 'superadmin', 'admin', 'user']
+          : ['moderator', 'admin', 'user'];
       if (!email) {
         return res.status(400).json({ error: 'Field "email" is required' });
       }
@@ -213,6 +232,12 @@ const buildAuthRouter = (config) => {
       const user = await resolveUserByEmail(email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
+      }
+      const targetRole = getUserRole(user) || 'user';
+      if (actorRole !== 'superadmin' && hasMinRole(targetRole, 'superadmin')) {
+        return res
+          .status(403)
+          .json({ error: 'Moderator cannot edit superadmin accounts' });
       }
 
       const nextUserMetadata = { ...(user.user_metadata || {}), role };
@@ -245,8 +270,11 @@ const buildAuthRouter = (config) => {
       }
 
       const actor = await getActor(req);
-      if (getUserRole(actor) !== 'superadmin') {
-        return res.status(403).json({ error: 'Only superadmin can manage users' });
+      const actorRole = getUserRole(actor);
+      if (!hasMinRole(actorRole, 'moderator')) {
+        return res
+          .status(403)
+          .json({ error: 'Only moderator or superadmin can manage users' });
       }
 
       const userId = String(req.params?.id || '').trim();
@@ -254,6 +282,20 @@ const buildAuthRouter = (config) => {
         return res.status(400).json({ error: 'User id is required' });
       }
       const active = req.body?.active !== false;
+
+      if (actorRole !== 'superadmin') {
+        const { data: targetUser, error: targetError } =
+          await supabaseAdmin.auth.admin.getUserById(userId);
+        if (targetError || !targetUser?.user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+        const targetRole = getUserRole(targetUser.user) || 'user';
+        if (hasMinRole(targetRole, 'superadmin')) {
+          return res
+            .status(403)
+            .json({ error: 'Moderator cannot edit superadmin accounts' });
+        }
+      }
 
       const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         ban_duration: active ? 'none' : '876000h',
