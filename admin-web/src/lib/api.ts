@@ -73,3 +73,35 @@ export async function setUserRole(token: string, email: string, role: string) {
     }
   );
 }
+
+export async function setAuthUserStatus(token: string, userId: string, active: boolean) {
+  return authRequestJson<{ data: { id: string; isActive: boolean } }>(
+    `/auth/users/${encodeURIComponent(userId)}/status`,
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify({ active }),
+    }
+  );
+}
+
+export async function loadAllReviews(token: string) {
+  return authRequestJson<{
+    data: Array<{
+      id: string;
+      school_id: string;
+      school_name: string;
+      author: string;
+      text: string;
+      rating: number;
+      created_at: string;
+    }>;
+  }>('/schools/reviews/all', { token });
+}
+
+export async function deleteReviewById(token: string, reviewId: string) {
+  return authRequestJson<{ ok: true }>(
+    `/schools/reviews/${encodeURIComponent(reviewId)}`,
+    { token, method: 'DELETE' }
+  );
+}

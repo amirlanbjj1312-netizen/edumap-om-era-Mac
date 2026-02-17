@@ -1,7 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { loadAuthUsers, setUserRole } from '@/lib/api';
+import {
+  deleteReviewById,
+  loadAllReviews,
+  loadAuthUsers,
+  setAuthUserStatus,
+  setUserRole,
+} from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -11,7 +17,27 @@ export default function UsersPage() {
   const { t } = useAdminLocale();
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
-  const [users, setUsers] = useState<Array<{ id: string; email: string; role: string; createdAt: string }>>([]);
+  const [users, setUsers] = useState<
+    Array<{
+      id: string;
+      email: string;
+      role: string;
+      createdAt: string;
+      bannedUntil?: string | null;
+      isActive?: boolean;
+    }>
+  >([]);
+  const [reviews, setReviews] = useState<
+    Array<{
+      id: string;
+      school_id: string;
+      school_name: string;
+      author: string;
+      text: string;
+      rating: number;
+      created_at: string;
+    }>
+  >([]);
   const [token, setToken] = useState('');
   const [actorRole, setActorRole] = useState('');
   const [targetEmail, setTargetEmail] = useState('');
@@ -42,8 +68,12 @@ export default function UsersPage() {
     setLoading(true);
     setMessage('');
     try {
-      const result = await loadAuthUsers(token);
-      setUsers(Array.isArray(result?.data) ? result.data : []);
+      const [usersResult, reviewsResult] = await Promise.all([
+        loadAuthUsers(token),
+        loadAllReviews(token),
+      ]);
+      setUsers(Array.isArray(usersResult?.data) ? usersResult.data : []);
+      setReviews(Array.isArray(reviewsResult?.data) ? reviewsResult.data : []);
     } catch (error) {
       setMessage((error as Error)?.message || 'Failed to load users');
     } finally {
@@ -74,6 +104,48 @@ export default function UsersPage() {
       setMessage((error as Error)?.message || t('saveError'));
     }
   }, [actorRole, targetEmail, targetRole, t, token]);
+
+  const toggleUserStatus = useCallback(
+    async (userId: string, active: boolean) => {
+      if (!token || actorRole !== 'superadmin') return;
+      setMessage('');
+      try {
+        await setAuthUserStatus(token, userId, active);
+        setMessage(t('usersSaved'));
+        setUsers((prev) =>
+          prev.map((item) =>
+            item.id === userId
+              ? {
+                  ...item,
+                  isActive: active,
+                  bannedUntil: active
+                    ? null
+                    : new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 100)
+                        .toISOString(),
+                }
+              : item
+          )
+        );
+      } catch (error) {
+        setMessage((error as Error)?.message || t('saveError'));
+      }
+    },
+    [actorRole, t, token]
+  );
+
+  const handleDeleteReview = useCallback(
+    async (reviewId: string) => {
+      if (!token || actorRole !== 'superadmin') return;
+      setMessage('');
+      try {
+        await deleteReviewById(token, reviewId);
+        setReviews((prev) => prev.filter((item) => item.id !== reviewId));
+      } catch (error) {
+        setMessage((error as Error)?.message || t('saveError'));
+      }
+    },
+    [actorRole, t, token]
+  );
 
   const sorted = useMemo(
     () =>
@@ -132,19 +204,79 @@ export default function UsersPage() {
       {loading ? (
         <p className="muted">{t('usersLoading')}</p>
       ) : (
-        <div className="schools-admin-list">
-          {sorted.map((user) => (
-            <div key={user.id} className="schools-admin-card">
-              <div className="schools-admin-top">
-                <div>
-                  <p className="request-title">{user.email}</p>
-                  <p className="muted">{user.id}</p>
+        <>
+          <div className="schools-admin-list">
+            {sorted.map((user) => {
+              const isActive =
+                typeof user.isActive === 'boolean'
+                  ? user.isActive
+                  : !user.bannedUntil;
+              return (
+                <div key={user.id} className="schools-admin-card">
+                  <div className="schools-admin-top">
+                    <div>
+                      <p className="request-title">{user.email}</p>
+                      <p className="muted">{user.id}</p>
+                    </div>
+                    <div className="schools-admin-statuses">
+                      <span className={`schools-status ${isActive ? 'ok' : 'warn'}`}>
+                        {isActive ? t('usersStatusActive') : t('usersStatusInactive')}
+                      </span>
+                      <span className="schools-status ok">{user.role || 'user'}</span>
+                    </div>
+                  </div>
+                  <div className="schools-admin-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => toggleUserStatus(user.id, !isActive)}
+                    >
+                      {isActive ? t('usersDeactivate') : t('usersActivate')}
+                    </button>
+                  </div>
                 </div>
-                <span className="schools-status ok">{user.role || 'user'}</span>
+              );
+            })}
+          </div>
+
+          <div className="card" style={{ marginTop: 16 }}>
+            <h3 style={{ marginTop: 0 }}>{t('usersReviewsTitle')}</h3>
+            {reviews.length ? (
+              <div className="schools-admin-list">
+                {reviews.map((review) => (
+                  <div key={review.id} className="schools-admin-card">
+                    <p className="request-title">{review.text || '—'}</p>
+                    <p className="muted">
+                      <strong>{t('usersSchool')}</strong> {review.school_name || review.school_id}
+                    </p>
+                    <p className="muted">
+                      <strong>{t('usersAuthor')}</strong> {review.author || '—'}
+                    </p>
+                    <p className="muted">
+                      <strong>{t('usersRating')}</strong> {review.rating || 0}
+                    </p>
+                    <p className="muted">
+                      {review.created_at
+                        ? new Date(review.created_at).toLocaleString()
+                        : '—'}
+                    </p>
+                    <div className="schools-admin-actions">
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => handleDeleteReview(review.id)}
+                      >
+                        {t('usersReviewDelete')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
-        </div>
+            ) : (
+              <p className="muted">{t('usersReviewsEmpty')}</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

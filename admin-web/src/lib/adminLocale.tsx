@@ -344,6 +344,56 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Refresh',
     kk: 'Жаңарту',
   },
+  usersDeactivate: {
+    ru: 'Деактивировать',
+    en: 'Deactivate',
+    kk: 'Өшіру',
+  },
+  usersActivate: {
+    ru: 'Активировать',
+    en: 'Activate',
+    kk: 'Іске қосу',
+  },
+  usersStatusActive: {
+    ru: 'Активен',
+    en: 'Active',
+    kk: 'Белсенді',
+  },
+  usersStatusInactive: {
+    ru: 'Деактивирован',
+    en: 'Inactive',
+    kk: 'Өшірілген',
+  },
+  usersReviewsTitle: {
+    ru: 'Отзывы пользователей',
+    en: 'User reviews',
+    kk: 'Пайдаланушы пікірлері',
+  },
+  usersReviewsEmpty: {
+    ru: 'Отзывов пока нет.',
+    en: 'No reviews yet.',
+    kk: 'Пікірлер әзірге жоқ.',
+  },
+  usersReviewDelete: {
+    ru: 'Удалить отзыв',
+    en: 'Delete review',
+    kk: 'Пікірді жою',
+  },
+  usersSchool: {
+    ru: 'Школа:',
+    en: 'School:',
+    kk: 'Мектеп:',
+  },
+  usersAuthor: {
+    ru: 'Автор:',
+    en: 'Author:',
+    kk: 'Автор:',
+  },
+  usersRating: {
+    ru: 'Рейтинг:',
+    en: 'Rating:',
+    kk: 'Рейтинг:',
+  },
   statisticsTitle: {
     ru: 'Статистика',
     en: 'Statistics',

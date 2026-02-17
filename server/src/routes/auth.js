@@ -180,6 +180,8 @@ const buildAuthRouter = (config) => {
         email: user.email || '',
         createdAt: user.created_at || '',
         role: getUserRole(user) || 'user',
+        bannedUntil: user.banned_until || null,
+        isActive: !user.banned_until,
       }));
       return res.json({ data: users });
     } catch (error) {
@@ -229,6 +231,41 @@ const buildAuthRouter = (config) => {
           id: data?.user?.id || user.id,
           email,
           role,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/users/:id/status', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      if (getUserRole(actor) !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can manage users' });
+      }
+
+      const userId = String(req.params?.id || '').trim();
+      if (!userId) {
+        return res.status(400).json({ error: 'User id is required' });
+      }
+      const active = req.body?.active !== false;
+
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        ban_duration: active ? 'none' : '876000h',
+      });
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      return res.json({
+        data: {
+          id: data?.user?.id || userId,
+          isActive: active,
         },
       });
     } catch (error) {
