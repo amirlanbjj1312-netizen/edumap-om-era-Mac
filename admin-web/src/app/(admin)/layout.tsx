@@ -10,20 +10,29 @@ import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 const NAV_ITEMS: Array<{
   href: string;
   labelKey: string;
+  minRole?: 'moderator' | 'superadmin';
 }> = [
   { href: '/school-info', labelKey: 'navSchoolInfo' },
-  { href: '/schools', labelKey: 'navSchools' },
-  { href: '/users', labelKey: 'navUsers' },
+  { href: '/schools', labelKey: 'navSchools', minRole: 'moderator' },
+  { href: '/users', labelKey: 'navUsers', minRole: 'superadmin' },
   { href: '/requests', labelKey: 'navRequests' },
   { href: '/statistics', labelKey: 'navStatistics' },
   { href: '/profile', labelKey: 'navProfile' },
 ];
+
+const ROLE_PRIORITY: Record<string, number> = {
+  user: 0,
+  admin: 1,
+  moderator: 2,
+  superadmin: 3,
+};
 
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useAdminLocale();
   const [ready, setReady] = useState(false);
+  const [role, setRole] = useState('user');
 
   useEffect(() => {
     let mounted = true;
@@ -32,12 +41,23 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
       if (!data.session) {
         router.replace('/login');
       } else {
+        const nextRole =
+          data.session.user?.user_metadata?.role ||
+          data.session.user?.app_metadata?.role ||
+          'user';
+        setRole(nextRole);
         setReady(true);
       }
     });
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         router.replace('/login');
+      } else {
+        const nextRole =
+          session.user?.user_metadata?.role ||
+          session.user?.app_metadata?.role ||
+          'user';
+        setRole(nextRole);
       }
     });
     return () => {
@@ -61,13 +81,18 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
     );
   }
 
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (!item.minRole) return true;
+    return (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[item.minRole] || 0);
+  });
+
   return (
     <div className="page">
       <div className="container">
         <header className="topbar">
           <div className="brand">EDUMAP Admin</div>
           <nav className="topnav">
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -16,12 +16,18 @@ export default function SchoolsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [query, setQuery] = useState('');
   const [actorEmail, setActorEmail] = useState('');
+  const [actorRole, setActorRole] = useState('user');
 
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setActorEmail(data?.session?.user?.email || '');
+      setActorRole(
+        data?.session?.user?.user_metadata?.role ||
+          data?.session?.user?.app_metadata?.role ||
+          'user'
+      );
     });
     return () => {
       mounted = false;
@@ -29,6 +35,11 @@ export default function SchoolsPage() {
   }, []);
 
   const reload = useCallback(async () => {
+    if (!['moderator', 'superadmin'].includes(actorRole)) {
+      setLoading(false);
+      setItems([]);
+      return;
+    }
     setLoading(true);
     try {
       const result = await loadSchools();
@@ -36,7 +47,7 @@ export default function SchoolsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [actorRole]);
 
   useEffect(() => {
     reload();
@@ -122,6 +133,10 @@ export default function SchoolsPage() {
       return haystack.includes(q);
     });
   }, [items, query]);
+
+  if (!['moderator', 'superadmin'].includes(actorRole)) {
+    return <div className="card">{t('schoolsForbidden')}</div>;
+  }
 
   return (
     <div className="card">

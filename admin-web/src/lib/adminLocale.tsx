@@ -294,6 +294,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Audit log',
     kk: 'Әрекет журналы',
   },
+  schoolsForbidden: {
+    ru: 'Доступ только для moderator или superadmin.',
+    en: 'Access only for moderator or superadmin.',
+    kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
+  },
   usersTitle: {
     ru: 'Пользователи и роли',
     en: 'Users and roles',
