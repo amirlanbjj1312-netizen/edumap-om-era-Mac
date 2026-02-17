@@ -3,9 +3,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://edumap-bac
 export const buildApiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
 export async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { headers, ...restOptions } = options;
   const response = await fetch(buildApiUrl(path), {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
+    ...restOptions,
+    headers: { 'Content-Type': 'application/json', ...(headers || {}) },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
