@@ -7,14 +7,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 
-const NAV_ITEMS = [
-  { href: '/school-info', labelKey: 'navSchoolInfo', resetSelectedSchool: true },
+const NAV_ITEMS: Array<{
+  href: string;
+  labelKey: string;
+}> = [
+  { href: '/school-info', labelKey: 'navSchoolInfo' },
   { href: '/schools', labelKey: 'navSchools' },
   { href: '/users', labelKey: 'navUsers' },
   { href: '/requests', labelKey: 'navRequests' },
   { href: '/statistics', labelKey: 'navStatistics' },
   { href: '/profile', labelKey: 'navProfile' },
-] as const;
+];
 
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -70,7 +73,7 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={pathname === item.href ? 'active' : ''}
                 onClick={() => {
-                  if (item.resetSelectedSchool) {
+                  if (item.href === '/school-info') {
                     localStorage.removeItem('EDUMAP_ADMIN_SELECTED_SCHOOL_ID');
                   }
                 }}
