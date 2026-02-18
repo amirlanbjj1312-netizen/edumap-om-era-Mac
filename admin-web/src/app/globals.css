@@ -111,6 +111,13 @@ a {
   font-family: inherit;
 }
 
+.field input[type='range'] {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  accent-color: #5667fd;
+}
+
 .input-wrap {
   position: relative;
   width: 100%;

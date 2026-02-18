@@ -357,6 +357,7 @@ const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year'];
 const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
 const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
 const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+const TEACHER_EXPERIENCE_MAX = 40;
 
 const getDeep = (obj: any, path: string, fallback: any = '') => {
   return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj) ?? fallback;
@@ -1446,13 +1447,26 @@ export default function SchoolInfoPage() {
                         updateTeachingStaffMember(index, { subjects: value })
                       }
                     />
-                    <Input
-                      label="Стаж (лет)"
-                      value={member?.experience_years || ''}
-                      onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { experience_years: value })
-                      }
-                    />
+                    <label className="field">
+                      <span>
+                        {t('Стаж (лет)')}:{' '}
+                        {Number(member?.experience_years || 0) >= TEACHER_EXPERIENCE_MAX
+                          ? `${TEACHER_EXPERIENCE_MAX}+`
+                          : Number(member?.experience_years || 0)}
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={TEACHER_EXPERIENCE_MAX}
+                        step={1}
+                        value={Number(member?.experience_years || 0)}
+                        onChange={(event) =>
+                          updateTeachingStaffMember(index, {
+                            experience_years: String(event.target.value),
+                          })
+                        }
+                      />
+                    </label>
                   </FieldRow>
                   <FieldRow>
                     <Input
