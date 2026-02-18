@@ -88,6 +88,15 @@ const LABELS: Record<string, { en: string; kk: string }> = {
     en: 'Teacher description / experience',
     kk: 'Мұғалімнің сипаттамасы / тәжірибесі',
   },
+  'ФИО преподавателя': { en: 'Teacher full name', kk: 'Мұғалімнің аты-жөні' },
+  Должность: { en: 'Position', kk: 'Лауазымы' },
+  'Стаж (лет)': { en: 'Experience (years)', kk: 'Тәжірибе (жыл)' },
+  'Добавить преподавателя': { en: 'Add teacher', kk: 'Мұғалім қосу' },
+  'Удалить преподавателя': { en: 'Remove teacher', kk: 'Мұғалімді жою' },
+  'Добавьте хотя бы одного преподавателя.': {
+    en: 'Add at least one teacher.',
+    kk: 'Кемінде бір мұғалім қосыңыз.',
+  },
   ИЛИ: { en: 'OR', kk: 'НЕМЕСЕ' },
   'Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.': {
     en: 'You can provide a URL or upload a file. If both are set, file has priority.',
@@ -516,6 +525,86 @@ export default function SchoolInfoPage() {
 
   const localePath = (path: string) => `${path}.${contentLocale}`;
   const t = (label: string) => translateLabel(label, contentLocale);
+  const createTeacherMember = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    full_name: '',
+    position: '',
+    subjects: '',
+    experience_years: '',
+    photo_url: '',
+    bio: { ru: '', en: '', kk: '' },
+  });
+
+  const getTeachingStaffMembers = () => {
+    const members = getDeep(profile, 'services.teaching_staff.members', []);
+    if (Array.isArray(members) && members.length) {
+      return members;
+    }
+    const legacyPhoto = String(getDeep(profile, 'services.teaching_staff.photo', '') || '');
+    const legacyDescription = getDeep(profile, 'services.teaching_staff.description', {});
+    const hasLegacyDescription = ['ru', 'en', 'kk'].some((localeKey) =>
+      String((legacyDescription as any)?.[localeKey] || '').trim()
+    );
+    if (legacyPhoto || hasLegacyDescription) {
+      return [
+        {
+          id: 'legacy-staff',
+          full_name: '',
+          position: '',
+          subjects: '',
+          experience_years: '',
+          photo_url: legacyPhoto,
+          bio: {
+            ru: String((legacyDescription as any)?.ru || ''),
+            en: String((legacyDescription as any)?.en || ''),
+            kk: String((legacyDescription as any)?.kk || ''),
+          },
+        },
+      ];
+    }
+    return Array.isArray(members) ? members : [];
+  };
+
+  const buildProfileWithTeachingStaffMembers = (
+    baseProfile: SchoolProfile,
+    members: Array<any>
+  ) => {
+    const next = setDeep(baseProfile, 'services.teaching_staff.members', members);
+    const first = members[0];
+    const legacyDescription =
+      first?.bio && typeof first.bio === 'object'
+        ? {
+            ru: String(first.bio.ru || ''),
+            en: String(first.bio.en || ''),
+            kk: String(first.bio.kk || ''),
+          }
+        : { ru: '', en: '', kk: '' };
+    const withPhoto = setDeep(next, 'services.teaching_staff.photo', first?.photo_url || '');
+    return setDeep(withPhoto, 'services.teaching_staff.description', legacyDescription);
+  };
+
+  const setTeachingStaffMembers = (members: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    const nextProfile = buildProfileWithTeachingStaffMembers(profile, members);
+    setProfile(nextProfile);
+    if (shouldSave) {
+      save(nextProfile);
+    }
+  };
+
+  const updateTeachingStaffMember = (
+    index: number,
+    patch: Record<string, any>,
+    shouldSave = false
+  ) => {
+    const members = getTeachingStaffMembers();
+    if (!members[index]) return;
+    const nextMembers = members.map((member, memberIndex) =>
+      memberIndex === index ? { ...member, ...patch } : member
+    );
+    setTeachingStaffMembers(nextMembers, shouldSave);
+  };
+  const teachingStaffMembers = useMemo(() => getTeachingStaffMembers(), [profile]);
 
   const updateLocalizedField = (pathBase: string, value: string) => {
     updateField(`${pathBase}.${contentLocale}`, value);
@@ -1293,51 +1382,127 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <Section title="Наш преподавательский состав">
-          <FieldRow>
-            <Input
-              label="Фото преподавателя URL"
-              value={getDeep(profile, 'services.teaching_staff.photo')}
-              onChange={(value: string) => updateField('services.teaching_staff.photo', value)}
-            />
-            <label className="field">
-              <span>{t('Фото преподавателя (файл)')}</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    setMediaMessage('');
-                    const urls = await uploadMediaFiles([file], 'teachers');
-                    if (urls[0]) {
-                      applyAndSave('services.teaching_staff.photo', urls[0]);
-                    }
-                  } catch (error: any) {
-                    setMediaMessage(
-                      error?.message ||
-                        'Не удалось загрузить фото преподавателя. Проверьте bucket в Supabase.'
-                    );
-                  } finally {
-                    event.currentTarget.value = '';
-                  }
-                }}
-              />
-            </label>
-          </FieldRow>
-          <p className="upload-choice-note">
-            <span className="or-badge">{t('ИЛИ')}</span>{' '}
-            {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-          </p>
-          <FieldRow>
-            <TextArea
-              label="Описание / опыт преподавателя"
-              value={getDeep(profile, localePath('services.teaching_staff.description'))}
-              onChange={(value: string) =>
-                updateField(localePath('services.teaching_staff.description'), value)
-              }
-            />
-          </FieldRow>
+          <div className="teacher-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                const nextMembers = [...teachingStaffMembers, createTeacherMember()];
+                setTeachingStaffMembers(nextMembers);
+              }}
+            >
+              {t('Добавить преподавателя')}
+            </button>
+          </div>
+          {teachingStaffMembers.length ? (
+            <div className="teacher-list">
+              {teachingStaffMembers.map((member: any, index: number) => (
+                <div key={member?.id || `teacher-${index}`} className="teacher-card">
+                  <div className="teacher-card-head">
+                    <h3>{`${t('Наш преподавательский состав')} #${index + 1}`}</h3>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => {
+                        const nextMembers = teachingStaffMembers.filter(
+                          (_item: any, itemIndex: number) => itemIndex !== index
+                        );
+                        setTeachingStaffMembers(nextMembers);
+                      }}
+                    >
+                      {t('Удалить преподавателя')}
+                    </button>
+                  </div>
+                  <FieldRow>
+                    <Input
+                      label="ФИО преподавателя"
+                      value={member?.full_name || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { full_name: value })
+                      }
+                    />
+                    <Input
+                      label="Должность"
+                      value={member?.position || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { position: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Предметы"
+                      value={member?.subjects || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { subjects: value })
+                      }
+                    />
+                    <Input
+                      label="Стаж (лет)"
+                      value={member?.experience_years || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { experience_years: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Фото преподавателя URL"
+                      value={member?.photo_url || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { photo_url: value })
+                      }
+                    />
+                    <label className="field">
+                      <span>{t('Фото преподавателя (файл)')}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setMediaMessage('');
+                            const urls = await uploadMediaFiles([file], 'teachers');
+                            if (urls[0]) {
+                              updateTeachingStaffMember(index, { photo_url: urls[0] }, true);
+                            }
+                          } catch (error: any) {
+                            setMediaMessage(
+                              error?.message ||
+                                'Не удалось загрузить фото преподавателя. Проверьте bucket в Supabase.'
+                            );
+                          } finally {
+                            event.currentTarget.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+                  </FieldRow>
+                  <p className="upload-choice-note">
+                    <span className="or-badge">{t('ИЛИ')}</span>{' '}
+                    {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
+                  </p>
+                  <FieldRow>
+                    <TextArea
+                      label="Описание / опыт преподавателя"
+                      value={getDeep(member, `bio.${contentLocale}`, '')}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, {
+                          bio: {
+                            ...(member?.bio || {}),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">{t('Добавьте хотя бы одного преподавателя.')}</p>
+          )}
         </Section>
         <FieldRow>
           <Toggle

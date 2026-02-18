@@ -69,6 +69,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       teaching_staff: {
         photo: '',
         description: { ru: '', en: '', kk: '' },
+        members: [],
       },
       transport: false,
       inclusive_education: false,

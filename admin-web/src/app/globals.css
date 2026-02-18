@@ -428,6 +428,35 @@ a {
   border-top: 1px dashed var(--border);
 }
 
+.teacher-actions {
+  margin-bottom: 12px;
+}
+
+.teacher-list {
+  display: grid;
+  gap: 12px;
+}
+
+.teacher-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+}
+
+.teacher-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.teacher-card-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
 .upload-choice-note {
   margin: -4px 0 12px;
   color: var(--muted);
