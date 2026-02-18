@@ -204,6 +204,20 @@ const OPTION_LABELS: Record<
   Chinese: { ru: 'Китайский', en: 'Chinese', kk: 'Қытай тілі' },
   French: { ru: 'Французский', en: 'French', kk: 'Француз тілі' },
   German: { ru: 'Немецкий', en: 'German', kk: 'Неміс тілі' },
+  Педагог: { ru: 'Педагог', en: 'Teacher', kk: 'Педагог' },
+  'Педагог-модератор': { ru: 'Педагог-модератор', en: 'Teacher moderator', kk: 'Педагог-модератор' },
+  'Педагог-эксперт': { ru: 'Педагог-эксперт', en: 'Teacher expert', kk: 'Педагог-эксперт' },
+  'Педагог-исследователь': { ru: 'Педагог-исследователь', en: 'Teacher researcher', kk: 'Педагог-зерттеуші' },
+  'Педагог-мастер': { ru: 'Педагог-мастер', en: 'Teacher master', kk: 'Педагог-шебер' },
+  'Высшая категория': { ru: 'Высшая категория', en: 'Highest category', kk: 'Жоғары санат' },
+  'Первая категория': { ru: 'Первая категория', en: 'First category', kk: 'Бірінші санат' },
+  'Вторая категория': { ru: 'Вторая категория', en: 'Second category', kk: 'Екінші санат' },
+  ЕНТ: { ru: 'ЕНТ', en: 'UNT', kk: 'ҰБТ' },
+  IELTS: { ru: 'IELTS', en: 'IELTS', kk: 'IELTS' },
+  TOEFL: { ru: 'TOEFL', en: 'TOEFL', kk: 'TOEFL' },
+  SAT: { ru: 'SAT', en: 'SAT', kk: 'SAT' },
+  NIS: { ru: 'NIS', en: 'NIS', kk: 'NIS' },
+  Олимпиады: { ru: 'Олимпиады', en: 'Olympiads', kk: 'Олимпиадалар' },
   'State program (Kazakhstan)': {
     ru: 'Госпрограмма (Казахстан)',
     en: 'State program (Kazakhstan)',
@@ -358,6 +372,20 @@ const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
 const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
 const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 const TEACHER_EXPERIENCE_MAX = 40;
+const TEACHER_CATEGORY_OPTIONS = [
+  'Педагог',
+  'Педагог-модератор',
+  'Педагог-эксперт',
+  'Педагог-исследователь',
+  'Педагог-мастер',
+  'Высшая категория',
+  'Первая категория',
+  'Вторая категория',
+];
+const TEACHER_LANGUAGE_OPTIONS = ['Kazakh', 'Russian', 'English', 'German', 'French', 'Chinese'];
+const TEACHER_EXAM_OPTIONS = ['ЕНТ', 'IELTS', 'TOEFL', 'SAT', 'NIS', 'Олимпиады'];
+const withCurrentOption = (options: string[], current: string) =>
+  current && !options.includes(current) ? [current, ...options] : options;
 
 const getDeep = (obj: any, path: string, fallback: any = '') => {
   return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj) ?? fallback;
@@ -1469,28 +1497,58 @@ export default function SchoolInfoPage() {
                     </label>
                   </FieldRow>
                   <FieldRow>
-                    <Input
+                    <Select
                       label="Категория преподавателя"
                       value={member?.category || ''}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, { category: value })
                       }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        ...withCurrentOption(
+                          TEACHER_CATEGORY_OPTIONS,
+                          member?.category || ''
+                        ).map((item) => ({
+                          value: item,
+                          label: translateOption(item, contentLocale),
+                        })),
+                      ]}
                     />
-                    <Input
+                    <Select
                       label="Языки преподавания"
                       value={member?.teaching_languages || ''}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, { teaching_languages: value })
                       }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        ...withCurrentOption(
+                          TEACHER_LANGUAGE_OPTIONS,
+                          member?.teaching_languages || ''
+                        ).map((item) => ({
+                          value: item,
+                          label: translateOption(item, contentLocale),
+                        })),
+                      ]}
                     />
                   </FieldRow>
                   <FieldRow>
-                    <Input
+                    <Select
                       label="Подготовка к экзаменам"
                       value={member?.exam_prep || ''}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, { exam_prep: value })
                       }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        ...withCurrentOption(
+                          TEACHER_EXAM_OPTIONS,
+                          member?.exam_prep || ''
+                        ).map((item) => ({
+                          value: item,
+                          label: translateOption(item, contentLocale),
+                        })),
+                      ]}
                     />
                   </FieldRow>
                   <FieldRow>
