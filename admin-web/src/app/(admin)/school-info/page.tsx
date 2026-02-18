@@ -91,6 +91,9 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'ФИО преподавателя': { en: 'Teacher full name', kk: 'Мұғалімнің аты-жөні' },
   Должность: { en: 'Position', kk: 'Лауазымы' },
   'Стаж (лет)': { en: 'Experience (years)', kk: 'Тәжірибе (жыл)' },
+  'Категория преподавателя': { en: 'Teacher category', kk: 'Мұғалім санаты' },
+  'Языки преподавания': { en: 'Teaching languages', kk: 'Оқыту тілдері' },
+  'Подготовка к экзаменам': { en: 'Exam preparation', kk: 'Емтиханға дайындық' },
   'Добавить преподавателя': { en: 'Add teacher', kk: 'Мұғалім қосу' },
   'Удалить преподавателя': { en: 'Remove teacher', kk: 'Мұғалімді жою' },
   'Добавьте хотя бы одного преподавателя.': {
@@ -531,6 +534,9 @@ export default function SchoolInfoPage() {
     position: '',
     subjects: '',
     experience_years: '',
+    category: '',
+    teaching_languages: '',
+    exam_prep: '',
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
@@ -553,6 +559,9 @@ export default function SchoolInfoPage() {
           position: '',
           subjects: '',
           experience_years: '',
+          category: '',
+          teaching_languages: '',
+          exam_prep: '',
           photo_url: legacyPhoto,
           bio: {
             ru: String((legacyDescription as any)?.ru || ''),
@@ -1442,6 +1451,31 @@ export default function SchoolInfoPage() {
                       value={member?.experience_years || ''}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, { experience_years: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Категория преподавателя"
+                      value={member?.category || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { category: value })
+                      }
+                    />
+                    <Input
+                      label="Языки преподавания"
+                      value={member?.teaching_languages || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { teaching_languages: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Подготовка к экзаменам"
+                      value={member?.exam_prep || ''}
+                      onChange={(value: string) =>
+                        updateTeachingStaffMember(index, { exam_prep: value })
                       }
                     />
                   </FieldRow>

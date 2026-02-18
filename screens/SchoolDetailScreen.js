@@ -201,6 +201,23 @@ const formatMealsFreeUntil = (grade, locale) => {
   return locale === 'ru' ? `бесплатно до ${grade} класса` : `free until grade ${grade}`;
 };
 
+const parseCsvList = (value) =>
+  String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const matchesExperienceFilter = (value, filter) => {
+  const years = Number(value);
+  if (!filter || filter === 'all') return true;
+  if (!Number.isFinite(years)) return false;
+  if (filter === '0-3') return years >= 0 && years <= 3;
+  if (filter === '3-7') return years > 3 && years <= 7;
+  if (filter === '7-15') return years > 7 && years <= 15;
+  if (filter === '15+') return years > 15;
+  return true;
+};
+
 export default function SchoolDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -272,6 +289,10 @@ export default function SchoolDetailScreen() {
     visible: false,
     member: null,
   });
+  const [staffSubjectFilter, setStaffSubjectFilter] = useState('all');
+  const [staffExperienceFilter, setStaffExperienceFilter] = useState('all');
+  const [staffLanguageFilter, setStaffLanguageFilter] = useState('all');
+  const [staffExamOnly, setStaffExamOnly] = useState(false);
   const [isSubmittingReview, setSubmittingReview] = useState(false);
   const visitUserKey = useMemo(() => {
     if (account?.email) return account.email.toLowerCase();
@@ -451,6 +472,45 @@ export default function SchoolDetailScreen() {
     }
     return [];
   }, [services, locale, t]);
+  const staffSubjectOptions = useMemo(() => {
+    const options = new Set();
+    staffMembers.forEach((member) => {
+      parseCsvList(member?.subjects).forEach((item) => options.add(item));
+    });
+    return ['all', ...Array.from(options)];
+  }, [staffMembers]);
+  const staffLanguageOptions = useMemo(() => {
+    const options = new Set();
+    staffMembers.forEach((member) => {
+      parseCsvList(member?.teaching_languages).forEach((item) => options.add(item));
+    });
+    return ['all', ...Array.from(options)];
+  }, [staffMembers]);
+  const filteredStaffMembers = useMemo(
+    () =>
+      staffMembers.filter((member) => {
+        const subjects = parseCsvList(member?.subjects);
+        const langs = parseCsvList(member?.teaching_languages);
+        const examPrep = String(member?.exam_prep || '').trim();
+        const subjectOk =
+          staffSubjectFilter === 'all' || subjects.includes(staffSubjectFilter);
+        const languageOk =
+          staffLanguageFilter === 'all' || langs.includes(staffLanguageFilter);
+        const experienceOk = matchesExperienceFilter(
+          member?.experience_years,
+          staffExperienceFilter
+        );
+        const examOk = !staffExamOnly || Boolean(examPrep);
+        return subjectOk && languageOk && experienceOk && examOk;
+      }),
+    [
+      staffMembers,
+      staffSubjectFilter,
+      staffLanguageFilter,
+      staffExperienceFilter,
+      staffExamOnly,
+    ]
+  );
 
   const allMarkers = useMemo(() => {
     return profiles
@@ -1160,8 +1220,97 @@ export default function SchoolDetailScreen() {
               isOpen={expanded.staff}
               onToggle={() => toggle('staff')}
             >
+              <View style={styles.staffFilters}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.staffFilterRow}>
+                    {staffSubjectOptions.map((option) => (
+                      <Pressable
+                        key={`subject-${option}`}
+                        style={[
+                          styles.staffFilterChip,
+                          staffSubjectFilter === option && styles.staffFilterChipActive,
+                        ]}
+                        onPress={() => setStaffSubjectFilter(option)}
+                      >
+                        <Text
+                          style={[
+                            styles.staffFilterChipText,
+                            staffSubjectFilter === option && styles.staffFilterChipTextActive,
+                          ]}
+                        >
+                          {option === 'all' ? t('schoolDetail.staff.filter.allSubjects') : option}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.staffFilterRow}>
+                    {['all', '0-3', '3-7', '7-15', '15+'].map((option) => (
+                      <Pressable
+                        key={`exp-${option}`}
+                        style={[
+                          styles.staffFilterChip,
+                          staffExperienceFilter === option && styles.staffFilterChipActive,
+                        ]}
+                        onPress={() => setStaffExperienceFilter(option)}
+                      >
+                        <Text
+                          style={[
+                            styles.staffFilterChipText,
+                            staffExperienceFilter === option && styles.staffFilterChipTextActive,
+                          ]}
+                        >
+                          {option === 'all' ? t('schoolDetail.staff.filter.allExperience') : option}
+                        </Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      style={[
+                        styles.staffFilterChip,
+                        staffExamOnly && styles.staffFilterChipActive,
+                      ]}
+                      onPress={() => setStaffExamOnly((prev) => !prev)}
+                    >
+                      <Text
+                        style={[
+                          styles.staffFilterChipText,
+                          staffExamOnly && styles.staffFilterChipTextActive,
+                        ]}
+                      >
+                        {t('schoolDetail.staff.filter.examOnly')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+                {staffLanguageOptions.length > 1 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.staffFilterRow}>
+                      {staffLanguageOptions.map((option) => (
+                        <Pressable
+                          key={`lang-${option}`}
+                          style={[
+                            styles.staffFilterChip,
+                            staffLanguageFilter === option && styles.staffFilterChipActive,
+                          ]}
+                          onPress={() => setStaffLanguageFilter(option)}
+                        >
+                          <Text
+                            style={[
+                              styles.staffFilterChipText,
+                              staffLanguageFilter === option && styles.staffFilterChipTextActive,
+                            ]}
+                          >
+                            {option === 'all' ? t('schoolDetail.staff.filter.allLanguages') : option}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                ) : null}
+              </View>
               <View style={styles.staffGrid}>
-                {staffMembers.map((member, index) => {
+                {filteredStaffMembers.map((member, index) => {
                   const name =
                     member?.full_name ||
                     getLocalizedText(member?.name, locale) ||
@@ -1200,6 +1349,11 @@ export default function SchoolDetailScreen() {
                   );
                 })}
               </View>
+              {!filteredStaffMembers.length ? (
+                <Text style={styles.reviewEmptyText}>
+                  {t('schoolDetail.staff.filter.empty')}
+                </Text>
+              ) : null}
             </ExpandableSection>
           ) : null}
 
@@ -1548,18 +1702,30 @@ export default function SchoolDetailScreen() {
                 <XMarkIcon color="#0F172A" size={20} />
               </Pressable>
             </View>
-            {isValidRemoteImage(teacherModal.member?.photo_url) ? (
-              <RNImage
-                source={{ uri: teacherModal.member.photo_url }}
-                style={styles.teacherModalPhoto}
-                resizeMode="cover"
-              />
-            ) : null}
-            <View style={styles.teacherMetaList}>
+            <ScrollView
+              style={styles.teacherModalScroll}
+              contentContainerStyle={styles.teacherModalContent}
+              showsVerticalScrollIndicator
+            >
+              {isValidRemoteImage(teacherModal.member?.photo_url) ? (
+                <RNImage
+                  source={{ uri: teacherModal.member.photo_url }}
+                  style={styles.teacherModalPhoto}
+                  resizeMode="cover"
+                />
+              ) : null}
+              <View style={styles.teacherMetaList}>
               {teacherModal.member?.position ? (
                 <DetailRow
                   label={t('schoolDetail.staff.position')}
                   value={teacherModal.member.position}
+                  labelColor="#2563EB"
+                />
+              ) : null}
+              {teacherModal.member?.category ? (
+                <DetailRow
+                  label={t('schoolDetail.staff.category')}
+                  value={teacherModal.member.category}
                   labelColor="#2563EB"
                 />
               ) : null}
@@ -1570,21 +1736,36 @@ export default function SchoolDetailScreen() {
                   labelColor="#2563EB"
                 />
               ) : null}
-              {teacherModal.member?.experience_years ? (
+              {teacherModal.member?.teaching_languages ? (
                 <DetailRow
-                  label={t('schoolDetail.staff.experience')}
-                  value={`${teacherModal.member.experience_years}`}
+                  label={t('schoolDetail.staff.languages')}
+                  value={teacherModal.member.teaching_languages}
                   labelColor="#2563EB"
                 />
               ) : null}
-              {getLocalizedText(teacherModal.member?.bio, locale) ? (
+              {teacherModal.member?.exam_prep ? (
                 <DetailRow
-                  label={t('schoolDetail.staff.bio')}
-                  value={getLocalizedText(teacherModal.member.bio, locale)}
+                  label={t('schoolDetail.staff.examPrep')}
+                  value={teacherModal.member.exam_prep}
                   labelColor="#2563EB"
                 />
               ) : null}
-            </View>
+                {teacherModal.member?.experience_years ? (
+                  <DetailRow
+                    label={t('schoolDetail.staff.experience')}
+                    value={`${teacherModal.member.experience_years}`}
+                    labelColor="#2563EB"
+                  />
+                ) : null}
+                {getLocalizedText(teacherModal.member?.bio, locale) ? (
+                  <DetailRow
+                    label={t('schoolDetail.staff.bio')}
+                    value={getLocalizedText(teacherModal.member.bio, locale)}
+                    labelColor="#2563EB"
+                  />
+                ) : null}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2057,6 +2238,36 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  staffFilters: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  staffFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 2,
+  },
+  staffFilterChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(79,70,229,0.26)',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  staffFilterChipActive: {
+    backgroundColor: 'rgba(79,70,229,0.14)',
+    borderColor: '#4F46E5',
+  },
+  staffFilterChipText: {
+    fontFamily: 'exo',
+    fontSize: 12,
+    color: '#334155',
+  },
+  staffFilterChipTextActive: {
+    fontFamily: 'exoSemibold',
+    color: '#4338CA',
+  },
   staffCard: {
     width: '48%',
     borderRadius: 16,
@@ -2391,13 +2602,23 @@ const styles = StyleSheet.create({
   teacherModalCard: {
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    gap: 12,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
     maxHeight: '88%',
+    overflow: 'hidden',
+  },
+  teacherModalScroll: {
+    marginTop: 10,
+  },
+  teacherModalContent: {
+    paddingBottom: 10,
+    gap: 10,
   },
   teacherModalPhoto: {
-    width: '100%',
-    height: 190,
+    width: '62%',
+    aspectRatio: 3 / 4,
+    alignSelf: 'center',
     borderRadius: 16,
     backgroundColor: '#E5E7EB',
   },
