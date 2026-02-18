@@ -245,6 +245,7 @@ export default function SchoolDetailScreen() {
     contacts: false,
     socials: false,
     services: false,
+    staff: false,
     reviews: false,
   });
   const [isMapExpanded, setMapExpanded] = useState(false);
@@ -266,6 +267,10 @@ export default function SchoolDetailScreen() {
   const [videoModal, setVideoModal] = useState({
     visible: false,
     url: '',
+  });
+  const [teacherModal, setTeacherModal] = useState({
+    visible: false,
+    member: null,
   });
   const [isSubmittingReview, setSubmittingReview] = useState(false);
   const visitUserKey = useMemo(() => {
@@ -422,6 +427,30 @@ export default function SchoolDetailScreen() {
       ? `${t('schoolDetail.value.yes')} • ${foreignTeachersNotes}`
       : t('schoolDetail.value.yes')
     : t('schoolDetail.value.no');
+  const staffMembers = useMemo(() => {
+    const members = Array.isArray(services?.teaching_staff?.members)
+      ? services.teaching_staff.members
+      : [];
+    if (members.length) {
+      return members.filter((member) => member && (member.full_name || member.subjects || member.position || member.photo_url || getLocalizedText(member.bio, locale)));
+    }
+    const legacyPhoto = services?.teaching_staff?.photo;
+    const legacyBio = getLocalizedText(services?.teaching_staff?.description, locale);
+    if (legacyPhoto || legacyBio) {
+      return [
+        {
+          id: 'legacy-member',
+          full_name: t('schoolDetail.staff.defaultName'),
+          position: '',
+          subjects: '',
+          experience_years: '',
+          photo_url: legacyPhoto || '',
+          bio: services?.teaching_staff?.description || {},
+        },
+      ];
+    }
+    return [];
+  }, [services, locale, t]);
 
   const allMarkers = useMemo(() => {
     return profiles
@@ -584,6 +613,19 @@ export default function SchoolDetailScreen() {
   const handleOpenVideo = (url) => {
     if (!url) return;
     setVideoModal({ visible: true, url });
+  };
+  const handleOpenTeacher = (member) => {
+    setTeacherModal({
+      visible: true,
+      member,
+    });
+  };
+
+  const handleCloseTeacher = () => {
+    setTeacherModal({
+      visible: false,
+      member: null,
+    });
   };
 
   const handleCloseVideo = () => {
@@ -1111,6 +1153,56 @@ export default function SchoolDetailScreen() {
             )}
           </ExpandableSection>
 
+          {staffMembers.length ? (
+            <ExpandableSection
+              icon="👩‍🏫"
+              title={t('schoolDetail.section.staff')}
+              isOpen={expanded.staff}
+              onToggle={() => toggle('staff')}
+            >
+              <View style={styles.staffGrid}>
+                {staffMembers.map((member, index) => {
+                  const name =
+                    member?.full_name ||
+                    getLocalizedText(member?.name, locale) ||
+                    `${t('schoolDetail.staff.defaultName')} ${index + 1}`;
+                  const subjects =
+                    member?.subjects ||
+                    getLocalizedText(member?.subjects_localized, locale) ||
+                    t('schoolDetail.value.unknown');
+                  const photoUrl = isValidRemoteImage(member?.photo_url)
+                    ? member.photo_url
+                    : null;
+                  return (
+                    <Pressable
+                      key={member?.id || `${name}-${index}`}
+                      style={styles.staffCard}
+                      onPress={() => handleOpenTeacher(member)}
+                    >
+                      <View style={styles.staffPhotoWrap}>
+                        {photoUrl ? (
+                          <RNImage source={{ uri: photoUrl }} style={styles.staffPhoto} />
+                        ) : (
+                          <View style={styles.staffPhotoPlaceholder}>
+                            <Text style={styles.staffPhotoPlaceholderText}>
+                              {name.slice(0, 1).toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.staffName} numberOfLines={1}>
+                        {name}
+                      </Text>
+                      <Text style={styles.staffSubject} numberOfLines={1}>
+                        {subjects}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ExpandableSection>
+          ) : null}
+
           {photos.length ? (
             <View style={styles.mediaSection}>
               <Text style={styles.mediaSectionTitle}>
@@ -1435,6 +1527,64 @@ export default function SchoolDetailScreen() {
               allowsInlineMediaPlayback
               mediaPlaybackRequiresUserAction={false}
             />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={teacherModal.visible}
+        animationType="fade"
+        transparent
+        onRequestClose={handleCloseTeacher}
+      >
+        <View style={styles.reviewModalBackdrop}>
+          <View style={styles.teacherModalCard}>
+            <View style={styles.reviewModalHeader}>
+              <Text style={styles.reviewModalTitle}>
+                {teacherModal.member?.full_name ||
+                  t('schoolDetail.staff.defaultName')}
+              </Text>
+              <Pressable style={styles.reviewModalClose} onPress={handleCloseTeacher}>
+                <XMarkIcon color="#0F172A" size={20} />
+              </Pressable>
+            </View>
+            {isValidRemoteImage(teacherModal.member?.photo_url) ? (
+              <RNImage
+                source={{ uri: teacherModal.member.photo_url }}
+                style={styles.teacherModalPhoto}
+                resizeMode="cover"
+              />
+            ) : null}
+            <View style={styles.teacherMetaList}>
+              {teacherModal.member?.position ? (
+                <DetailRow
+                  label={t('schoolDetail.staff.position')}
+                  value={teacherModal.member.position}
+                  labelColor="#2563EB"
+                />
+              ) : null}
+              {teacherModal.member?.subjects ? (
+                <DetailRow
+                  label={t('schoolDetail.staff.subjects')}
+                  value={teacherModal.member.subjects}
+                  labelColor="#2563EB"
+                />
+              ) : null}
+              {teacherModal.member?.experience_years ? (
+                <DetailRow
+                  label={t('schoolDetail.staff.experience')}
+                  value={`${teacherModal.member.experience_years}`}
+                  labelColor="#2563EB"
+                />
+              ) : null}
+              {getLocalizedText(teacherModal.member?.bio, locale) ? (
+                <DetailRow
+                  label={t('schoolDetail.staff.bio')}
+                  value={getLocalizedText(teacherModal.member.bio, locale)}
+                  labelColor="#2563EB"
+                />
+              ) : null}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1902,6 +2052,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
   },
+  staffGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  staffCard: {
+    width: '48%',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(79,70,229,0.2)',
+    backgroundColor: '#F8FAFF',
+    padding: 10,
+    gap: 8,
+  },
+  staffPhotoWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#E5E7EB',
+  },
+  staffPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  staffPhotoPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2FF',
+  },
+  staffPhotoPlaceholderText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 28,
+    color: '#4F46E5',
+  },
+  staffName: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  staffSubject: {
+    fontFamily: 'exo',
+    fontSize: 12,
+    color: '#475569',
+  },
   socialGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2191,6 +2387,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 24,
     gap: 16,
+  },
+  teacherModalCard: {
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    gap: 12,
+    maxHeight: '88%',
+  },
+  teacherModalPhoto: {
+    width: '100%',
+    height: 190,
+    borderRadius: 16,
+    backgroundColor: '#E5E7EB',
+  },
+  teacherMetaList: {
+    gap: 10,
   },
   reviewModalHeader: {
     flexDirection: 'row',
