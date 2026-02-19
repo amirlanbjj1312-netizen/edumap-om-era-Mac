@@ -386,6 +386,12 @@ const TEACHER_LANGUAGE_OPTIONS = ['Kazakh', 'Russian', 'English', 'German', 'Fre
 const TEACHER_EXAM_OPTIONS = ['ЕНТ', 'IELTS', 'TOEFL', 'SAT', 'NIS', 'Олимпиады'];
 const withCurrentOption = (options: string[], current: string) =>
   current && !options.includes(current) ? [current, ...options] : options;
+const withCurrentOptions = (options: string[], currentValues: string[]) => {
+  const normalized = Array.isArray(currentValues)
+    ? currentValues.map((item) => String(item || '').trim()).filter(Boolean)
+    : [];
+  return Array.from(new Set([...normalized, ...options]));
+};
 
 const getDeep = (obj: any, path: string, fallback: any = '') => {
   return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj) ?? fallback;
@@ -1514,22 +1520,18 @@ export default function SchoolInfoPage() {
                         })),
                       ]}
                     />
-                    <Select
+                    <CheckboxGroup
                       label="Языки преподавания"
-                      value={member?.teaching_languages || ''}
-                      onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { teaching_languages: value })
+                      options={withCurrentOptions(
+                        TEACHER_LANGUAGE_OPTIONS,
+                        normalizeListValue(member?.teaching_languages)
+                      )}
+                      values={normalizeListValue(member?.teaching_languages)}
+                      onChange={(next: string[]) =>
+                        updateTeachingStaffMember(index, {
+                          teaching_languages: next.join(', '),
+                        })
                       }
-                      options={[
-                        { value: '', label: t('Не выбрано') },
-                        ...withCurrentOption(
-                          TEACHER_LANGUAGE_OPTIONS,
-                          member?.teaching_languages || ''
-                        ).map((item) => ({
-                          value: item,
-                          label: translateOption(item, contentLocale),
-                        })),
-                      ]}
                     />
                   </FieldRow>
                   <FieldRow>
