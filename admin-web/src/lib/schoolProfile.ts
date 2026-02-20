@@ -139,6 +139,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       is_active: true,
       hidden_from_users: false,
       audit_log: [],
+      notifications: [],
     },
   };
 

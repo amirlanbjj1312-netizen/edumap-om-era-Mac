@@ -59,6 +59,36 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Data comes from registration and can be edited.',
     kk: 'Деректер тіркеуден алынады және өңдеуге болады.',
   },
+  profileNotificationsTitle: {
+    ru: 'Уведомления от модератора',
+    en: 'Moderator notifications',
+    kk: 'Модератор хабарламалары',
+  },
+  profileNotificationsHint: {
+    ru: 'Здесь показываются служебные сообщения от модератора/суперадмина.',
+    en: 'Service messages from moderator/superadmin are shown here.',
+    kk: 'Мұнда модератор/суперадминнің қызметтік хабарламалары көрінеді.',
+  },
+  profileNotificationsEmpty: {
+    ru: 'Новых уведомлений нет.',
+    en: 'No new notifications.',
+    kk: 'Жаңа хабарламалар жоқ.',
+  },
+  profileNotificationsMarkRead: {
+    ru: 'Отметить прочитанным',
+    en: 'Mark as read',
+    kk: 'Оқылды деп белгілеу',
+  },
+  profileNotificationsUnread: {
+    ru: 'Новое',
+    en: 'New',
+    kk: 'Жаңа',
+  },
+  profileNotificationsFrom: {
+    ru: 'От:',
+    en: 'From:',
+    kk: 'Кімнен:',
+  },
   loadingProfile: {
     ru: 'Загрузка профиля...',
     en: 'Loading profile...',
@@ -268,6 +298,21 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     ru: 'Редактировать',
     en: 'Edit',
     kk: 'Өңдеу',
+  },
+  schoolsNotify: {
+    ru: 'Отправить уведомление',
+    en: 'Send notification',
+    kk: 'Хабарлама жіберу',
+  },
+  schoolsNotifyPrompt: {
+    ru: 'Текст уведомления для школы',
+    en: 'Notification text for school',
+    kk: 'Мектепке арналған хабарлама мәтіні',
+  },
+  schoolsNotifySent: {
+    ru: 'Уведомление отправлено.',
+    en: 'Notification sent.',
+    kk: 'Хабарлама жіберілді.',
   },
   schoolsStatusActive: {
     ru: 'Активна',

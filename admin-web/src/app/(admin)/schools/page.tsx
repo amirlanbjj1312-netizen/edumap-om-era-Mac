@@ -115,6 +115,41 @@ export default function SchoolsPage() {
     [saveMutated]
   );
 
+  const sendNotification = useCallback(
+    async (profile: any) => {
+      const text = window.prompt(t('schoolsNotifyPrompt'));
+      const message = normalizeText(text);
+      if (!message) return;
+
+      const currentNotifications = Array.isArray(profile?.system?.notifications)
+        ? profile.system.notifications
+        : [];
+      const nextNotifications = [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          text: message,
+          created_at: new Date().toISOString(),
+          from: actorEmail || 'moderator',
+          read_at: '',
+        },
+        ...currentNotifications,
+      ].slice(0, 100);
+
+      await saveMutated(
+        {
+          ...profile,
+          system: {
+            ...(profile?.system || {}),
+            notifications: nextNotifications,
+          },
+        },
+        'send_notification'
+      );
+      window.alert(t('schoolsNotifySent'));
+    },
+    [actorEmail, saveMutated, t]
+  );
+
   const editSchool = useCallback((schoolId: string) => {
     localStorage.setItem(SELECTED_SCHOOL_STORAGE_KEY, schoolId);
     window.location.href = '/school-info';
@@ -196,6 +231,13 @@ export default function SchoolsPage() {
                     onClick={() => editSchool(item.school_id)}
                   >
                     {t('schoolsEdit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => sendNotification(item)}
+                  >
+                    {t('schoolsNotify')}
                   </button>
                   <button
                     type="button"

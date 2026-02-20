@@ -28,6 +28,25 @@ const normalizeText = (value: unknown) => (typeof value === 'string' ? value.tri
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
 
+const getNotifications = (profile: any) => {
+  if (!Array.isArray(profile?.system?.notifications)) return [];
+  return [...profile.system.notifications].sort(
+    (a, b) =>
+      new Date(b?.created_at || 0).getTime() -
+      new Date(a?.created_at || 0).getTime()
+  );
+};
+
+const findOwnSchool = (items: any[], email: string) => {
+  const schoolId = buildFallbackSchoolId(email);
+  return (
+    items.find((item: any) => {
+      const itemEmail = normalizeEmail(item?.basic_info?.email);
+      return item?.school_id === schoolId || (itemEmail && itemEmail === email);
+    }) || null
+  );
+};
+
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
   const fromMeta = (...keys: string[]) => {
@@ -86,13 +105,25 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<StatusState>('idle');
   const [message, setMessage] = useState('');
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      setForm(toProfileForm(data.session?.user));
+      const nextForm = toProfileForm(data.session?.user);
+      setForm(nextForm);
+      try {
+        const email = normalizeEmail(nextForm.email);
+        if (email) {
+          const result = await loadSchools();
+          const ownSchool = findOwnSchool(result.data, email);
+          setNotifications(getNotifications(ownSchool));
+        }
+      } catch {
+        setNotifications([]);
+      }
       setLoading(false);
     };
     load();
@@ -223,6 +254,34 @@ export default function ProfilePage() {
     }
   };
 
+  const markNotificationRead = async (notificationId: string) => {
+    if (!form?.email) return;
+    try {
+      const email = normalizeEmail(form.email);
+      const result = await loadSchools();
+      const existing = findOwnSchool(result.data, email);
+      if (!existing) return;
+
+      const nextNotifications = getNotifications(existing).map((item: any) =>
+        item.id === notificationId && !item.read_at
+          ? { ...item, read_at: new Date().toISOString() }
+          : item
+      );
+
+      await upsertSchool({
+        ...existing,
+        system: {
+          ...(existing?.system || {}),
+          notifications: nextNotifications,
+          updated_at: new Date().toISOString(),
+        },
+      });
+      setNotifications(nextNotifications);
+    } catch {
+      // no-op
+    }
+  };
+
   if (loading) {
     return <div className="card">{t('loadingProfile')}</div>;
   }
@@ -249,6 +308,46 @@ export default function ProfilePage() {
       <p className="muted" style={{ marginTop: 0 }}>
         {t('profileHint')}
       </p>
+
+      <div className="profile-notifications">
+        <p className="profile-notifications-title">{t('profileNotificationsTitle')}</p>
+        <p className="muted">{t('profileNotificationsHint')}</p>
+        {notifications.length ? (
+          <div className="profile-notifications-list">
+            {notifications.map((item) => {
+              const unread = !item?.read_at;
+              return (
+                <div
+                  key={item?.id || `${item?.created_at}-${item?.text}`}
+                  className={`profile-notification-item${unread ? ' unread' : ''}`}
+                >
+                  <p>{item?.text || '—'}</p>
+                  <p className="muted">
+                    {t('profileNotificationsFrom')} {item?.from || 'moderator'} ·{' '}
+                    {item?.created_at
+                      ? new Date(item.created_at).toLocaleString()
+                      : '—'}
+                  </p>
+                  {unread ? (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => markNotificationRead(item.id)}
+                    >
+                      {t('profileNotificationsMarkRead')}
+                    </button>
+                  ) : null}
+                  {unread ? (
+                    <span className="schools-status warn">{t('profileNotificationsUnread')}</span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="muted">{t('profileNotificationsEmpty')}</p>
+        )}
+      </div>
 
       <div className="form-row">
         <EditableField
