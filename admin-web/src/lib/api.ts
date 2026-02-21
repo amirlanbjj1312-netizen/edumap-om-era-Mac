@@ -107,6 +107,33 @@ export async function deleteReviewById(token: string, reviewId: string) {
   );
 }
 
+export async function loadNewsFeed() {
+  return requestJson<{ data: Array<any> }>('/news');
+}
+
+export async function createNewsItem(token: string, payload: any) {
+  return authRequestJson<{ data: any }>('/news', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateNewsItem(token: string, id: string, payload: any) {
+  return authRequestJson<{ data: any }>(`/news/${encodeURIComponent(id)}`, {
+    token,
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteNewsItem(token: string, id: string) {
+  return authRequestJson<{ data: Array<any> }>(`/news/${encodeURIComponent(id)}`, {
+    token,
+    method: 'DELETE',
+  });
+}
+
 export async function loadProgramInfoAnalytics(
   token: string,
   options: { days?: number; limit?: number } = {}

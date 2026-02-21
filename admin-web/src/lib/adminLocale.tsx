@@ -44,6 +44,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Schools',
     kk: 'Мектептер',
   },
+  navNews: {
+    ru: 'Новости',
+    en: 'News',
+    kk: 'Жаңалықтар',
+  },
   logout: {
     ru: 'Выйти',
     en: 'Sign out',
@@ -488,6 +493,56 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     ru: 'Всего событий за период',
     en: 'Total events for period',
     kk: 'Кезеңдегі барлық оқиғалар',
+  },
+  newsAdminTitle: {
+    ru: 'Управление новостями',
+    en: 'News management',
+    kk: 'Жаңалықтарды басқару',
+  },
+  newsAdminHint: {
+    ru: 'Публикация и редактирование новостей для пользовательского ЛК.',
+    en: 'Publish and edit news for the user app.',
+    kk: 'Пайдаланушы қолданбасына жаңалық жариялау және өңдеу.',
+  },
+  newsAdminRefresh: {
+    ru: 'Обновить',
+    en: 'Refresh',
+    kk: 'Жаңарту',
+  },
+  newsAdminPublish: {
+    ru: 'Опубликовать',
+    en: 'Publish',
+    kk: 'Жариялау',
+  },
+  newsAdminUpdate: {
+    ru: 'Сохранить изменения',
+    en: 'Save changes',
+    kk: 'Өзгерістерді сақтау',
+  },
+  newsAdminDelete: {
+    ru: 'Удалить',
+    en: 'Delete',
+    kk: 'Жою',
+  },
+  newsAdminEdit: {
+    ru: 'Редактировать',
+    en: 'Edit',
+    kk: 'Өңдеу',
+  },
+  newsAdminCancel: {
+    ru: 'Отмена',
+    en: 'Cancel',
+    kk: 'Бас тарту',
+  },
+  newsAdminEmpty: {
+    ru: 'Новостей пока нет.',
+    en: 'No news yet.',
+    kk: 'Жаңалықтар әлі жоқ.',
+  },
+  newsAdminForbidden: {
+    ru: 'Доступ только для moderator или superadmin.',
+    en: 'Access only for moderator or superadmin.',
+    kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
   },
   checkingSession: {
     ru: 'Проверяем сессию...',
