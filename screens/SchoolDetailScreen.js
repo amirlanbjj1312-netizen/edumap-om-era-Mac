@@ -236,6 +236,21 @@ const formatMealsFreeUntil = (grade, locale) => {
   return locale === 'ru' ? `бесплатно до ${grade} класса` : `free until grade ${grade}`;
 };
 
+const formatClubPrice = (value, locale) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    if (locale === 'ru') return 'Бесплатно';
+    if (locale === 'kk') return 'Тегін';
+    return 'Free';
+  }
+  const localized = Math.round(numeric).toLocaleString(
+    locale === 'ru' || locale === 'kk' ? 'ru-RU' : 'en-US'
+  );
+  if (locale === 'ru') return `${localized} ₸ / месяц`;
+  if (locale === 'kk') return `${localized} ₸ / ай`;
+  return `${localized} ₸ / month`;
+};
+
 const parseCsvList = (value) =>
   String(value || '')
     .split(',')
@@ -494,6 +509,30 @@ export default function SchoolDetailScreen() {
     ...translateList(t, CLUB_LABEL_KEYS, splitToList(services.clubs)),
     getLocalizedMapText(services.clubs_other),
   ]);
+  const clubsCatalog = useMemo(() => {
+    const raw = Array.isArray(services?.clubs_catalog) ? services.clubs_catalog : [];
+    return raw
+      .map((club, index) => {
+        const name = getLocalizedText(club?.name, locale).trim();
+        const description = getLocalizedText(club?.description, locale).trim();
+        const schedule = getLocalizedText(club?.schedule, locale).trim();
+        const teacherName = String(club?.teacher_name || '').trim();
+        const grades = String(club?.grades || '').trim();
+        const priceMonthly = String(club?.price_monthly || '').trim();
+        const hasContent = name || description || schedule || teacherName || grades || priceMonthly;
+        if (!hasContent) return null;
+        return {
+          id: club?.id || `club-${index}`,
+          name: name || t('schoolDetail.value.unknown'),
+          description,
+          schedule,
+          teacherName,
+          grades,
+          priceLabel: formatClubPrice(priceMonthly, locale),
+        };
+      })
+      .filter(Boolean);
+  }, [services, locale, t]);
   const photos = splitToList(media.photos).filter(isValidRemoteImage);
   const serviceArea = getLocalizedMapText(location.service_area);
 
@@ -721,13 +760,15 @@ export default function SchoolDetailScreen() {
     !isStateSchool && (!isAutonomousSchool || fundingSelf);
 
   const quickStats = [
-    { icon: '🏫', label: t('schoolDetail.quick.type'), value: displayType },
+    { key: 'type', icon: '🏫', label: t('schoolDetail.quick.type'), value: displayType },
     isAutonomousSchool && {
+      key: 'funding',
       icon: '🏛️',
       label: t('schoolDetail.quick.funding'),
       value: fundingLabel,
     },
     shouldShowPrice && {
+      key: 'price',
       icon: '💰',
       label: t('schoolDetail.quick.price'),
       value:
@@ -738,16 +779,19 @@ export default function SchoolDetailScreen() {
           : t('schoolDetail.value.unknown'),
     },
     {
+      key: 'address',
       icon: '📍',
       label: t('schoolDetail.quick.address'),
       value: addressText || t('schoolDetail.value.unknown'),
     },
     {
+      key: 'city',
       icon: '🏙️',
       label: t('schoolDetail.quick.city'),
       value: displayCity,
     },
     {
+      key: 'district',
       icon: '🗺️',
       label: t('schoolDetail.quick.district'),
       value: displayDistrict,
@@ -1073,13 +1117,21 @@ export default function SchoolDetailScreen() {
           </View>
 
           <View style={styles.quickStats}>
-            {quickStats.map(({ icon, label, value }) => (
-          <View key={label} style={styles.statItem}>
+            {quickStats.map(({ key, icon, label, value }) => {
+              const important =
+                key === 'type' ||
+                key === 'price' ||
+                key === 'address' ||
+                key === 'city' ||
+                key === 'district';
+              return (
+          <View key={label} style={[styles.statItem, important && styles.statItemImportant]}>
             <Text style={styles.statIcon}>{icon}</Text>
-            <Text style={styles.statText}>{label}</Text>
-            <Text style={styles.statValue}>{value}</Text>
+            <Text style={[styles.statText, important && styles.statTextImportant]}>{label}</Text>
+            <Text style={[styles.statValue, important && styles.statValueImportant]}>{value}</Text>
           </View>
-        ))}
+              );
+            })}
       </View>
 
           <View style={styles.mapCard}>
@@ -1260,6 +1312,41 @@ export default function SchoolDetailScreen() {
               value={specialists.join(', ')}
               labelColor="#2563EB"
             />
+            {clubsCatalog.length ? (
+              <View style={styles.clubCatalogWrap}>
+                <Text style={[styles.detailLabel, { color: '#2563EB' }]}>
+                  {t('schoolDetail.field.clubs')}
+                </Text>
+                <View style={styles.clubCatalogList}>
+                  {clubsCatalog.map((club) => (
+                    <View key={club.id} style={styles.clubCatalogCard}>
+                      <Text style={styles.clubCatalogTitle}>{club.name}</Text>
+                      {club.description ? (
+                        <Text style={styles.clubCatalogText}>{club.description}</Text>
+                      ) : null}
+                      {club.schedule ? (
+                        <Text style={styles.clubCatalogMeta}>
+                          {`${t('schoolDetail.club.schedule')}: ${club.schedule}`}
+                        </Text>
+                      ) : null}
+                      {club.teacherName ? (
+                        <Text style={styles.clubCatalogMeta}>
+                          {`${t('schoolDetail.club.teacher')}: ${club.teacherName}`}
+                        </Text>
+                      ) : null}
+                      {club.grades ? (
+                        <Text style={styles.clubCatalogMeta}>
+                          {`${t('schoolDetail.club.grades')}: ${club.grades}`}
+                        </Text>
+                      ) : null}
+                      <Text style={styles.clubCatalogPrice}>
+                        {`${t('schoolDetail.club.price')}: ${club.priceLabel}`}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             <DetailRow
               label={t('schoolDetail.field.clubs')}
               value={clubs.join(', ')}
@@ -2267,7 +2354,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  statItemImportant: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.28)',
   },
   statIcon: {
     fontSize: 18,
@@ -2279,10 +2373,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
   },
+  statTextImportant: {
+    color: '#1D4ED8',
+  },
   statValue: {
     fontFamily: 'exo',
     fontSize: 13,
     color: '#0F172A',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  statValueImportant: {
+    fontFamily: 'exoSemibold',
+    color: '#0B3AAE',
   },
   mapCard: {
     borderRadius: 20,
@@ -2424,6 +2527,42 @@ const styles = StyleSheet.create({
     fontFamily: 'exo',
     fontSize: 12,
     color: '#64748B',
+  },
+  clubCatalogWrap: {
+    gap: 8,
+  },
+  clubCatalogList: {
+    gap: 10,
+  },
+  clubCatalogCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.2)',
+    backgroundColor: '#F8FAFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  clubCatalogTitle: {
+    fontFamily: 'exoSemibold',
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  clubCatalogText: {
+    fontFamily: 'exo',
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 18,
+  },
+  clubCatalogMeta: {
+    fontFamily: 'exo',
+    fontSize: 12,
+    color: '#475569',
+  },
+  clubCatalogPrice: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#1D4ED8',
   },
   descriptionCard: {
     borderRadius: 24,
@@ -2764,7 +2903,7 @@ const styles = StyleSheet.create({
   mediaSectionTitle: {
     fontFamily: 'exoSemibold',
     fontSize: 16,
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 10,
   },
   mediaPhoto: {

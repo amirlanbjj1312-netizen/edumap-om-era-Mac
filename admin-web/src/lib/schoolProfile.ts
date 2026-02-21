@@ -76,6 +76,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       specialists: '',
       specialists_other: { ru: '', en: '', kk: '' },
       clubs: '',
+      clubs_catalog: [],
       clubs_other: {
         ru: {
           sports: '',

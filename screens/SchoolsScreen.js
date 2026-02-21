@@ -400,6 +400,15 @@ const getLogoSource = (logo) => {
   return { uri: logo };
 };
 
+const isPrivateSchoolType = (value) => {
+  const type = String(value || '').trim().toLowerCase();
+  return (
+    type.includes('private') ||
+    type.includes('частн') ||
+    type.includes('жеке')
+  );
+};
+
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildSearchRemainder = (text, consumed) => {
@@ -650,13 +659,18 @@ const normalizeCityAreasSelection = (areasMap = {}) => {
   return normalized;
 };
 
-const SchoolCard = ({ item, onPress, t }) => {
+const SchoolCard = ({ item, onPress, t, locale }) => {
   const cityLabel = getCityLabel(item);
   const phoneText = item.phone || (t ? t('schools.phoneMissing') : 'Phone not provided');
   const hasLogo = Boolean(item.logo);
   const firstLetter = item.name ? item.name.charAt(0).toUpperCase() : '?';
   const ratingValue = Number(item.rating);
   const hasRating = Number.isFinite(ratingValue);
+  const monthlyFee = Number(item.monthlyFee);
+  const showMonthlyFee = isPrivateSchoolType(item.type) && Number.isFinite(monthlyFee) && monthlyFee > 0;
+  const formattedMonthlyFee = showMonthlyFee
+    ? `${Math.round(monthlyFee).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')} ₸`
+    : '';
 
   return (
     <Pressable
@@ -695,6 +709,11 @@ const SchoolCard = ({ item, onPress, t }) => {
         <Text className="text-darkGrayText/70 font-exo text-xs mb-1.5">
           {phoneText}
         </Text>
+        {showMonthlyFee ? (
+          <Text className="text-bgPurple font-exoSemibold text-xs mb-1.5">
+            {`${t ? t('schools.filters.monthlyFeeTitle') : 'Monthly fee'}: ${formattedMonthlyFee}`}
+          </Text>
+        ) : null}
         {hasRating ? (
           <View className="flex-row items-center">
             <Rating rating={ratingValue} size={14} />
@@ -1464,6 +1483,7 @@ export default function SchoolsScreen() {
           <SchoolCard
             item={item}
             t={t}
+            locale={locale}
             onPress={() =>
               navigation.navigate('SchoolDetail', {
                 schoolId: item.school_id || item.id,

@@ -100,6 +100,19 @@ const LABELS: Record<string, { en: string; kk: string }> = {
     en: 'Add at least one teacher.',
     kk: 'Кемінде бір мұғалім қосыңыз.',
   },
+  'Каталог кружков и секций': { en: 'Clubs catalog', kk: 'Үйірмелер каталогы' },
+  'Добавить кружок': { en: 'Add club', kk: 'Үйірме қосу' },
+  'Удалить кружок': { en: 'Remove club', kk: 'Үйірмені жою' },
+  'Добавьте хотя бы один кружок.': {
+    en: 'Add at least one club.',
+    kk: 'Кемінде бір үйірме қосыңыз.',
+  },
+  'Название кружка': { en: 'Club name', kk: 'Үйірме атауы' },
+  'Описание кружка': { en: 'Club description', kk: 'Үйірме сипаттамасы' },
+  'Расписание': { en: 'Schedule', kk: 'Кесте' },
+  'Кто ведет (ФИО)': { en: 'Teacher name', kk: 'Жетекші (АЖТ)' },
+  'Для классов': { en: 'Grades', kk: 'Сыныптар үшін' },
+  'Стоимость в месяц': { en: 'Monthly fee', kk: 'Айлық төлем' },
   ИЛИ: { en: 'OR', kk: 'НЕМЕСЕ' },
   'Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.': {
     en: 'You can provide a URL or upload a file. If both are set, file has priority.',
@@ -575,6 +588,15 @@ export default function SchoolInfoPage() {
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
+  const createClubEntry = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: { ru: '', en: '', kk: '' },
+    description: { ru: '', en: '', kk: '' },
+    schedule: { ru: '', en: '', kk: '' },
+    teacher_name: '',
+    grades: '',
+    price_monthly: '',
+  });
 
   const getTeachingStaffMembers = () => {
     const members = getDeep(profile, 'services.teaching_staff.members', []);
@@ -649,6 +671,46 @@ export default function SchoolInfoPage() {
     setTeachingStaffMembers(nextMembers, shouldSave);
   };
   const teachingStaffMembers = useMemo(() => getTeachingStaffMembers(), [profile]);
+
+  const getClubsCatalog = () => {
+    const clubs = getDeep(profile, 'services.clubs_catalog', []);
+    if (!Array.isArray(clubs)) return [];
+    return clubs.map((item: any) => ({
+      id: item?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: item?.name && typeof item.name === 'object' ? item.name : { ru: '', en: '', kk: '' },
+      description:
+        item?.description && typeof item.description === 'object'
+          ? item.description
+          : { ru: '', en: '', kk: '' },
+      schedule:
+        item?.schedule && typeof item.schedule === 'object'
+          ? item.schedule
+          : { ru: '', en: '', kk: '' },
+      teacher_name: String(item?.teacher_name || ''),
+      grades: String(item?.grades || ''),
+      price_monthly: String(item?.price_monthly || ''),
+    }));
+  };
+
+  const setClubsCatalog = (clubs: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    const nextProfile = setDeep(profile, 'services.clubs_catalog', clubs);
+    setProfile(nextProfile);
+    if (shouldSave) {
+      save(nextProfile);
+    }
+  };
+
+  const updateClubEntry = (index: number, patch: Record<string, any>, shouldSave = false) => {
+    const clubs = getClubsCatalog();
+    if (!clubs[index]) return;
+    const next = clubs.map((club: any, clubIndex: number) =>
+      clubIndex === index ? { ...club, ...patch } : club
+    );
+    setClubsCatalog(next, shouldSave);
+  };
+
+  const clubsCatalog = useMemo(() => getClubsCatalog(), [profile]);
 
   const updateLocalizedField = (pathBase: string, value: string) => {
     updateField(`${pathBase}.${contentLocale}`, value);
@@ -1610,6 +1672,114 @@ export default function SchoolInfoPage() {
             </div>
           ) : (
             <p className="muted">{t('Добавьте хотя бы одного преподавателя.')}</p>
+          )}
+        </Section>
+        <Section title="Каталог кружков и секций">
+          <div className="teacher-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                const nextClubs = [...clubsCatalog, createClubEntry()];
+                setClubsCatalog(nextClubs);
+              }}
+            >
+              {t('Добавить кружок')}
+            </button>
+          </div>
+          {clubsCatalog.length ? (
+            <div className="teacher-list">
+              {clubsCatalog.map((club: any, index: number) => (
+                <div key={club?.id || `club-${index}`} className="teacher-card">
+                  <div className="teacher-card-head">
+                    <h3>{`${t('Каталог кружков и секций')} #${index + 1}`}</h3>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => {
+                        const nextClubs = clubsCatalog.filter(
+                          (_item: any, itemIndex: number) => itemIndex !== index
+                        );
+                        setClubsCatalog(nextClubs);
+                      }}
+                    >
+                      {t('Удалить кружок')}
+                    </button>
+                  </div>
+                  <FieldRow>
+                    <Input
+                      label="Название кружка"
+                      value={String(club?.name?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateClubEntry(index, {
+                          name: {
+                            ...(club?.name || {}),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
+                    />
+                    <Input
+                      label="Кто ведет (ФИО)"
+                      value={club?.teacher_name || ''}
+                      onChange={(value: string) =>
+                        updateClubEntry(index, { teacher_name: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <TextArea
+                      label="Описание кружка"
+                      value={String(club?.description?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateClubEntry(index, {
+                          description: {
+                            ...(club?.description || {}),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <TextArea
+                      label="Расписание"
+                      value={String(club?.schedule?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateClubEntry(index, {
+                          schedule: {
+                            ...(club?.schedule || {}),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
+                      rows={2}
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Для классов"
+                      value={club?.grades || ''}
+                      placeholder="Например: 1-4, 5-7"
+                      onChange={(value: string) =>
+                        updateClubEntry(index, { grades: value })
+                      }
+                    />
+                    <Input
+                      label="Стоимость в месяц"
+                      type="number"
+                      value={club?.price_monthly || ''}
+                      placeholder="0"
+                      onChange={(value: string) =>
+                        updateClubEntry(index, { price_monthly: value })
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">{t('Добавьте хотя бы один кружок.')}</p>
           )}
         </Section>
         <FieldRow>
