@@ -24,10 +24,12 @@ import { addConsultationRequest } from '../services/consultationRequests';
 import Rating from '../components/home/rating';
 import { useAuth } from '../context/AuthContext';
 import { recordVisit } from '../services/visitHistory';
+import { trackProgramInfoEvent } from '../services/programInfoAnalytics';
 import { useLocale } from '../context/LocaleContext';
 import { useRole } from '../context/RoleContext';
 import { getLocalizedText } from '../utils/localizedText';
 import { parseCoordinate } from '../utils/coordinates';
+import { getCurriculaInfo } from '../utils/curriculaInfo';
 import {
   CITY_LABEL_KEYS,
   CLUB_LABEL_KEYS,
@@ -132,6 +134,39 @@ const DetailRow = ({ label, value, labelColor }) => {
         {label}
       </Text>
       <Text style={styles.detailValue}>{normalizedValue}</Text>
+    </View>
+  );
+};
+
+const ProgramChipsRow = ({ label, items, hint, onPress }) => {
+  if (!items.length) return null;
+  return (
+    <View style={styles.programsRow}>
+      <Text style={[styles.detailLabel, { color: '#2563EB' }]}>{label}</Text>
+      <View style={styles.programsChipWrap}>
+        {items.map((item) => (
+          <Pressable
+            key={`${item.label}-${item.raw}`}
+            style={[
+              styles.programChip,
+              item.hasInfo ? styles.programChipActive : styles.programChipPassive,
+            ]}
+            onPress={() => item.hasInfo && onPress(item)}
+            disabled={!item.hasInfo}
+          >
+            <Text
+              style={[
+                styles.programChipText,
+                item.hasInfo ? styles.programChipTextActive : styles.programChipTextPassive,
+              ]}
+            >
+              {item.label}
+            </Text>
+            {item.hasInfo ? <Text style={styles.programChipHelp}>?</Text> : null}
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.programHint}>{hint}</Text>
     </View>
   );
 };
@@ -294,6 +329,12 @@ export default function SchoolDetailScreen() {
   const [staffLanguageFilter, setStaffLanguageFilter] = useState('all');
   const [staffExamOnly, setStaffExamOnly] = useState(false);
   const [isSubmittingReview, setSubmittingReview] = useState(false);
+  const [programModal, setProgramModal] = useState({
+    visible: false,
+    label: '',
+    info: null,
+  });
+  const [programModalExpanded, setProgramModalExpanded] = useState(false);
   const visitUserKey = useMemo(() => {
     if (account?.email) return account.email.toLowerCase();
     if (account?.organization) return account.organization.toLowerCase();
@@ -340,6 +381,66 @@ export default function SchoolDetailScreen() {
   });
 
   const dedupeList = (list) => Array.from(new Set(list.filter(Boolean)));
+  const programsUiText = useMemo(() => {
+    if (locale === 'en') {
+      return {
+        hint: 'Tap a program to see what it means.',
+        whatIs: 'What is this',
+        includes: 'What it includes',
+        forWho: 'Who it is for',
+        workload: 'Workload',
+        outcome: 'Expected outcome',
+        risks: 'What to watch',
+        details: 'Read more',
+        close: 'Close',
+      };
+    }
+    if (locale === 'kk') {
+      return {
+        hint: 'Мағынасын көру үшін бағдарламаны басыңыз.',
+        whatIs: 'Бұл не',
+        includes: 'Нені қамтиды',
+        forWho: 'Кімге лайық',
+        workload: 'Жүктеме',
+        outcome: 'Нәтиже',
+        risks: 'Неге назар аудару керек',
+        details: 'Толығырақ',
+        close: 'Жабу',
+      };
+    }
+    return {
+      hint: 'Нажмите на программу, чтобы понять, что это значит.',
+      whatIs: 'Что это',
+      includes: 'Что включает',
+      forWho: 'Кому подходит',
+      workload: 'Нагрузка',
+      outcome: 'Ожидаемый результат',
+      risks: 'На что обратить внимание',
+      details: 'Подробнее',
+      close: 'Закрыть',
+    };
+  }, [locale]);
+
+  const buildCurriculaItems = (values) => {
+    const seen = new Set();
+    return values.reduce((acc, rawValue) => {
+      const raw = String(rawValue || '').trim();
+      if (!raw) return acc;
+      const label = translateLabel(t, CURRICULA_LABEL_KEYS, raw) || raw;
+      const normalized = label.toLowerCase();
+      if (seen.has(normalized)) return acc;
+      seen.add(normalized);
+      const info = getCurriculaInfo(raw, locale) || getCurriculaInfo(label, locale);
+      acc.push({
+        raw,
+        label,
+        hasInfo: Boolean(info),
+        info,
+      });
+      return acc;
+    }, []);
+  };
+
   const languages = dedupeList([
     ...translateList(
       t,
@@ -349,21 +450,29 @@ export default function SchoolDetailScreen() {
     getLocalizedText(education.languages_other, locale),
   ]);
   const programsRaw = splitToList(getLocalizedText(education.programs, locale));
-  const programs = dedupeList(
-    translateList(t, CURRICULA_LABEL_KEYS, programsRaw)
-  );
+  const programItemsRaw = buildCurriculaItems(programsRaw);
   const curricula = education.curricula || {};
   const curriculaList = [
     ...(curricula.national || []),
     ...(curricula.international || []),
     ...(curricula.additional || []),
   ];
-  const curriculaLocalized = dedupeList([
-    ...translateList(t, CURRICULA_LABEL_KEYS, curriculaList),
-    getLocalizedText(curricula.other, locale),
-  ]);
-  const programsToShow = programs.filter(
-    (item) => !curriculaLocalized.includes(item)
+  const curriculaItemsBase = buildCurriculaItems(curriculaList);
+  const curriculaOther = getLocalizedText(curricula.other, locale).trim();
+  const curriculaItems = curriculaOther
+    ? [
+        ...curriculaItemsBase,
+        {
+          raw: curriculaOther,
+          label: curriculaOther,
+          hasInfo: false,
+          info: null,
+        },
+      ]
+    : curriculaItemsBase;
+  const curriculaLabelsSet = new Set(curriculaItemsBase.map((item) => item.label));
+  const programsToShow = programItemsRaw.filter(
+    (item) => !curriculaLabelsSet.has(item.label)
   );
   const subjects = dedupeList([
     ...translateList(
@@ -692,6 +801,41 @@ export default function SchoolDetailScreen() {
     setVideoModal({ visible: false, url: '' });
   };
 
+  const handleOpenProgramInfo = (item) => {
+    if (!item?.info) return;
+    setProgramModalExpanded(false);
+    setProgramModal({
+      visible: true,
+      label: item.label,
+      info: item.info,
+    });
+    trackProgramInfoEvent({
+      schoolId: profile?.school_id || basic_info?.name,
+      programName: item.raw || item.label,
+      eventType: 'open',
+      locale,
+      expanded: false,
+    });
+  };
+
+  const handleCloseProgramInfo = () => {
+    if (programModal?.label) {
+      trackProgramInfoEvent({
+        schoolId: profile?.school_id || basic_info?.name,
+        programName: programModal.label,
+        eventType: 'close',
+        locale,
+        expanded: programModalExpanded,
+      });
+    }
+    setProgramModalExpanded(false);
+    setProgramModal({
+      visible: false,
+      label: '',
+      info: null,
+    });
+  };
+
   const handlePhotoNext = () => {
     if (!photos.length) return;
     setPhotoModal((prev) => ({
@@ -984,17 +1128,19 @@ export default function SchoolDetailScreen() {
               labelColor="#2563EB"
             />
             {programsToShow.length ? (
-              <DetailRow
+              <ProgramChipsRow
                 label={t('schoolDetail.field.programs')}
-                value={programsToShow.join(', ')}
-                labelColor="#2563EB"
+                items={programsToShow}
+                hint={programsUiText.hint}
+                onPress={handleOpenProgramInfo}
               />
             ) : null}
-            {curriculaList.length ? (
-              <DetailRow
+            {curriculaItems.length ? (
+              <ProgramChipsRow
                 label={t('schoolDetail.field.curricula')}
-                value={curriculaLocalized.join(', ')}
-                labelColor="#2563EB"
+                items={curriculaItems}
+                hint={programsUiText.hint}
+                onPress={handleOpenProgramInfo}
               />
             ) : null}
             <DetailRow
@@ -1660,6 +1806,92 @@ export default function SchoolDetailScreen() {
       ) : null}
 
       <Modal
+        visible={programModal.visible}
+        animationType="fade"
+        transparent
+        onRequestClose={handleCloseProgramInfo}
+      >
+        <View style={styles.reviewModalBackdrop}>
+          <View style={styles.programModalCard}>
+            <View style={styles.reviewModalHeader}>
+              <Text style={styles.reviewModalTitle}>
+                {programModal.info?.title || programModal.label}
+              </Text>
+              <Pressable style={styles.reviewModalClose} onPress={handleCloseProgramInfo}>
+                <XMarkIcon color="#0F172A" size={20} />
+              </Pressable>
+            </View>
+            <View style={styles.programModalIntro}>
+              <Text style={styles.programModalSectionLabel}>
+                {programsUiText.whatIs}
+              </Text>
+              <Text style={styles.programModalText}>
+                {programModal.info?.short || ''}
+              </Text>
+            </View>
+            {programModalExpanded ? (
+              <ScrollView style={styles.programModalScroll} contentContainerStyle={styles.programModalContent}>
+                <DetailRow
+                  label={programsUiText.includes}
+                  value={programModal.info?.includes}
+                  labelColor="#2563EB"
+                />
+                <DetailRow
+                  label={programsUiText.forWho}
+                  value={programModal.info?.forWho}
+                  labelColor="#2563EB"
+                />
+                <DetailRow
+                  label={programsUiText.workload}
+                  value={programModal.info?.workload}
+                  labelColor="#2563EB"
+                />
+                <DetailRow
+                  label={programsUiText.outcome}
+                  value={programModal.info?.outcome}
+                  labelColor="#2563EB"
+                />
+                <DetailRow
+                  label={programsUiText.risks}
+                  value={programModal.info?.risks}
+                  labelColor="#2563EB"
+                />
+              </ScrollView>
+            ) : null}
+            <View style={styles.programModalActions}>
+              {!programModalExpanded ? (
+                <Pressable
+                  style={styles.programModalPrimary}
+                  onPress={() => {
+                    trackProgramInfoEvent({
+                      schoolId: profile?.school_id || basic_info?.name,
+                      programName: programModal.label,
+                      eventType: 'read_more',
+                      locale,
+                      expanded: true,
+                    });
+                    setProgramModalExpanded(true);
+                  }}
+                >
+                  <Text style={styles.programModalPrimaryText}>
+                    {programsUiText.details}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                style={styles.programModalSecondary}
+                onPress={handleCloseProgramInfo}
+              >
+                <Text style={styles.programModalSecondaryText}>
+                  {programsUiText.close}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={videoModal.visible}
         transparent
         animationType="fade"
@@ -2139,6 +2371,59 @@ const styles = StyleSheet.create({
     fontFamily: 'exo',
     fontSize: 14,
     color: '#1F2937',
+  },
+  programsRow: {
+    gap: 6,
+  },
+  programsChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  programChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  programChipActive: {
+    borderColor: 'rgba(37,99,235,0.35)',
+    backgroundColor: '#EFF6FF',
+  },
+  programChipPassive: {
+    borderColor: 'rgba(148,163,184,0.35)',
+    backgroundColor: '#F8FAFC',
+  },
+  programChipText: {
+    fontSize: 12,
+  },
+  programChipTextActive: {
+    fontFamily: 'exoSemibold',
+    color: '#1D4ED8',
+  },
+  programChipTextPassive: {
+    fontFamily: 'exo',
+    color: '#475569',
+  },
+  programChipHelp: {
+    fontFamily: 'exoSemibold',
+    fontSize: 11,
+    color: '#2563EB',
+    backgroundColor: 'rgba(37,99,235,0.12)',
+    borderRadius: 999,
+    width: 16,
+    height: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    overflow: 'hidden',
+  },
+  programHint: {
+    fontFamily: 'exo',
+    fontSize: 12,
+    color: '#64748B',
   },
   descriptionCard: {
     borderRadius: 24,
@@ -2624,6 +2909,74 @@ const styles = StyleSheet.create({
   },
   teacherMetaList: {
     gap: 10,
+  },
+  programModalCard: {
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    maxHeight: '88%',
+    overflow: 'hidden',
+    gap: 12,
+  },
+  programModalIntro: {
+    gap: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.18)',
+    backgroundColor: '#F8FAFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  programModalSectionLabel: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    color: '#2563EB',
+  },
+  programModalText: {
+    fontFamily: 'exo',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#1F2937',
+  },
+  programModalScroll: {
+    maxHeight: 320,
+  },
+  programModalContent: {
+    gap: 10,
+    paddingBottom: 6,
+  },
+  programModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  programModalPrimary: {
+    borderRadius: 999,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  programModalPrimaryText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  programModalSecondary: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.35)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  programModalSecondaryText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#2563EB',
   },
   reviewModalHeader: {
     flexDirection: 'row',

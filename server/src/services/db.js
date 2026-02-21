@@ -33,7 +33,33 @@ const ensureSchoolsTable = async () => {
   `);
 };
 
+const ensureProgramAnalyticsTable = async () => {
+  const db = getPool();
+  if (!db) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS program_analytics_events (
+      id BIGSERIAL PRIMARY KEY,
+      school_id TEXT NOT NULL,
+      program_name TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      locale TEXT,
+      expanded BOOLEAN NOT NULL DEFAULT FALSE,
+      source TEXT NOT NULL DEFAULT 'mobile',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_program_analytics_events_created_at
+    ON program_analytics_events (created_at DESC);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_program_analytics_events_school_event
+    ON program_analytics_events (school_id, event_type);
+  `);
+};
+
 module.exports = {
   getPool,
   ensureSchoolsTable,
+  ensureProgramAnalyticsTable,
 };

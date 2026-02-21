@@ -449,6 +449,46 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Statistics will be added later.',
     kk: 'Статистика кейін қосылады.',
   },
+  statisticsProgramInfoHint: {
+    ru: 'Клики родителей по объяснениям учебных программ в мобильной карточке школы.',
+    en: 'Parent clicks on curriculum explanations in the mobile school card.',
+    kk: 'Мобильді мектеп картасындағы оқу бағдарламасы түсіндірмелеріне ата-аналардың басулары.',
+  },
+  statisticsProgramInfoOpen: {
+    ru: 'Открытия карточки программы',
+    en: 'Program card opens',
+    kk: 'Бағдарлама карточкасын ашу',
+  },
+  statisticsProgramInfoReadMore: {
+    ru: 'Нажатия "Подробнее"',
+    en: '"Read more" clicks',
+    kk: '"Толығырақ" басулары',
+  },
+  statisticsProgramInfoClose: {
+    ru: 'Закрытия карточки',
+    en: 'Program card closes',
+    kk: 'Карточканы жабу',
+  },
+  statisticsProgramInfoRate: {
+    ru: 'Доля "Подробнее" от открытий',
+    en: 'Read more rate from opens',
+    kk: 'Ашулардан "Толығырақ" үлесі',
+  },
+  statisticsTopPrograms: {
+    ru: 'Топ программ',
+    en: 'Top programs',
+    kk: 'Үздік бағдарламалар',
+  },
+  statisticsTopSchools: {
+    ru: 'Топ школ',
+    en: 'Top schools',
+    kk: 'Үздік мектептер',
+  },
+  statisticsSampledEvents: {
+    ru: 'Всего событий за период',
+    en: 'Total events for period',
+    kk: 'Кезеңдегі барлық оқиғалар',
+  },
   checkingSession: {
     ru: 'Проверяем сессию...',
     en: 'Checking session...',

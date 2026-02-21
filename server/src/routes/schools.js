@@ -5,6 +5,10 @@ const {
   upsertSchool,
   deleteSchool,
 } = require('../services/schoolsStore');
+const {
+  recordProgramAnalyticsEvent,
+  getProgramAnalyticsSummary,
+} = require('../services/programAnalyticsStore');
 const { buildConfig } = require('../utils/config');
 
 const buildSchoolsRouter = () => {
@@ -93,6 +97,75 @@ const buildSchoolsRouter = () => {
         return res.status(404).json({ error: 'School not found' });
       }
       res.json({ data: school });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/analytics/program-info', async (req, res, next) => {
+    try {
+      const schoolId = String(req.body?.schoolId || '').trim();
+      const programName = String(req.body?.programName || '').trim();
+      const eventType = String(req.body?.eventType || '').trim();
+
+      if (!schoolId || !programName || !eventType) {
+        return res.status(400).json({
+          error: 'schoolId, programName and eventType are required',
+        });
+      }
+
+      await recordProgramAnalyticsEvent({
+        schoolId,
+        programName,
+        eventType,
+        locale: req.body?.locale,
+        expanded: Boolean(req.body?.expanded),
+        source: req.body?.source || 'mobile',
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      if (String(error?.message || '').includes('Invalid eventType')) {
+        return res.status(400).json({ error: 'Invalid eventType' });
+      }
+      next(error);
+    }
+  });
+
+  router.get('/analytics/program-info', async (req, res, next) => {
+    try {
+      const actor = await requireModerator(req, res);
+      if (!actor) return;
+
+      const days = Number.parseInt(String(req.query?.days || '30'), 10);
+      const limit = Number.parseInt(String(req.query?.limit || '10'), 10);
+      const summary = await getProgramAnalyticsSummary({ days, limit });
+      const schools = await readStore();
+      const nameById = schools.reduce((acc, school) => {
+        const schoolId = school?.school_id;
+        if (!schoolId) return acc;
+        const schoolName =
+          school?.basic_info?.display_name?.ru ||
+          school?.basic_info?.name?.ru ||
+          school?.basic_info?.display_name?.en ||
+          school?.basic_info?.name?.en ||
+          schoolId;
+        acc[schoolId] = schoolName;
+        return acc;
+      }, {});
+
+      const topSchools = (summary.topSchools || []).map((row) => ({
+        ...row,
+        school_name: nameById[row.school_id] || row.school_id,
+      }));
+
+      res.json({
+        data: {
+          ...summary,
+          topSchools,
+          actor: actor.email || actor.id,
+        },
+      });
     } catch (error) {
       next(error);
     }

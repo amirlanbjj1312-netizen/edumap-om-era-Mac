@@ -106,3 +106,27 @@ export async function deleteReviewById(token: string, reviewId: string) {
     { token, method: 'DELETE' }
   );
 }
+
+export async function loadProgramInfoAnalytics(
+  token: string,
+  options: { days?: number; limit?: number } = {}
+) {
+  const days = Number.isFinite(options.days) ? Math.max(1, Math.floor(options.days as number)) : 30;
+  const limit = Number.isFinite(options.limit) ? Math.max(1, Math.floor(options.limit as number)) : 10;
+  const query = `days=${encodeURIComponent(String(days))}&limit=${encodeURIComponent(String(limit))}`;
+  return authRequestJson<{
+    data: {
+      days: number;
+      totals: { open: number; read_more: number; close: number };
+      topPrograms: Array<{ program_name: string; open: number; read_more: number; close: number }>;
+      topSchools: Array<{
+        school_id: string;
+        school_name: string;
+        open: number;
+        read_more: number;
+        close: number;
+      }>;
+      sampled_events: number;
+    };
+  }>(`/schools/analytics/program-info?${query}`, { token });
+}
