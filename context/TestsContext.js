@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TESTS_SEED } from '../data/testsSeed';
+import {
+  loadCourseTests,
+  upsertCourseQuestionApi,
+  upsertCourseTestApi,
+} from '../services/coursesApi';
 
 const COMPLETIONS_STORAGE_KEY = 'EDUMAP_TEST_COMPLETIONS_V1';
 
@@ -18,6 +23,27 @@ export const TestsProvider = ({ children }) => {
   const [testsBySubject, setTestsBySubject] = useState(TESTS_SEED);
   const [completedTests, setCompletedTests] = useState({});
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const remote = await loadCourseTests();
+        if (!mounted) return;
+        const hasRemoteData = Object.values(remote || {}).some(
+          (list) => Array.isArray(list) && list.length > 0
+        );
+        if (hasRemoteData) {
+          setTestsBySubject((prev) => ({ ...prev, ...remote }));
+        }
+      } catch (error) {
+        console.warn('[TestsProvider] Failed to load tests from API', error);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,6 +103,9 @@ export const TestsProvider = ({ children }) => {
       const current = prev[subjectId] || [];
       return { ...prev, [subjectId]: [...current, newTest] };
     });
+    upsertCourseTestApi({ subjectId, test: newTest }).catch((error) => {
+      console.warn('[TestsProvider] Failed to save test via API', error);
+    });
     return newTest.id;
   };
 
@@ -97,6 +126,13 @@ export const TestsProvider = ({ children }) => {
         return { ...t, questions: nextQuestions };
       });
       return { ...prev, [subjectId]: updatedTests };
+    });
+    upsertCourseQuestionApi({
+      subjectId,
+      testId,
+      question,
+    }).catch((error) => {
+      console.warn('[TestsProvider] Failed to save question via API', error);
     });
   };
 

@@ -49,6 +49,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'News',
     kk: 'Жаңалықтар',
   },
+  navCourses: {
+    ru: 'Курсы',
+    en: 'Courses',
+    kk: 'Курстар',
+  },
   logout: {
     ru: 'Выйти',
     en: 'Sign out',
@@ -540,6 +545,21 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     kk: 'Жаңалықтар әлі жоқ.',
   },
   newsAdminForbidden: {
+    ru: 'Доступ только для moderator или superadmin.',
+    en: 'Access only for moderator or superadmin.',
+    kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
+  },
+  coursesAdminTitle: {
+    ru: 'Управление курсами',
+    en: 'Courses management',
+    kk: 'Курстарды басқару',
+  },
+  coursesAdminHint: {
+    ru: 'Создавайте и редактируйте тесты и вопросы для раздела обучения.',
+    en: 'Create and edit tests and questions for studying section.',
+    kk: 'Оқу бөлімі үшін тесттер мен сұрақтарды жасаңыз және өңдеңіз.',
+  },
+  coursesAdminForbidden: {
     ru: 'Доступ только для moderator или superadmin.',
     en: 'Access only for moderator or superadmin.',
     kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',

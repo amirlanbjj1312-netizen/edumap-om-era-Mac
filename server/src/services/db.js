@@ -74,9 +74,26 @@ const ensureNewsTable = async () => {
   `);
 };
 
+const ensureCoursesTestsTable = async () => {
+  const db = getPool();
+  if (!db) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS courses_tests (
+      id TEXT PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_courses_tests_updated_at
+    ON courses_tests (updated_at DESC);
+  `);
+};
+
 module.exports = {
   getPool,
   ensureSchoolsTable,
   ensureProgramAnalyticsTable,
   ensureNewsTable,
+  ensureCoursesTestsTable,
 };

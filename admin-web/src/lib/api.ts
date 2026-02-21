@@ -134,6 +134,36 @@ export async function deleteNewsItem(token: string, id: string) {
   });
 }
 
+export async function loadCourseTests() {
+  return requestJson<{ data: Record<string, any[]> }>('/courses/tests');
+}
+
+export async function upsertCourseTest(token: string, payload: { subjectId: string; test: any }) {
+  return authRequestJson<{ data: any }>('/courses/tests', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function upsertCourseQuestion(
+  token: string,
+  payload: { subjectId: string; testId: string; question: any }
+) {
+  return authRequestJson<{ data: any }>('/courses/questions', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCourseTest(token: string, subjectId: string, testId: string) {
+  return authRequestJson<{ data: Record<string, any[]> }>(
+    `/courses/tests/${encodeURIComponent(subjectId)}/${encodeURIComponent(testId)}`,
+    { token, method: 'DELETE' }
+  );
+}
+
 export async function loadProgramInfoAnalytics(
   token: string,
   options: { days?: number; limit?: number } = {}
