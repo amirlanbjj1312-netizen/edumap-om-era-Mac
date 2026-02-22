@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createNewsItem,
   deleteNewsItem,
@@ -102,6 +102,7 @@ export default function AdminNewsPage() {
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
   const [tagInput, setTagInput] = useState('');
+  const contentInputRef = useRef<HTMLTextAreaElement | null>(null);
   const localeKey = (locale === 'ru' || locale === 'en' || locale === 'kk' ? locale : 'ru') as
     | 'ru'
     | 'en'
@@ -167,6 +168,48 @@ export default function AdminNewsPage() {
         : locale === 'kk'
         ? '#мысал: #қабылдау #мектеп-өмірі #олимпиада'
         : '#пример: #поступление #школьнаяжизнь #олимпиада',
+    [locale]
+  );
+  const contentToolbarLabels = useMemo(
+    () =>
+      locale === 'en'
+        ? {
+            bold: 'Bold',
+            italic: 'Italic',
+            underline: 'Underline',
+            h1: 'Title',
+            h2: 'Heading',
+            list: 'List',
+            link: 'Link',
+            small: 'A-',
+            large: 'A+',
+            placeholder: 'Text',
+          }
+        : locale === 'kk'
+        ? {
+            bold: 'Қалың',
+            italic: 'Көлбеу',
+            underline: 'Асты сызылған',
+            h1: 'Тақырып',
+            h2: 'Бөлім',
+            list: 'Тізім',
+            link: 'Сілтеме',
+            small: 'A-',
+            large: 'A+',
+            placeholder: 'Мәтін',
+          }
+        : {
+            bold: 'Жирный',
+            italic: 'Курсив',
+            underline: 'Подчеркнутый',
+            h1: 'Заголовок',
+            h2: 'Подзаголовок',
+            list: 'Список',
+            link: 'Ссылка',
+            small: 'A-',
+            large: 'A+',
+            placeholder: 'Текст',
+          },
     [locale]
   );
   const tagsList = useMemo(() => splitList(form.tags), [form.tags]);
@@ -398,6 +441,30 @@ export default function AdminNewsPage() {
       return { ...prev, tags: joinList(next) };
     });
   }, []);
+  const applyContentFormat = useCallback(
+    (before: string, after: string, fallbackText?: string) => {
+      const node = contentInputRef.current;
+      const currentValue = getLocalizedField('content');
+      const defaultText = fallbackText || contentToolbarLabels.placeholder;
+      if (!node) {
+        setLocalizedField('content', `${currentValue}${before}${defaultText}${after}`);
+        return;
+      }
+      const start = node.selectionStart ?? currentValue.length;
+      const end = node.selectionEnd ?? currentValue.length;
+      const selectedText = currentValue.slice(start, end);
+      const insertText = `${before}${selectedText || defaultText}${after}`;
+      const nextValue =
+        currentValue.slice(0, start) + insertText + currentValue.slice(end);
+      setLocalizedField('content', nextValue);
+      requestAnimationFrame(() => {
+        node.focus();
+        const cursor = start + insertText.length;
+        node.setSelectionRange(cursor, cursor);
+      });
+    },
+    [contentToolbarLabels.placeholder, getLocalizedField, setLocalizedField]
+  );
 
   const remove = useCallback(
     async (id: string) => {
@@ -533,7 +600,62 @@ export default function AdminNewsPage() {
         </p>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <Field label={localizedFieldLabels.videoUrls} value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
-        <Field label={localizedFieldLabels.content} value={getLocalizedField('content')} onChange={(value) => setLocalizedField('content', value)} textarea rows={6} />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{localizedFieldLabels.content}</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+            <button type="button" className="option-chip" onClick={() => applyContentFormat('<strong>', '</strong>')}>
+              {contentToolbarLabels.bold}
+            </button>
+            <button type="button" className="option-chip" onClick={() => applyContentFormat('<em>', '</em>')}>
+              {contentToolbarLabels.italic}
+            </button>
+            <button type="button" className="option-chip" onClick={() => applyContentFormat('<u>', '</u>')}>
+              {contentToolbarLabels.underline}
+            </button>
+            <button type="button" className="option-chip" onClick={() => applyContentFormat('<h1>', '</h1>')}>
+              {contentToolbarLabels.h1}
+            </button>
+            <button type="button" className="option-chip" onClick={() => applyContentFormat('<h2>', '</h2>')}>
+              {contentToolbarLabels.h2}
+            </button>
+            <button
+              type="button"
+              className="option-chip"
+              onClick={() =>
+                applyContentFormat('<ul><li>', '</li></ul>', contentToolbarLabels.placeholder)
+              }
+            >
+              {contentToolbarLabels.list}
+            </button>
+            <button
+              type="button"
+              className="option-chip"
+              onClick={() => applyContentFormat('<a href="https://" target="_blank">', '</a>', 'https://')}
+            >
+              {contentToolbarLabels.link}
+            </button>
+            <button
+              type="button"
+              className="option-chip"
+              onClick={() => applyContentFormat('<span style="font-size:14px;">', '</span>')}
+            >
+              {contentToolbarLabels.small}
+            </button>
+            <button
+              type="button"
+              className="option-chip"
+              onClick={() => applyContentFormat('<span style="font-size:22px;">', '</span>')}
+            >
+              {contentToolbarLabels.large}
+            </button>
+          </div>
+          <textarea
+            ref={contentInputRef}
+            value={getLocalizedField('content')}
+            rows={6}
+            onChange={(event) => setLocalizedField('content', event.target.value)}
+          />
+        </label>
         <Field
           label={localizedFieldLabels.publishedAt}
           value={publishedAtInputValue}
