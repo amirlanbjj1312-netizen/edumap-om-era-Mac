@@ -857,6 +857,7 @@ export default function AdminNewsPage() {
           </div>
           <textarea
             ref={contentInputRef}
+            className="news-editor-textarea"
             value={getLocalizedField('content')}
             rows={6}
             onChange={(event) => setLocalizedField('content', event.target.value)}

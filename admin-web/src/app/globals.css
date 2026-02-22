@@ -272,6 +272,13 @@ a {
   cursor: pointer;
 }
 
+.news-editor-textarea {
+  height: 240px;
+  max-height: 240px;
+  overflow-y: auto;
+  resize: vertical;
+}
+
 .actions {
   margin-top: 24px;
   display: flex;
