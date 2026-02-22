@@ -35,7 +35,7 @@ const initialForm = {
 };
 
 export default function AdminNewsPage() {
-  const { t } = useAdminLocale();
+  const { locale, setLocale, t } = useAdminLocale();
   const [authReady, setAuthReady] = useState(false);
   const [actorRole, setActorRole] = useState('user');
   const [actorEmail, setActorEmail] = useState('');
@@ -265,6 +265,18 @@ export default function AdminNewsPage() {
 
   return (
     <div className="card">
+      <div className="locale-toggle" style={{ marginBottom: 8 }}>
+        {(['ru', 'en', 'kk'] as const).map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            className={`locale-chip${locale === lang ? ' active' : ''}`}
+            onClick={() => setLocale(lang)}
+          >
+            {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
+          </button>
+        ))}
+      </div>
       <div className="requests-head">
         <h2>{t('newsAdminTitle')}</h2>
         <button type="button" className="button secondary" onClick={reload}>
