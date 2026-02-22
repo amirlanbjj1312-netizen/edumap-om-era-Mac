@@ -26,6 +26,20 @@ const normalizeTag = (value: string) =>
     .replace(/\s+/g, '-')
     .replace(/[^\p{L}\p{N}_-]/gu, '')
     .toLowerCase();
+const toDateTimeLocalValue = (value: string) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const pad = (num: number) => String(num).padStart(2, '0');
+  const year = parsed.getFullYear();
+  const month = pad(parsed.getMonth() + 1);
+  const day = pad(parsed.getDate());
+  const hours = pad(parsed.getHours());
+  const minutes = pad(parsed.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 const initialForm = {
   title: '',
@@ -112,7 +126,7 @@ export default function AdminNewsPage() {
             tags: 'Hashtags',
             imageUrls: 'Image URLs (comma separated)',
             videoUrls: 'Video URLs (comma separated)',
-            publishedAt: 'Published at (ISO, optional)',
+            publishedAt: 'Publish date and time (optional)',
           }
         : locale === 'kk'
         ? {
@@ -123,7 +137,7 @@ export default function AdminNewsPage() {
             tags: 'Хэштегтер',
             imageUrls: 'Сурет URL-дары (үтір арқылы)',
             videoUrls: 'Видео URL-дары (үтір арқылы)',
-            publishedAt: 'Жарияланған уақыты (ISO, міндетті емес)',
+            publishedAt: 'Жариялау күні мен уақыты (міндетті емес)',
           }
         : {
             title: 'Название',
@@ -133,7 +147,7 @@ export default function AdminNewsPage() {
             tags: 'Хештеги',
             imageUrls: 'URL изображений (через запятую)',
             videoUrls: 'URL видео (через запятую)',
-            publishedAt: 'Дата публикации (ISO, необязательно)',
+            publishedAt: 'Дата и время публикации (необязательно)',
           },
     [locale]
   );
@@ -156,6 +170,10 @@ export default function AdminNewsPage() {
     [locale]
   );
   const tagsList = useMemo(() => splitList(form.tags), [form.tags]);
+  const publishedAtInputValue = useMemo(
+    () => toDateTimeLocalValue(form.publishedAt),
+    [form.publishedAt]
+  );
   const setLocalizedField = useCallback(
     (field: 'title' | 'summary' | 'content', value: string) => {
       const key = textFieldKeyMap[field];
@@ -518,8 +536,14 @@ export default function AdminNewsPage() {
         <Field label={localizedFieldLabels.content} value={getLocalizedField('content')} onChange={(value) => setLocalizedField('content', value)} textarea rows={6} />
         <Field
           label={localizedFieldLabels.publishedAt}
-          value={form.publishedAt}
-          onChange={(value) => setForm((p) => ({ ...p, publishedAt: value }))}
+          value={publishedAtInputValue}
+          onChange={(value) =>
+            setForm((p) => ({
+              ...p,
+              publishedAt: value ? new Date(value).toISOString() : '',
+            }))
+          }
+          type="datetime-local"
         />
 
         <div className="actions">
@@ -570,12 +594,14 @@ function Field({
   onChange,
   textarea = false,
   rows = 3,
+  type = 'text',
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   textarea?: boolean;
   rows?: number;
+  type?: string;
 }) {
   return (
     <label className="field" style={{ marginBottom: 10 }}>
@@ -583,7 +609,7 @@ function Field({
       {textarea ? (
         <textarea value={value} rows={rows} onChange={(event) => onChange(event.target.value)} />
       ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} />
+        <input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
       )}
     </label>
   );
