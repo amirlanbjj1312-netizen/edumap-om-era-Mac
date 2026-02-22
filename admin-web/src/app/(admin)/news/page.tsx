@@ -100,6 +100,7 @@ export default function AdminNewsPage() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadingVideos, setUploadingVideos] = useState(false);
   const [mediaMessage, setMediaMessage] = useState('');
+  const [uploadInputsKey, setUploadInputsKey] = useState(0);
   const [message, setMessage] = useState('');
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
@@ -313,11 +314,13 @@ export default function AdminNewsPage() {
     setForm(initialForm);
     setTagInput('');
     setMediaMessage('');
+    setUploadInputsKey((prev) => prev + 1);
   }, []);
 
   const startEdit = useCallback((item: any) => {
     setEditId(item?.id || '');
     setMediaMessage('');
+    setUploadInputsKey((prev) => prev + 1);
     setForm({
       title: item?.title || '',
       titleEn: item?.titleEn || '',
@@ -732,6 +735,7 @@ export default function AdminNewsPage() {
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{t('newsAdminImageUploadLabel')}</span>
           <input
+            key={`news-image-upload-${uploadInputsKey}`}
             type="file"
             accept="image/*"
             multiple
@@ -749,6 +753,7 @@ export default function AdminNewsPage() {
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{localizedVideoUpload.label}</span>
           <input
+            key={`news-video-upload-${uploadInputsKey}`}
             type="file"
             accept="video/*"
             multiple
