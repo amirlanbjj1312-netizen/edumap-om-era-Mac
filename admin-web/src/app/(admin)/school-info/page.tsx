@@ -1281,11 +1281,15 @@ export default function SchoolInfoPage() {
                 <Input
                   label="Телефон"
                   value={getDeep(profile, 'basic_info.phone')}
+                  type="tel"
+                  placeholder="+7 (___) ___-__-__"
                   onChange={(value: string) => updateField('basic_info.phone', value)}
                 />
                 <Input
                   label="WhatsApp"
                   value={getDeep(profile, 'basic_info.whatsapp_phone')}
+                  type="tel"
+                  placeholder="+7 (___) ___-__-__"
                   onChange={(value: string) =>
                     updateField('basic_info.whatsapp_phone', value)
                   }

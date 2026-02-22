@@ -79,12 +79,14 @@ const EditableField = ({
   value,
   onChange,
   type = 'text',
+  placeholder,
   readOnly = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  placeholder?: string;
   readOnly?: boolean;
 }) => (
   <label className="field">
@@ -93,6 +95,7 @@ const EditableField = ({
       className="input"
       value={value}
       type={type}
+      placeholder={placeholder}
       readOnly={readOnly}
       onChange={(event) => onChange(event.target.value)}
     />
@@ -385,6 +388,8 @@ export default function ProfilePage() {
         <EditableField
           label={t('contactPhone')}
           value={form.contactPhone}
+          type="tel"
+          placeholder="+7 (___) ___-__-__"
           onChange={(value) => updateField('contactPhone', value)}
         />
       </div>
