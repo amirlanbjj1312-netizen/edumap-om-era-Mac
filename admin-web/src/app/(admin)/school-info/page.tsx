@@ -3,7 +3,12 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { loadSchools, upsertSchool } from '@/lib/api';
+import {
+  loadSchools,
+  upsertSchool,
+  loadTestBillingTariffs,
+  runSchoolTestPayment,
+} from '@/lib/api';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
@@ -164,6 +169,21 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Сохраняем...': { en: 'Saving...', kk: 'Сақталуда...' },
   'Сохранено.': { en: 'Saved.', kk: 'Сақталды.' },
   'Ошибка сохранения.': { en: 'Save failed.', kk: 'Сақтау қатесі.' },
+  'Подписка и продвижение': { en: 'Subscription and promotion', kk: 'Жазылым және ілгерілету' },
+  Тариф: { en: 'Tariff', kk: 'Тариф' },
+  'Оплатить (тест)': { en: 'Pay (test)', kk: 'Төлеу (тест)' },
+  'Проводим оплату...': { en: 'Processing payment...', kk: 'Төлем өңделуде...' },
+  'Продлить по текущему тарифу': { en: 'Renew current tariff', kk: 'Ағымдағы тарифпен ұзарту' },
+  'Текущий статус подписки': { en: 'Current subscription status', kk: 'Ағымдағы жазылым күйі' },
+  'Тарифы недоступны': { en: 'No tariffs available', kk: 'Тарифтер қолжетімсіз' },
+  'Нет предыдущего тарифа для продления': {
+    en: 'No previous tariff to renew',
+    kk: 'Ұзарту үшін алдыңғы тариф жоқ',
+  },
+  'Тестовая оплата успешна': {
+    en: 'Test payment successful',
+    kk: 'Тест төлемі сәтті',
+  },
   'Не удалось загрузить данные.': {
     en: 'Failed to load data.',
     kk: 'Деректерді жүктеу мүмкін болмады.',
@@ -555,6 +575,19 @@ export default function SchoolInfoPage() {
     return profile.school_id;
   }, [profile?.school_id]);
   const [fallbackSchoolId, setFallbackSchoolId] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
+  const [tariffs, setTariffs] = useState<
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      price_kzt: number;
+      duration_days: number;
+      priority_weight: number;
+    }>
+  >([]);
+  const [selectedTariffId, setSelectedTariffId] = useState('');
+  const [isPayingTariff, setPayingTariff] = useState(false);
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
   const schoolType = useMemo(() => getDeep(profile, 'basic_info.type', ''), [profile]);
@@ -598,6 +631,14 @@ export default function SchoolInfoPage() {
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
   };
+  const monetizationStatus = useMemo(
+    () => String(getDeep(profile, 'monetization.subscription_status', 'inactive') || 'inactive'),
+    [profile]
+  );
+  const lastTariffId = useMemo(
+    () => String(getDeep(profile, 'monetization.last_tariff_id', '') || ''),
+    [profile]
+  );
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
@@ -824,6 +865,7 @@ export default function SchoolInfoPage() {
         router.replace('/login');
         return;
       }
+      setSessionToken(session.access_token || '');
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
@@ -992,6 +1034,27 @@ export default function SchoolInfoPage() {
       ignore = true;
     };
   }, [router]);
+  useEffect(() => {
+    let active = true;
+    const loadTariffs = async () => {
+      try {
+        const result = await loadTestBillingTariffs();
+        if (!active) return;
+        const nextTariffs = Array.isArray(result?.data) ? result.data : [];
+        setTariffs(nextTariffs);
+        if (!selectedTariffId && nextTariffs[0]?.id) {
+          setSelectedTariffId(nextTariffs[0].id);
+        }
+      } catch {
+        if (!active) return;
+        setTariffs([]);
+      }
+    };
+    loadTariffs();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateField = (path: string, value: any) => {
     setProfile((prev: SchoolProfile | null) => (prev ? setDeep(prev, path, value) : prev));
@@ -1043,6 +1106,45 @@ export default function SchoolInfoPage() {
         (error as any)?.error ||
         t('Ошибка сохранения.');
       setMessage(detail);
+    }
+  };
+  const handleTestPayment = async (mode: 'selected' | 'renew') => {
+    if (!profile?.school_id) return;
+    if (!sessionToken) {
+      window.alert(t('Ошибка сохранения.'));
+      return;
+    }
+    const tariffId =
+      mode === 'renew'
+        ? (lastTariffId || selectedTariffId)
+        : (selectedTariffId || lastTariffId);
+    if (!tariffId) {
+      window.alert(t('Тарифы недоступны'));
+      return;
+    }
+    if (mode === 'renew' && !lastTariffId) {
+      window.alert(t('Нет предыдущего тарифа для продления'));
+      return;
+    }
+    const tariffName = tariffs.find((item) => item.id === tariffId)?.name || tariffId;
+    const confirmed = window.confirm(`${t('Оплатить (тест)')} ${tariffName}?`);
+    if (!confirmed) return;
+
+    setPayingTariff(true);
+    try {
+      const result = await runSchoolTestPayment(sessionToken, profile.school_id, {
+        tariffId,
+      });
+      const nextProfile = result?.data?.profile;
+      if (nextProfile) {
+        setProfile(createEmptySchoolProfile(nextProfile));
+      }
+      window.alert(t('Тестовая оплата успешна'));
+    } catch (error) {
+      const detail = (error as any)?.message || t('Ошибка сохранения.');
+      window.alert(detail);
+    } finally {
+      setPayingTariff(false);
     }
   };
 
@@ -1292,6 +1394,49 @@ export default function SchoolInfoPage() {
                       updateField('finance.grants_discounts', value)
                     }
                   />
+                  <Section title="Подписка и продвижение">
+                    <FieldRow>
+                      <label className="field">
+                        <span>{t('Тариф')}</span>
+                        <select
+                          value={selectedTariffId || tariffs[0]?.id || ''}
+                          onChange={(event) => setSelectedTariffId(event.target.value)}
+                          disabled={isPayingTariff || !tariffs.length}
+                        >
+                          {tariffs.length ? (
+                            tariffs.map((tariff) => (
+                              <option key={tariff.id} value={tariff.id}>
+                                {`${tariff.name} · ${Number(tariff.price_kzt || 0).toLocaleString('ru-RU')} ₸ · ${tariff.duration_days} дн`}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">{t('Тарифы недоступны')}</option>
+                          )}
+                        </select>
+                      </label>
+                    </FieldRow>
+                    <p className="muted">
+                      {`${t('Текущий статус подписки')}: ${monetizationStatus}`}
+                    </p>
+                    <div className="schools-admin-actions">
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => handleTestPayment('selected')}
+                        disabled={isPayingTariff || !tariffs.length}
+                      >
+                        {isPayingTariff ? t('Проводим оплату...') : t('Оплатить (тест)')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => handleTestPayment('renew')}
+                        disabled={isPayingTariff || !lastTariffId}
+                      >
+                        {t('Продлить по текущему тарифу')}
+                      </button>
+                    </div>
+                  </Section>
                 </Section>
               )}
             </>

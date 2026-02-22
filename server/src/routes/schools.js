@@ -70,7 +70,7 @@ const buildSchoolsRouter = () => {
     }
     return data.user;
   };
-  const requireSuperadmin = async (req, res) => {
+  const requireAdminOrSuperadmin = async (req, res) => {
     if (!supabaseAdmin) {
       res.status(500).json({ error: 'Supabase admin is not configured' });
       return null;
@@ -87,11 +87,11 @@ const buildSchoolsRouter = () => {
     }
     const role =
       data.user?.user_metadata?.role || data.user?.app_metadata?.role || '';
-    if (!hasMinRole(role, 'superadmin')) {
-      res.status(403).json({ error: 'Only superadmin can process test payments' });
+    if (!hasMinRole(role, 'admin')) {
+      res.status(403).json({ error: 'Only admin/superadmin can process payments' });
       return null;
     }
-    return data.user;
+    return { user: data.user, role };
   };
 
   const TEST_BILLING_TARIFFS = [
@@ -379,8 +379,10 @@ const buildSchoolsRouter = () => {
 
   router.post('/:id/payments/test', async (req, res, next) => {
     try {
-      const actor = await requireSuperadmin(req, res);
-      if (!actor) return;
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
 
       const schoolId = String(req.params?.id || '').trim();
       const tariffId = String(req.body?.tariffId || '').trim();
@@ -397,6 +399,20 @@ const buildSchoolsRouter = () => {
       const school = schools.find((item) => item?.school_id === schoolId);
       if (!school) {
         return res.status(404).json({ error: 'School not found' });
+      }
+
+      if (actorRole !== 'superadmin') {
+        const actorEmail = String(actor?.email || '')
+          .trim()
+          .toLowerCase();
+        const schoolEmail = String(school?.basic_info?.email || '')
+          .trim()
+          .toLowerCase();
+        if (!actorEmail || !schoolEmail || actorEmail !== schoolEmail) {
+          return res
+            .status(403)
+            .json({ error: 'Admin can process payments only for own school' });
+        }
       }
 
       const now = new Date();
