@@ -19,6 +19,13 @@ const splitList = (value: string) =>
     .filter(Boolean);
 
 const joinList = (value: string[] = []) => value.filter(Boolean).join(', ');
+const normalizeTag = (value: string) =>
+  String(value || '')
+    .trim()
+    .replace(/^#+/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}_-]/gu, '')
+    .toLowerCase();
 
 const initialForm = {
   title: '',
@@ -80,6 +87,7 @@ export default function AdminNewsPage() {
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
+  const [tagInput, setTagInput] = useState('');
   const localeKey = (locale === 'ru' || locale === 'en' || locale === 'kk' ? locale : 'ru') as
     | 'ru'
     | 'en'
@@ -101,7 +109,7 @@ export default function AdminNewsPage() {
             summary: 'Summary',
             content: 'Content',
             category: 'Category',
-            tags: 'Tags (comma separated)',
+            tags: 'Hashtags',
             imageUrls: 'Image URLs (comma separated)',
             videoUrls: 'Video URLs (comma separated)',
             publishedAt: 'Published at (ISO, optional)',
@@ -112,7 +120,7 @@ export default function AdminNewsPage() {
             summary: 'Қысқаша сипаттама',
             content: 'Мәтін',
             category: 'Санат',
-            tags: 'Тегтер (үтір арқылы)',
+            tags: 'Хэштегтер',
             imageUrls: 'Сурет URL-дары (үтір арқылы)',
             videoUrls: 'Видео URL-дары (үтір арқылы)',
             publishedAt: 'Жарияланған уақыты (ISO, міндетті емес)',
@@ -122,13 +130,32 @@ export default function AdminNewsPage() {
             summary: 'Краткое описание',
             content: 'Текст',
             category: 'Категория',
-            tags: 'Теги (через запятую)',
+            tags: 'Хештеги',
             imageUrls: 'URL изображений (через запятую)',
             videoUrls: 'URL видео (через запятую)',
             publishedAt: 'Дата публикации (ISO, необязательно)',
           },
     [locale]
   );
+  const localizedTagPlaceholder = useMemo(
+    () =>
+      locale === 'en'
+        ? 'type hashtag and press Enter'
+        : locale === 'kk'
+        ? 'хэштег жазыңыз және Enter басыңыз'
+        : 'введите хештег и нажмите Enter',
+    [locale]
+  );
+  const localizedTagExample = useMemo(
+    () =>
+      locale === 'en'
+        ? '#example: #admission #school-life #olympiad'
+        : locale === 'kk'
+        ? '#мысал: #қабылдау #мектеп-өмірі #олимпиада'
+        : '#пример: #поступление #школьнаяжизнь #олимпиада',
+    [locale]
+  );
+  const tagsList = useMemo(() => splitList(form.tags), [form.tags]);
   const setLocalizedField = useCallback(
     (field: 'title' | 'summary' | 'content', value: string) => {
       const key = textFieldKeyMap[field];
@@ -181,6 +208,7 @@ export default function AdminNewsPage() {
   const resetForm = useCallback(() => {
     setEditId('');
     setForm(initialForm);
+    setTagInput('');
     setMediaMessage('');
   }, []);
 
@@ -332,6 +360,27 @@ export default function AdminNewsPage() {
     }
   }, [actorRole, editId, form, resetForm, t, token]);
 
+  const addTag = useCallback((rawValue: string) => {
+    const normalized = normalizeTag(rawValue);
+    if (!normalized) return;
+    setForm((prev) => {
+      const existing = splitList(prev.tags).map(normalizeTag).filter(Boolean);
+      if (existing.includes(normalized)) return prev;
+      return { ...prev, tags: joinList([...existing, normalized]) };
+    });
+  }, []);
+
+  const removeTag = useCallback((tag: string) => {
+    const normalized = normalizeTag(tag);
+    if (!normalized) return;
+    setForm((prev) => {
+      const next = splitList(prev.tags)
+        .map(normalizeTag)
+        .filter((item) => item && item !== normalized);
+      return { ...prev, tags: joinList(next) };
+    });
+  }, []);
+
   const remove = useCallback(
     async (id: string) => {
       if (!token || !isModerator(actorRole) || !id) return;
@@ -408,7 +457,46 @@ export default function AdminNewsPage() {
             ))}
           </select>
         </label>
-        <Field label={localizedFieldLabels.tags} value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{localizedFieldLabels.tags}</span>
+          {tagsList.length ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+              {tagsList.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className="option-chip"
+                  onClick={() => removeTag(tag)}
+                  title={locale === 'en' ? 'Remove tag' : locale === 'kk' ? 'Тегті өшіру' : 'Удалить тег'}
+                >
+                  #{normalizeTag(tag)} ×
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <input
+            value={tagInput}
+            placeholder={localizedTagPlaceholder}
+            onChange={(event) => setTagInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ',' || event.key === ' ') {
+                event.preventDefault();
+                addTag(tagInput);
+                setTagInput('');
+                return;
+              }
+              if (event.key === 'Backspace' && !tagInput.trim() && tagsList.length) {
+                removeTag(tagsList[tagsList.length - 1]);
+              }
+            }}
+            onBlur={() => {
+              if (!tagInput.trim()) return;
+              addTag(tagInput);
+              setTagInput('');
+            }}
+          />
+          <p className="upload-choice-note" style={{ marginTop: 6 }}>{localizedTagExample}</p>
+        </label>
         <Field label={localizedFieldLabels.imageUrls} value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{t('newsAdminImageUploadLabel')}</span>
