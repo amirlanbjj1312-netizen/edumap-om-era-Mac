@@ -60,6 +60,42 @@ export default function AdminNewsPage() {
     [locale]
   );
   const localeBadge = locale === 'kk' ? 'KZ' : locale.toUpperCase();
+  const localizedFieldLabels = useMemo(
+    () =>
+      locale === 'en'
+        ? {
+            title: 'Title',
+            summary: 'Summary',
+            content: 'Content',
+            category: 'Category',
+            tags: 'Tags (comma separated)',
+            imageUrls: 'Image URLs (comma separated)',
+            videoUrls: 'Video URLs (comma separated)',
+            publishedAt: 'Published at (ISO, optional)',
+          }
+        : locale === 'kk'
+        ? {
+            title: 'Атауы',
+            summary: 'Қысқаша сипаттама',
+            content: 'Мәтін',
+            category: 'Санат',
+            tags: 'Тегтер (үтір арқылы)',
+            imageUrls: 'Сурет URL-дары (үтір арқылы)',
+            videoUrls: 'Видео URL-дары (үтір арқылы)',
+            publishedAt: 'Жарияланған уақыты (ISO, міндетті емес)',
+          }
+        : {
+            title: 'Название',
+            summary: 'Краткое описание',
+            content: 'Текст',
+            category: 'Категория',
+            tags: 'Теги (через запятую)',
+            imageUrls: 'URL изображений (через запятую)',
+            videoUrls: 'URL видео (через запятую)',
+            publishedAt: 'Дата публикации (ISO, необязательно)',
+          },
+    [locale]
+  );
   const setLocalizedField = useCallback(
     (field: 'title' | 'summary' | 'content', value: string) => {
       const key = textFieldKeyMap[field];
@@ -322,11 +358,11 @@ export default function AdminNewsPage() {
           <span className="or-badge">{localeBadge}</span>
           {t('newsAdminSingleLocaleHint')}
         </div>
-        <Field label="Title" value={getLocalizedField('title')} onChange={(value) => setLocalizedField('title', value)} />
-        <Field label="Summary" value={getLocalizedField('summary')} onChange={(value) => setLocalizedField('summary', value)} textarea />
-        <Field label="Category" value={form.category} onChange={(value) => setForm((p) => ({ ...p, category: value }))} />
-        <Field label="Tags (comma separated)" value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
-        <Field label="Image URLs (comma separated)" value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
+        <Field label={localizedFieldLabels.title} value={getLocalizedField('title')} onChange={(value) => setLocalizedField('title', value)} />
+        <Field label={localizedFieldLabels.summary} value={getLocalizedField('summary')} onChange={(value) => setLocalizedField('summary', value)} textarea />
+        <Field label={localizedFieldLabels.category} value={form.category} onChange={(value) => setForm((p) => ({ ...p, category: value }))} />
+        <Field label={localizedFieldLabels.tags} value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
+        <Field label={localizedFieldLabels.imageUrls} value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{t('newsAdminImageUploadLabel')}</span>
           <input
@@ -343,10 +379,10 @@ export default function AdminNewsPage() {
           {uploadingImages ? ` ${t('newsAdminImageUploading')}` : ''}
         </p>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
-        <Field label="Video URLs (comma separated)" value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
-        <Field label="Content" value={getLocalizedField('content')} onChange={(value) => setLocalizedField('content', value)} textarea rows={6} />
+        <Field label={localizedFieldLabels.videoUrls} value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
+        <Field label={localizedFieldLabels.content} value={getLocalizedField('content')} onChange={(value) => setLocalizedField('content', value)} textarea rows={6} />
         <Field
-          label="Published at (ISO, optional)"
+          label={localizedFieldLabels.publishedAt}
           value={form.publishedAt}
           onChange={(value) => setForm((p) => ({ ...p, publishedAt: value }))}
         />
