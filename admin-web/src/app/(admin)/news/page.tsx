@@ -63,6 +63,8 @@ const CATEGORY_OPTIONS = [
   { value: 'events', labels: { ru: 'События', en: 'Events', kk: 'Оқиғалар' } },
   { value: 'competitions', labels: { ru: 'Конкурсы', en: 'Competitions', kk: 'Байқаулар' } },
 ];
+const FONT_OPTIONS = ['Times New Roman', 'Arial', 'Georgia', 'Verdana', 'Tahoma'];
+const FONT_SIZE_OPTIONS = [10, 12, 14, 16, 18, 20, 24, 28, 32];
 const normalizeCategoryValue = (value: string) =>
   String(value || '')
     .trim()
@@ -102,6 +104,9 @@ export default function AdminNewsPage() {
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
   const [tagInput, setTagInput] = useState('');
+  const [activeFontFamily, setActiveFontFamily] = useState(FONT_OPTIONS[0]);
+  const [activeFontSize, setActiveFontSize] = useState('16');
+  const [activeTextColor, setActiveTextColor] = useState('#1f2a44');
   const contentInputRef = useRef<HTMLTextAreaElement | null>(null);
   const localeKey = (locale === 'ru' || locale === 'en' || locale === 'kk' ? locale : 'ru') as
     | 'ru'
@@ -174,40 +179,52 @@ export default function AdminNewsPage() {
     () =>
       locale === 'en'
         ? {
-            bold: 'Bold',
-            italic: 'Italic',
-            underline: 'Underline',
-            h1: 'Title',
-            h2: 'Heading',
-            list: 'List',
+            bold: 'B',
+            italic: 'I',
+            underline: 'U',
+            h1: 'H1',
+            h2: 'H2',
+            bullets: '• List',
+            numbers: '1. List',
             link: 'Link',
-            small: 'A-',
-            large: 'A+',
+            color: 'Color',
+            left: 'Left',
+            center: 'Center',
+            right: 'Right',
+            justify: 'Justify',
             placeholder: 'Text',
           }
         : locale === 'kk'
         ? {
-            bold: 'Қалың',
-            italic: 'Көлбеу',
-            underline: 'Асты сызылған',
-            h1: 'Тақырып',
-            h2: 'Бөлім',
-            list: 'Тізім',
+            bold: 'B',
+            italic: 'I',
+            underline: 'U',
+            h1: 'H1',
+            h2: 'H2',
+            bullets: '• Тізім',
+            numbers: '1. Тізім',
             link: 'Сілтеме',
-            small: 'A-',
-            large: 'A+',
+            color: 'Түс',
+            left: 'Сол',
+            center: 'Орта',
+            right: 'Оң',
+            justify: 'Енімен',
             placeholder: 'Мәтін',
           }
         : {
-            bold: 'Жирный',
-            italic: 'Курсив',
-            underline: 'Подчеркнутый',
-            h1: 'Заголовок',
-            h2: 'Подзаголовок',
-            list: 'Список',
+            bold: 'B',
+            italic: 'I',
+            underline: 'U',
+            h1: 'H1',
+            h2: 'H2',
+            bullets: '• Список',
+            numbers: '1. Список',
             link: 'Ссылка',
-            small: 'A-',
-            large: 'A+',
+            color: 'Цвет',
+            left: 'Лево',
+            center: 'Центр',
+            right: 'Право',
+            justify: 'Ширина',
             placeholder: 'Текст',
           },
     [locale]
@@ -465,6 +482,30 @@ export default function AdminNewsPage() {
     },
     [contentToolbarLabels.placeholder, getLocalizedField, setLocalizedField]
   );
+  const applyFontFamily = useCallback(
+    (font: string) => {
+      setActiveFontFamily(font);
+      const safeFont = font.replace(/["<>]/g, '');
+      applyContentFormat(`<span style="font-family:${safeFont};">`, '</span>');
+    },
+    [applyContentFormat]
+  );
+  const applyFontSize = useCallback(
+    (size: string) => {
+      setActiveFontSize(size);
+      const numeric = Number(size);
+      const finalSize = Number.isFinite(numeric) ? numeric : 16;
+      applyContentFormat(`<span style="font-size:${finalSize}px;">`, '</span>');
+    },
+    [applyContentFormat]
+  );
+  const applyTextColor = useCallback(
+    (color: string) => {
+      setActiveTextColor(color);
+      applyContentFormat(`<span style="color:${color};">`, '</span>');
+    },
+    [applyContentFormat]
+  );
 
   const remove = useCallback(
     async (id: string) => {
@@ -602,52 +643,97 @@ export default function AdminNewsPage() {
         <Field label={localizedFieldLabels.videoUrls} value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{localizedFieldLabels.content}</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-            <button type="button" className="option-chip" onClick={() => applyContentFormat('<strong>', '</strong>')}>
-              {contentToolbarLabels.bold}
-            </button>
-            <button type="button" className="option-chip" onClick={() => applyContentFormat('<em>', '</em>')}>
-              {contentToolbarLabels.italic}
-            </button>
-            <button type="button" className="option-chip" onClick={() => applyContentFormat('<u>', '</u>')}>
-              {contentToolbarLabels.underline}
-            </button>
-            <button type="button" className="option-chip" onClick={() => applyContentFormat('<h1>', '</h1>')}>
-              {contentToolbarLabels.h1}
-            </button>
-            <button type="button" className="option-chip" onClick={() => applyContentFormat('<h2>', '</h2>')}>
-              {contentToolbarLabels.h2}
-            </button>
-            <button
-              type="button"
-              className="option-chip"
-              onClick={() =>
-                applyContentFormat('<ul><li>', '</li></ul>', contentToolbarLabels.placeholder)
-              }
-            >
-              {contentToolbarLabels.list}
-            </button>
-            <button
-              type="button"
-              className="option-chip"
-              onClick={() => applyContentFormat('<a href="https://" target="_blank">', '</a>', 'https://')}
-            >
-              {contentToolbarLabels.link}
-            </button>
-            <button
-              type="button"
-              className="option-chip"
-              onClick={() => applyContentFormat('<span style="font-size:14px;">', '</span>')}
-            >
-              {contentToolbarLabels.small}
-            </button>
-            <button
-              type="button"
-              className="option-chip"
-              onClick={() => applyContentFormat('<span style="font-size:22px;">', '</span>')}
-            >
-              {contentToolbarLabels.large}
-            </button>
+          <div className="news-editor-toolbar">
+            <div className="news-editor-group">
+              <select
+                className="news-editor-select"
+                value={activeFontFamily}
+                onChange={(event) => applyFontFamily(event.target.value)}
+              >
+                {FONT_OPTIONS.map((font) => (
+                  <option key={font} value={font}>
+                    {font}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="news-editor-select news-editor-select-size"
+                value={activeFontSize}
+                onChange={(event) => applyFontSize(event.target.value)}
+              >
+                {FONT_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={String(size)}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<strong>', '</strong>')}>
+                {contentToolbarLabels.bold}
+              </button>
+              <button type="button" className="news-editor-button news-editor-italic" onClick={() => applyContentFormat('<em>', '</em>')}>
+                {contentToolbarLabels.italic}
+              </button>
+              <button type="button" className="news-editor-button news-editor-underline" onClick={() => applyContentFormat('<u>', '</u>')}>
+                {contentToolbarLabels.underline}
+              </button>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<h1>', '</h1>')}>
+                {contentToolbarLabels.h1}
+              </button>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<h2>', '</h2>')}>
+                {contentToolbarLabels.h2}
+              </button>
+            </div>
+            <div className="news-editor-divider" />
+            <div className="news-editor-group">
+              <button
+                type="button"
+                className="news-editor-button"
+                onClick={() =>
+                  applyContentFormat('<ul><li>', '</li></ul>', contentToolbarLabels.placeholder)
+                }
+              >
+                {contentToolbarLabels.bullets}
+              </button>
+              <button
+                type="button"
+                className="news-editor-button"
+                onClick={() =>
+                  applyContentFormat('<ol><li>', '</li></ol>', contentToolbarLabels.placeholder)
+                }
+              >
+                {contentToolbarLabels.numbers}
+              </button>
+              <button
+                type="button"
+                className="news-editor-button"
+                onClick={() => applyContentFormat('<a href="https://" target="_blank">', '</a>', 'https://')}
+              >
+                {contentToolbarLabels.link}
+              </button>
+              <label className="news-editor-color">
+                <span>{contentToolbarLabels.color}</span>
+                <input
+                  type="color"
+                  value={activeTextColor}
+                  onChange={(event) => applyTextColor(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="news-editor-divider" />
+            <div className="news-editor-group">
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<div style="text-align:left;">', '</div>')}>
+                {contentToolbarLabels.left}
+              </button>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<div style="text-align:center;">', '</div>')}>
+                {contentToolbarLabels.center}
+              </button>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<div style="text-align:right;">', '</div>')}>
+                {contentToolbarLabels.right}
+              </button>
+              <button type="button" className="news-editor-button" onClick={() => applyContentFormat('<div style="text-align:justify;">', '</div>')}>
+                {contentToolbarLabels.justify}
+              </button>
+            </div>
           </div>
           <textarea
             ref={contentInputRef}
