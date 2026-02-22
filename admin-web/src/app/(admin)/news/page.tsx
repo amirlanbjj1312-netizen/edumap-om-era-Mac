@@ -36,6 +36,35 @@ const initialForm = {
   contentKk: '',
   publishedAt: '',
 };
+const CATEGORY_OPTIONS = [
+  { value: 'announcements', labels: { ru: 'Объявления', en: 'Announcements', kk: 'Хабарландырулар' } },
+  { value: 'tips', labels: { ru: 'Полезные советы', en: 'Useful tips', kk: 'Пайдалы кеңестер' } },
+  { value: 'events', labels: { ru: 'События', en: 'Events', kk: 'Оқиғалар' } },
+  { value: 'competitions', labels: { ru: 'Конкурсы', en: 'Competitions', kk: 'Байқаулар' } },
+];
+const normalizeCategoryValue = (value: string) =>
+  String(value || '')
+    .trim()
+    .toLowerCase();
+const mapCategoryToOptionValue = (value: string) => {
+  const normalized = normalizeCategoryValue(value);
+  if (!normalized) return 'announcements';
+  if (
+    ['announcements', 'announcement', 'объявления', 'объявление', 'хабарландырулар'].includes(normalized)
+  ) {
+    return 'announcements';
+  }
+  if (['tips', 'useful tips', 'полезные советы', 'пайдалы кеңестер'].includes(normalized)) {
+    return 'tips';
+  }
+  if (['events', 'события', 'оқиғалар'].includes(normalized)) {
+    return 'events';
+  }
+  if (['competitions', 'contests', 'конкурсы', 'байқаулар'].includes(normalized)) {
+    return 'competitions';
+  }
+  return 'announcements';
+};
 
 export default function AdminNewsPage() {
   const { locale, setLocale, t } = useAdminLocale();
@@ -51,6 +80,10 @@ export default function AdminNewsPage() {
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
+  const localeKey = (locale === 'ru' || locale === 'en' || locale === 'kk' ? locale : 'ru') as
+    | 'ru'
+    | 'en'
+    | 'kk';
   const textFieldKeyMap = useMemo(
     () => ({
       title: locale === 'en' ? 'titleEn' : locale === 'kk' ? 'titleKk' : 'title',
@@ -161,7 +194,7 @@ export default function AdminNewsPage() {
       summary: item?.summary || '',
       summaryEn: item?.summaryEn || '',
       summaryKk: item?.summaryKk || '',
-      category: item?.category || 'Announcements',
+      category: mapCategoryToOptionValue(item?.category || 'announcements'),
       tags: joinList(item?.tags || []),
       imageUrls: joinList(item?.imageUrls || []),
       videoUrls: joinList(item?.videoUrls || []),
@@ -270,7 +303,7 @@ export default function AdminNewsPage() {
       summary: form.summary.trim(),
       summaryEn: form.summaryEn.trim(),
       summaryKk: form.summaryKk.trim(),
-      category: form.category.trim() || 'Announcements',
+      category: mapCategoryToOptionValue(form.category) || 'announcements',
       tags: splitList(form.tags),
       imageUrls: splitList(form.imageUrls),
       videoUrls: splitList(form.videoUrls),
@@ -360,7 +393,21 @@ export default function AdminNewsPage() {
         </div>
         <Field label={localizedFieldLabels.title} value={getLocalizedField('title')} onChange={(value) => setLocalizedField('title', value)} />
         <Field label={localizedFieldLabels.summary} value={getLocalizedField('summary')} onChange={(value) => setLocalizedField('summary', value)} textarea />
-        <Field label={localizedFieldLabels.category} value={form.category} onChange={(value) => setForm((p) => ({ ...p, category: value }))} />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{localizedFieldLabels.category}</span>
+          <select
+            value={mapCategoryToOptionValue(form.category)}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, category: event.target.value }))
+            }
+          >
+            {CATEGORY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.labels[localeKey]}
+              </option>
+            ))}
+          </select>
+        </label>
         <Field label={localizedFieldLabels.tags} value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
         <Field label={localizedFieldLabels.imageUrls} value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
         <label className="field" style={{ marginBottom: 10 }}>
