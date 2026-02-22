@@ -150,6 +150,13 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Ближайшее метро': { en: 'Nearest метро', kk: 'Жақын метро' },
   'Ближайшая остановка': { en: 'Nearest stop', kk: 'Жақын аялдама' },
   'Дистанция до метро (км)': { en: 'Distance to метро (km)', kk: 'Метроға дейінгі қашықтық (км)' },
+  'Тип остановки': { en: 'Stop type', kk: 'Аялдама түрі' },
+  Метро: { en: 'Metro', kk: 'Метро' },
+  Автобус: { en: 'Bus', kk: 'Автобус' },
+  'Дистанция до остановки (км)': {
+    en: 'Distance to bus stop (km)',
+    kk: 'Аялдамаға дейінгі қашықтық (км)',
+  },
   'Зона обслуживания': { en: 'Service area', kk: 'Қызмет көрсету аумағы' },
   'Не выбрано': { en: 'Not selected', kk: 'Таңдалмаған' },
   'Сначала выберите город': { en: 'Select city first', kk: 'Әуелі қаланы таңдаңыз' },
@@ -211,6 +218,8 @@ const OPTION_LABELS: Record<
   Paid: { ru: 'Платно', en: 'Paid', kk: 'Ақылы' },
   Included: { ru: 'Включено', en: 'Included', kk: 'Қамтылған' },
   'No meals': { ru: 'Без питания', en: 'No meals', kk: 'Тамақсыз' },
+  Metro: { ru: 'Метро', en: 'Metro', kk: 'Метро' },
+  Bus: { ru: 'Автобус', en: 'Bus', kk: 'Автобус' },
   Kazakh: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ тілі' },
   Russian: { ru: 'Русский', en: 'Russian', kk: 'Орыс тілі' },
   English: { ru: 'Английский', en: 'English', kk: 'Ағылшын тілі' },
@@ -381,6 +390,7 @@ const ADVANCED_SUBJECT_OPTIONS = [
 
 const CLASS_SIZE_OPTIONS = ['10', '12', '15', '18', '20', '22', '24', '26', '30', '35+'];
 const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year'];
+const LOCATION_STOP_TYPE_OPTIONS = ['Metro', 'Bus'];
 const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
 const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
 const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
@@ -552,10 +562,25 @@ export default function SchoolInfoPage() {
     () => ['Private', 'Autonomous', 'International'].includes(schoolType),
     [schoolType]
   );
+  const localePath = (path: string) => `${path}.${contentLocale}`;
+  const t = (label: string) => translateLabel(label, contentLocale);
   const availableDistricts = useMemo(() => {
     const match = CITY_OPTIONS.find((option) => option.name === cityValue);
     return match?.districts ?? [];
   }, [cityValue]);
+  const locationStopType = useMemo(() => {
+    const explicitType = String(getDeep(profile, 'location.transport_stop_type', '') || '').trim();
+    if (explicitType === 'Metro' || explicitType === 'Bus') return explicitType;
+    const hasMetroData =
+      Boolean(String(getDeep(profile, localePath('location.nearest_metro_stop'), '') || '').trim()) ||
+      Boolean(String(getDeep(profile, 'location.distance_to_metro_km', '') || '').trim());
+    const hasBusData =
+      Boolean(String(getDeep(profile, localePath('location.nearest_bus_stop'), '') || '').trim()) ||
+      Boolean(String(getDeep(profile, 'location.distance_to_bus_stop_km', '') || '').trim());
+    if (hasMetroData && !hasBusData) return 'Metro';
+    if (hasBusData && !hasMetroData) return 'Bus';
+    return '';
+  }, [profile, contentLocale]);
 
   const languagesValue = useMemo(
     () => normalizeListValue(getDeep(profile, 'education.languages', '')),
@@ -573,9 +598,6 @@ export default function SchoolInfoPage() {
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
   };
-
-  const localePath = (path: string) => `${path}.${contentLocale}`;
-  const t = (label: string) => translateLabel(label, contentLocale);
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
@@ -2021,38 +2043,80 @@ export default function SchoolInfoPage() {
 
           {activeTab === 'location' && (
             <Section title="Локация">
-        <FieldRow>
-          <Input
-            label="Ближайшее метро"
-            value={getDeep(profile, localePath('location.nearest_metro_stop'))}
-            onChange={(value: string) =>
-              updateField(localePath('location.nearest_metro_stop'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Ближайшая остановка"
-            value={getDeep(profile, localePath('location.nearest_bus_stop'))}
-            onChange={(value: string) =>
-              updateField(localePath('location.nearest_bus_stop'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Дистанция до метро (км)"
-            value={getDeep(profile, 'location.distance_to_metro_km')}
-            onChange={(value: string) => updateField('location.distance_to_metro_km', value)}
-          />
-          <TextArea
-            label="Зона обслуживания"
-            value={getDeep(profile, localePath('location.service_area'))}
-            onChange={(value: string) =>
-              updateField(localePath('location.service_area'), value)
-            }
-          />
-        </FieldRow>
+              <FieldRow>
+                <Select
+                  label="Тип остановки"
+                  value={locationStopType}
+                  onChange={(value: string) => updateField('location.transport_stop_type', value)}
+                  options={[
+                    { value: '', label: t('Не выбрано') },
+                    ...LOCATION_STOP_TYPE_OPTIONS.map((item) => ({
+                      value: item,
+                      label: translateOption(item, contentLocale),
+                    })),
+                  ]}
+                />
+              </FieldRow>
+
+              {locationStopType === 'Metro' ? (
+                <>
+                  <FieldRow>
+                    <Input
+                      label="Ближайшее метро"
+                      value={getDeep(profile, localePath('location.nearest_metro_stop'))}
+                      onChange={(value: string) =>
+                        updateField(localePath('location.nearest_metro_stop'), value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Дистанция до метро (км)"
+                      value={getDeep(profile, 'location.distance_to_metro_km')}
+                      onChange={(value: string) =>
+                        updateField('location.distance_to_metro_km', value)
+                      }
+                    />
+                    <TextArea
+                      label="Зона обслуживания"
+                      value={getDeep(profile, localePath('location.service_area'))}
+                      onChange={(value: string) =>
+                        updateField(localePath('location.service_area'), value)
+                      }
+                    />
+                  </FieldRow>
+                </>
+              ) : null}
+
+              {locationStopType === 'Bus' ? (
+                <>
+                  <FieldRow>
+                    <Input
+                      label="Ближайшая остановка"
+                      value={getDeep(profile, localePath('location.nearest_bus_stop'))}
+                      onChange={(value: string) =>
+                        updateField(localePath('location.nearest_bus_stop'), value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="Дистанция до остановки (км)"
+                      value={getDeep(profile, 'location.distance_to_bus_stop_km')}
+                      onChange={(value: string) =>
+                        updateField('location.distance_to_bus_stop_km', value)
+                      }
+                    />
+                    <TextArea
+                      label="Зона обслуживания"
+                      value={getDeep(profile, localePath('location.service_area'))}
+                      onChange={(value: string) =>
+                        updateField(localePath('location.service_area'), value)
+                      }
+                    />
+                  </FieldRow>
+                </>
+              ) : null}
             </Section>
           )}
         </div>

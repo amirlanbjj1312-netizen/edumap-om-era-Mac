@@ -127,9 +127,11 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       },
     },
     location: {
+      transport_stop_type: '',
       nearest_metro_stop: { ru: '', en: '', kk: '' },
       nearest_bus_stop: { ru: '', en: '', kk: '' },
       distance_to_metro_km: '',
+      distance_to_bus_stop_km: '',
       service_area: { ru: '', en: '', kk: '' },
     },
     system: {
