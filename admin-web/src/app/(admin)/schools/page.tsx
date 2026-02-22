@@ -57,7 +57,15 @@ const isPromotionActive = (profile: any) => {
   const endsOk = !endsAt || endsAt >= now;
   return startsOk && endsOk;
 };
-const getPaymentHistory = (profile: any) => {
+const getPaymentHistory = (
+  profile: any
+): Array<{
+  id: string;
+  paid_at: string;
+  tariff_name: string;
+  amount_kzt: number;
+  status: string;
+}> => {
   const list = Array.isArray(profile?.monetization?.payments)
     ? profile.monetization.payments
     : [];
@@ -69,7 +77,7 @@ const getPaymentHistory = (profile: any) => {
       amount_kzt: Number(item?.amount_kzt) || 0,
       status: String(item?.status || ''),
     }))
-    .filter((item) => item.id);
+    .filter((item: { id: string }) => Boolean(item.id));
 };
 
 export default function SchoolsPage() {
