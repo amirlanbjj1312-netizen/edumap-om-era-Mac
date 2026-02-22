@@ -31,9 +31,24 @@ export default function NewsDetailScreen() {
   if (!news) {
     return null;
   }
-  const title = locale === 'en' ? news.titleEn || news.title : news.title;
-  const summary = locale === 'en' ? news.summaryEn || news.summary : news.summary;
-  const content = locale === 'en' ? news.contentEn || news.content : news.content;
+  const title =
+    locale === 'en'
+      ? news.titleEn || news.title
+      : locale === 'kk'
+      ? news.titleKk || news.title
+      : news.title;
+  const summary =
+    locale === 'en'
+      ? news.summaryEn || news.summary
+      : locale === 'kk'
+      ? news.summaryKk || news.summary
+      : news.summary;
+  const content =
+    locale === 'en'
+      ? news.contentEn || news.content
+      : locale === 'kk'
+      ? news.contentKk || news.content
+      : news.content;
 
   const openLink = (url) => {
     if (!url) return;

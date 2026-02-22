@@ -32,8 +32,18 @@ const CategoryChip = ({ label, active, onPress }) => (
 );
 
 const NewsCard = ({ item, onPress, locale }) => {
-  const title = locale === 'en' ? item.titleEn || item.title : item.title;
-  const summary = locale === 'en' ? item.summaryEn || item.summary : item.summary;
+  const title =
+    locale === 'en'
+      ? item.titleEn || item.title
+      : locale === 'kk'
+      ? item.titleKk || item.title
+      : item.title;
+  const summary =
+    locale === 'en'
+      ? item.summaryEn || item.summary
+      : locale === 'kk'
+      ? item.summaryKk || item.summary
+      : item.summary;
   const dateLabel = item.publishedAt
     ? new Date(item.publishedAt).toLocaleDateString()
     : '';

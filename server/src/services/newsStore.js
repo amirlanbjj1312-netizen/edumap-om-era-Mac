@@ -44,8 +44,10 @@ const normalizeNewsItem = (value = {}, existing = null) => {
     id,
     title,
     titleEn: String(value.titleEn || existing?.titleEn || '').trim(),
+    titleKk: String(value.titleKk || existing?.titleKk || '').trim(),
     summary: String(value.summary || existing?.summary || '').trim(),
     summaryEn: String(value.summaryEn || existing?.summaryEn || '').trim(),
+    summaryKk: String(value.summaryKk || existing?.summaryKk || '').trim(),
     category: String(value.category || existing?.category || 'Announcements').trim(),
     author: String(value.author || existing?.author || 'Moderator').trim(),
     tags: Array.isArray(value.tags)
@@ -58,6 +60,7 @@ const normalizeNewsItem = (value = {}, existing = null) => {
     videoUrls: normalizeMedia(value.videoUrls || existing?.videoUrls),
     content: String(value.content || existing?.content || '').trim(),
     contentEn: String(value.contentEn || existing?.contentEn || '').trim(),
+    contentKk: String(value.contentKk || existing?.contentKk || '').trim(),
     updatedAt: now,
   };
 };

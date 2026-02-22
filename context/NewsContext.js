@@ -66,6 +66,15 @@ export const NewsProvider = ({ children }) => {
                   if (!updated.contentEn && seed.contentEn) {
                     updated.contentEn = seed.contentEn;
                   }
+                  if (!updated.titleKk && seed.titleKk) {
+                    updated.titleKk = seed.titleKk;
+                  }
+                  if (!updated.summaryKk && seed.summaryKk) {
+                    updated.summaryKk = seed.summaryKk;
+                  }
+                  if (!updated.contentKk && seed.contentKk) {
+                    updated.contentKk = seed.contentKk;
+                  }
                   if (seed.titleEn && updated.title === seed.titleEn) {
                     updated.title = seed.title;
                   }
@@ -114,8 +123,10 @@ export const NewsProvider = ({ children }) => {
       id: item.id || `news-${Date.now()}`,
       title: item.title?.trim() || 'Untitled',
       titleEn: item.titleEn?.trim?.() || '',
+      titleKk: item.titleKk?.trim?.() || '',
       summary: item.summary?.trim() || '',
       summaryEn: item.summaryEn?.trim?.() || '',
+      summaryKk: item.summaryKk?.trim?.() || '',
       category: item.category?.trim() || 'Announcements',
       author: item.author?.trim() || 'Admin',
       tags: Array.isArray(item.tags) ? item.tags.filter(Boolean) : [],
@@ -124,6 +135,7 @@ export const NewsProvider = ({ children }) => {
       videoUrls: normalizeMedia(item.videoUrls || item.videoUrl),
       content: item.content?.trim?.() || '',
       contentEn: item.contentEn?.trim?.() || '',
+      contentKk: item.contentKk?.trim?.() || '',
     };
     try {
       const saved = await createNews(payload);

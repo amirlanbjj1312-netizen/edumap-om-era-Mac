@@ -689,6 +689,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Failed to upload image. Check Supabase Storage bucket settings.',
     kk: 'Фото жүктеу сәтсіз. Supabase Storage bucket баптауларын тексеріңіз.',
   },
+  newsAdminSingleLocaleHint: {
+    ru: 'Редактируете только выбранный язык. Переключите RU/EN/KZ для перевода.',
+    en: 'You edit only the selected language. Switch RU/EN/KZ for translations.',
+    kk: 'Тек таңдалған тілді өңдейсіз. Аударма үшін RU/EN/KZ ауыстырыңыз.',
+  },
   coursesAdminTitle: {
     ru: 'Управление курсами',
     en: 'Courses management',

@@ -23,14 +23,17 @@ const joinList = (value: string[] = []) => value.filter(Boolean).join(', ');
 const initialForm = {
   title: '',
   titleEn: '',
+  titleKk: '',
   summary: '',
   summaryEn: '',
+  summaryKk: '',
   category: 'Announcements',
   tags: '',
   imageUrls: '',
   videoUrls: '',
   content: '',
   contentEn: '',
+  contentKk: '',
   publishedAt: '',
 };
 
@@ -48,6 +51,29 @@ export default function AdminNewsPage() {
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
+  const textFieldKeyMap = useMemo(
+    () => ({
+      title: locale === 'en' ? 'titleEn' : locale === 'kk' ? 'titleKk' : 'title',
+      summary: locale === 'en' ? 'summaryEn' : locale === 'kk' ? 'summaryKk' : 'summary',
+      content: locale === 'en' ? 'contentEn' : locale === 'kk' ? 'contentKk' : 'content',
+    }),
+    [locale]
+  );
+  const localeBadge = locale === 'kk' ? 'KZ' : locale.toUpperCase();
+  const setLocalizedField = useCallback(
+    (field: 'title' | 'summary' | 'content', value: string) => {
+      const key = textFieldKeyMap[field];
+      setForm((prev) => ({ ...prev, [key]: value }));
+    },
+    [textFieldKeyMap]
+  );
+  const getLocalizedField = useCallback(
+    (field: 'title' | 'summary' | 'content') => {
+      const key = textFieldKeyMap[field];
+      return String((form as any)[key] || '');
+    },
+    [form, textFieldKeyMap]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -95,14 +121,17 @@ export default function AdminNewsPage() {
     setForm({
       title: item?.title || '',
       titleEn: item?.titleEn || '',
+      titleKk: item?.titleKk || '',
       summary: item?.summary || '',
       summaryEn: item?.summaryEn || '',
+      summaryKk: item?.summaryKk || '',
       category: item?.category || 'Announcements',
       tags: joinList(item?.tags || []),
       imageUrls: joinList(item?.imageUrls || []),
       videoUrls: joinList(item?.videoUrls || []),
       content: item?.content || '',
       contentEn: item?.contentEn || '',
+      contentKk: item?.contentKk || '',
       publishedAt: item?.publishedAt || '',
     });
   }, []);
@@ -201,14 +230,17 @@ export default function AdminNewsPage() {
     const payload = {
       title: form.title.trim(),
       titleEn: form.titleEn.trim(),
+      titleKk: form.titleKk.trim(),
       summary: form.summary.trim(),
       summaryEn: form.summaryEn.trim(),
+      summaryKk: form.summaryKk.trim(),
       category: form.category.trim() || 'Announcements',
       tags: splitList(form.tags),
       imageUrls: splitList(form.imageUrls),
       videoUrls: splitList(form.videoUrls),
       content: form.content.trim(),
       contentEn: form.contentEn.trim(),
+      contentKk: form.contentKk.trim(),
       publishedAt: form.publishedAt.trim(),
     };
 
@@ -286,10 +318,12 @@ export default function AdminNewsPage() {
       <p className="muted">{t('newsAdminHint')}</p>
 
       <div className="card" style={{ marginTop: 12 }}>
-        <Field label="Title (RU)" value={form.title} onChange={(value) => setForm((p) => ({ ...p, title: value }))} />
-        <Field label="Summary (RU)" value={form.summary} onChange={(value) => setForm((p) => ({ ...p, summary: value }))} textarea />
-        <Field label="Title (EN)" value={form.titleEn} onChange={(value) => setForm((p) => ({ ...p, titleEn: value }))} />
-        <Field label="Summary (EN)" value={form.summaryEn} onChange={(value) => setForm((p) => ({ ...p, summaryEn: value }))} textarea />
+        <div className="upload-choice-note" style={{ marginTop: 0 }}>
+          <span className="or-badge">{localeBadge}</span>
+          {t('newsAdminSingleLocaleHint')}
+        </div>
+        <Field label="Title" value={getLocalizedField('title')} onChange={(value) => setLocalizedField('title', value)} />
+        <Field label="Summary" value={getLocalizedField('summary')} onChange={(value) => setLocalizedField('summary', value)} textarea />
         <Field label="Category" value={form.category} onChange={(value) => setForm((p) => ({ ...p, category: value }))} />
         <Field label="Tags (comma separated)" value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
         <Field label="Image URLs (comma separated)" value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
@@ -310,8 +344,7 @@ export default function AdminNewsPage() {
         </p>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <Field label="Video URLs (comma separated)" value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
-        <Field label="Content (RU)" value={form.content} onChange={(value) => setForm((p) => ({ ...p, content: value }))} textarea rows={6} />
-        <Field label="Content (EN)" value={form.contentEn} onChange={(value) => setForm((p) => ({ ...p, contentEn: value }))} textarea rows={6} />
+        <Field label="Content" value={getLocalizedField('content')} onChange={(value) => setLocalizedField('content', value)} textarea rows={6} />
         <Field
           label="Published at (ISO, optional)"
           value={form.publishedAt}
