@@ -98,6 +98,7 @@ export default function AdminNewsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
   const [mediaMessage, setMediaMessage] = useState('');
   const [message, setMessage] = useState('');
   const [news, setNews] = useState<any[]>([]);
@@ -173,6 +174,30 @@ export default function AdminNewsPage() {
         : locale === 'kk'
         ? '#мысал: #қабылдау #мектеп-өмірі #олимпиада'
         : '#пример: #поступление #школьнаяжизнь #олимпиада',
+    [locale]
+  );
+  const localizedVideoUpload = useMemo(
+    () =>
+      locale === 'en'
+        ? {
+            label: 'Upload video files',
+            hint: 'or upload video files and links will be added automatically',
+            uploading: 'Uploading videos...',
+            error: 'Failed to upload videos',
+          }
+        : locale === 'kk'
+        ? {
+            label: 'Видео файлдарды жүктеу',
+            hint: 'немесе видео файлдарды жүктеп, сілтемелерді автоматты түрде қосу',
+            uploading: 'Видеолар жүктелуде...',
+            error: 'Видеоларды жүктеу мүмкін болмады',
+          }
+        : {
+            label: 'Загрузить видеофайлы',
+            hint: 'или загрузите видеофайлы, ссылки добавятся автоматически',
+            uploading: 'Загружаем видео...',
+            error: 'Не удалось загрузить видео',
+          },
     [locale]
   );
   const contentToolbarLabels = useMemo(
@@ -391,6 +416,86 @@ export default function AdminNewsPage() {
       }
     },
     [t, uploadNewsImages]
+  );
+  const uploadNewsVideos = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return [];
+      const configuredBucket = (process.env.NEXT_PUBLIC_MEDIA_BUCKET || '').trim();
+      const buckets = Array.from(
+        new Set([configuredBucket, 'school media', 'school-media'].filter(Boolean))
+      );
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const baseId = (actorEmail || 'moderator').replace(/[^a-zA-Z0-9-_.]/g, '-');
+      const uploadedUrls: string[] = [];
+      let lastError: any = null;
+
+      for (const file of files) {
+        const safeName = file.name.replace(/\s+/g, '-').toLowerCase();
+        const dotIndex = safeName.lastIndexOf('.');
+        const baseName = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
+        const ext = dotIndex > 0 ? safeName.slice(dotIndex + 1) : 'bin';
+        const path = `news/${baseId}/videos/${Date.now()}-${baseName}.${ext}`;
+
+        let uploaded = false;
+        for (const bucket of buckets) {
+          const { error } = await supabase.storage.from(bucket).upload(path, file, {
+            upsert: true,
+            contentType: file.type || undefined,
+          });
+          if (error) {
+            lastError = error;
+            if (/bucket not found/i.test(error.message || '')) {
+              continue;
+            }
+            throw error;
+          }
+          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          const publicUrl =
+            data?.publicUrl ||
+            (supabaseUrl
+              ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(
+                  bucket
+                )}/${path}`
+              : '');
+          if (publicUrl) {
+            uploadedUrls.push(publicUrl);
+          }
+          uploaded = true;
+          break;
+        }
+        if (!uploaded) {
+          throw lastError || new Error('Bucket not found');
+        }
+      }
+      return uploadedUrls;
+    },
+    [actorEmail]
+  );
+  const handleVideoUpload = useCallback(
+    async (event: any) => {
+      const files = Array.from(event?.target?.files || []) as File[];
+      if (!files.length) return;
+      try {
+        setUploadingVideos(true);
+        setMediaMessage('');
+        const urls = await uploadNewsVideos(files);
+        if (urls.length) {
+          setForm((prev) => ({
+            ...prev,
+            videoUrls: joinList([...splitList(prev.videoUrls), ...urls]),
+          }));
+          setMediaMessage(t('saved'));
+        }
+      } catch (error: any) {
+        setMediaMessage(error?.message || localizedVideoUpload.error);
+      } finally {
+        if (event?.currentTarget) {
+          event.currentTarget.value = '';
+        }
+        setUploadingVideos(false);
+      }
+    },
+    [localizedVideoUpload.error, t, uploadNewsVideos]
   );
 
   const submit = useCallback(async () => {
@@ -641,6 +746,21 @@ export default function AdminNewsPage() {
         </p>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <Field label={localizedFieldLabels.videoUrls} value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{localizedVideoUpload.label}</span>
+          <input
+            type="file"
+            accept="video/*"
+            multiple
+            onChange={handleVideoUpload}
+            disabled={uploadingVideos || saving}
+          />
+        </label>
+        <p className="upload-choice-note">
+          <span className="or-badge">ИЛИ</span>
+          {localizedVideoUpload.hint}
+          {uploadingVideos ? ` ${localizedVideoUpload.uploading}` : ''}
+        </p>
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{localizedFieldLabels.content}</span>
           <div className="news-editor-toolbar">
