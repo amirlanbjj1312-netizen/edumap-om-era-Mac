@@ -43,6 +43,11 @@ const toIntegerOrZero = (value) => {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
 };
+const toTimestampOrNull = (value) => {
+  if (!value) return null;
+  const ts = new Date(value).getTime();
+  return Number.isFinite(ts) ? ts : null;
+};
 
 const getLocalizedMapText = (value, locale) => {
   if (!value) return '';
@@ -139,6 +144,19 @@ const toSchoolCard = (profile, locale, t) => {
     safeProfile.basic_info?.updated_at ||
     safeProfile.updated_at;
   const updatedAt = updatedAtRaw ? new Date(updatedAtRaw).getTime() : null;
+  const monetization = safeProfile.monetization || {};
+  const promotionStatus = String(monetization.subscription_status || 'inactive').toLowerCase();
+  const promotionStartsAt = toTimestampOrNull(monetization.starts_at);
+  const promotionEndsAt = toTimestampOrNull(monetization.ends_at);
+  const now = Date.now();
+  const promotionDateActive =
+    (!promotionStartsAt || promotionStartsAt <= now) &&
+    (!promotionEndsAt || promotionEndsAt >= now);
+  const isPromotedActive =
+    Boolean(monetization.is_promoted) &&
+    promotionStatus === 'active' &&
+    promotionDateActive;
+  const promotionPriority = Number(monetization.priority_weight);
 
   const cityValue = basic_info.city || '';
   const districtValue = basic_info.district || '';
@@ -174,6 +192,14 @@ const toSchoolCard = (profile, locale, t) => {
     highlightReview,
     monthlyFee: toNumberOrNull(profile.finance?.monthly_fee),
     updatedAt,
+    promotion: {
+      isPromotedActive,
+      status: promotionStatus,
+      planName: typeof monetization.plan_name === 'string' ? monetization.plan_name : '',
+      priorityWeight: Number.isFinite(promotionPriority) ? promotionPriority : 0,
+      startsAt: monetization.starts_at || '',
+      endsAt: monetization.ends_at || '',
+    },
     hasLicense,
     hasCertificates,
     servicesFlags: {

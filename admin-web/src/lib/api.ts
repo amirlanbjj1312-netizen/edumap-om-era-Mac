@@ -187,3 +187,41 @@ export async function loadProgramInfoAnalytics(
     };
   }>(`/schools/analytics/program-info?${query}`, { token });
 }
+
+export async function loadTestBillingTariffs() {
+  return requestJson<{
+    data: Array<{
+      id: string;
+      name: string;
+      price_kzt: number;
+      duration_days: number;
+      priority_weight: number;
+      description?: string;
+    }>;
+  }>('/schools/billing/tariffs');
+}
+
+export async function runSchoolTestPayment(
+  token: string,
+  schoolId: string,
+  payload: { tariffId: string }
+) {
+  return authRequestJson<{
+    data: {
+      school_id: string;
+      payment: {
+        id: string;
+        status: 'paid';
+        tariff_id: string;
+        amount_kzt: number;
+        paid_at: string;
+      };
+      monetization: any;
+      profile: any;
+    };
+  }>(`/schools/${encodeURIComponent(schoolId)}/payments/test`, {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

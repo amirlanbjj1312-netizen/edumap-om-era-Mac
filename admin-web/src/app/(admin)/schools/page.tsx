@@ -1,14 +1,76 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { loadSchools, upsertSchool } from '@/lib/api';
+import {
+  loadSchools,
+  upsertSchool,
+  loadTestBillingTariffs,
+  runSchoolTestPayment,
+} from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
 
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
+type MonetizationDraft = {
+  isPromoted: boolean;
+  status: string;
+  planName: string;
+  priorityWeight: string;
+  startsAt: string;
+  endsAt: string;
+  tariffId: string;
+};
 
 const normalizeText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
+const formatDateInput = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return trimmed.includes('T') ? trimmed.slice(0, 10) : trimmed;
+};
+const toTimestamp = (value: unknown) => {
+  if (!value) return null;
+  const ts = new Date(String(value)).getTime();
+  return Number.isFinite(ts) ? ts : null;
+};
+const buildMonetizationDraft = (profile: any) => {
+  const source = profile?.monetization || {};
+  return {
+    isPromoted: source.is_promoted === true,
+    status: normalizeText(source.subscription_status || 'inactive') || 'inactive',
+    planName: normalizeText(source.plan_name),
+    priorityWeight: String(source.priority_weight ?? '0'),
+    startsAt: formatDateInput(source.starts_at),
+    endsAt: formatDateInput(source.ends_at),
+    tariffId: normalizeText(source.last_tariff_id),
+  };
+};
+const isPromotionActive = (profile: any) => {
+  const monetization = profile?.monetization || {};
+  const status = normalizeText(monetization.subscription_status || '').toLowerCase();
+  if (monetization.is_promoted !== true || status !== 'active') return false;
+  const now = Date.now();
+  const startsAt = toTimestamp(monetization.starts_at);
+  const endsAt = toTimestamp(monetization.ends_at);
+  const startsOk = !startsAt || startsAt <= now;
+  const endsOk = !endsAt || endsAt >= now;
+  return startsOk && endsOk;
+};
+const getPaymentHistory = (profile: any) => {
+  const list = Array.isArray(profile?.monetization?.payments)
+    ? profile.monetization.payments
+    : [];
+  return list
+    .map((item: any) => ({
+      id: String(item?.id || ''),
+      paid_at: String(item?.paid_at || ''),
+      tariff_name: String(item?.tariff_name || item?.tariff_id || ''),
+      amount_kzt: Number(item?.amount_kzt) || 0,
+      status: String(item?.status || ''),
+    }))
+    .filter((item) => item.id);
+};
 
 export default function SchoolsPage() {
   const { t } = useAdminLocale();
@@ -17,11 +79,27 @@ export default function SchoolsPage() {
   const [query, setQuery] = useState('');
   const [actorEmail, setActorEmail] = useState('');
   const [actorRole, setActorRole] = useState('user');
+  const [sessionToken, setSessionToken] = useState('');
+  const [tariffs, setTariffs] = useState<
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      price_kzt: number;
+      duration_days: number;
+      priority_weight: number;
+    }>
+  >([]);
+  const [payingSchoolId, setPayingSchoolId] = useState('');
+  const [monetizationDrafts, setMonetizationDrafts] = useState<
+    Record<string, MonetizationDraft>
+  >({});
 
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
+      setSessionToken(data?.session?.access_token || '');
       setActorEmail(data?.session?.user?.email || '');
       setActorRole(
         data?.session?.user?.user_metadata?.role ||
@@ -52,6 +130,23 @@ export default function SchoolsPage() {
   useEffect(() => {
     reload();
   }, [reload]);
+  useEffect(() => {
+    let active = true;
+    const loadTariffs = async () => {
+      try {
+        const result = await loadTestBillingTariffs();
+        if (!active) return;
+        setTariffs(Array.isArray(result?.data) ? result.data : []);
+      } catch {
+        if (!active) return;
+        setTariffs([]);
+      }
+    };
+    loadTariffs();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const appendAudit = useCallback(
     (profile: any, action: string) => {
@@ -154,6 +249,136 @@ export default function SchoolsPage() {
     localStorage.setItem(SELECTED_SCHOOL_STORAGE_KEY, schoolId);
     window.location.href = '/school-info';
   }, []);
+  const isSuperadmin = actorRole === 'superadmin';
+  const getDraft = useCallback(
+    (profile: any) =>
+      monetizationDrafts[profile.school_id] || buildMonetizationDraft(profile),
+    [monetizationDrafts]
+  );
+  const setDraftField = useCallback(
+    (schoolId: string, key: keyof MonetizationDraft, value: string | boolean) => {
+      setMonetizationDrafts((prev) => {
+        const current: MonetizationDraft = prev[schoolId] || {
+          isPromoted: false,
+          status: 'inactive',
+          planName: '',
+          priorityWeight: '0',
+          startsAt: '',
+          endsAt: '',
+          tariffId: '',
+        };
+        return {
+          ...prev,
+          [schoolId]: { ...current, [key]: value } as MonetizationDraft,
+        };
+      });
+    },
+    []
+  );
+  const resetMonetizationDraft = useCallback((profile: any) => {
+    setMonetizationDrafts((prev) => {
+      const next = { ...prev };
+      delete next[profile.school_id];
+      return next;
+    });
+  }, []);
+  const saveMonetization = useCallback(
+    async (profile: any) => {
+      if (!isSuperadmin) return;
+      const draft = getDraft(profile);
+      const priority = Number.parseInt(draft.priorityWeight, 10);
+      await saveMutated(
+        {
+          ...profile,
+          monetization: {
+            is_promoted: Boolean(draft.isPromoted),
+            subscription_status: normalizeText(draft.status || 'inactive').toLowerCase(),
+            plan_name: normalizeText(draft.planName),
+            priority_weight: Number.isFinite(priority) ? priority : 0,
+            starts_at: draft.startsAt || '',
+            ends_at: draft.endsAt || '',
+            last_tariff_id: draft.tariffId || '',
+          },
+        },
+        'update_monetization'
+      );
+      resetMonetizationDraft(profile);
+    },
+    [getDraft, isSuperadmin, resetMonetizationDraft, saveMutated]
+  );
+  const payTestTariff = useCallback(
+    async (profile: any) => {
+      if (!isSuperadmin) return;
+      if (!sessionToken) {
+        window.alert(t('schoolsTestPaymentNeedAuth'));
+        return;
+      }
+      const draft = getDraft(profile);
+      const fallbackTariff = tariffs[0]?.id || '';
+      const tariffId = draft.tariffId || fallbackTariff;
+      if (!tariffId) {
+        window.alert(t('schoolsTestPaymentNoTariff'));
+        return;
+      }
+      const selectedTariff = tariffs.find((item) => item.id === tariffId);
+      const tariffName = selectedTariff?.name || tariffId;
+      const confirmed = window.confirm(
+        `${t('schoolsTestPaymentConfirm')} ${tariffName}?`
+      );
+      if (!confirmed) return;
+
+      setPayingSchoolId(profile.school_id);
+      try {
+        const result = await runSchoolTestPayment(sessionToken, profile.school_id, {
+          tariffId,
+        });
+        const nextProfile = result?.data?.profile;
+        if (nextProfile?.school_id) {
+          setItems((prev) =>
+            prev.map((item) =>
+              item.school_id === nextProfile.school_id ? nextProfile : item
+            )
+          );
+        } else {
+          await reload();
+        }
+        resetMonetizationDraft(profile);
+        window.alert(t('schoolsTestPaymentSuccess'));
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : t('schoolsTestPaymentFailed');
+        window.alert(message);
+      } finally {
+        setPayingSchoolId('');
+      }
+    },
+    [getDraft, isSuperadmin, reload, resetMonetizationDraft, sessionToken, t, tariffs]
+  );
+  const renewCurrentTariff = useCallback(
+    async (profile: any) => {
+      if (!isSuperadmin) return;
+      const lastTariffId = normalizeText(profile?.monetization?.last_tariff_id);
+      if (!lastTariffId) {
+        window.alert(t('schoolsTestPaymentNoLastTariff'));
+        return;
+      }
+      const hasTariff = tariffs.some((item) => item.id === lastTariffId);
+      if (!hasTariff) {
+        window.alert(t('schoolsTestPaymentNoTariff'));
+        return;
+      }
+      await payTestTariff({
+        ...profile,
+        monetization: {
+          ...(profile?.monetization || {}),
+          last_tariff_id: lastTariffId,
+        },
+      });
+    },
+    [isSuperadmin, payTestTariff, t, tariffs]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -206,6 +431,11 @@ export default function SchoolsPage() {
             const auditLog = Array.isArray(item?.system?.audit_log)
               ? item.system.audit_log
               : [];
+            const promotionActive = isPromotionActive(item);
+            const monetization = item?.monetization || {};
+            const currentStatus = normalizeText(monetization.subscription_status || 'inactive') || 'inactive';
+            const draft = getDraft(item);
+            const payments = getPaymentHistory(item);
             return (
               <div key={item.school_id} className="schools-admin-card">
                 <div className="schools-admin-top">
@@ -220,6 +450,11 @@ export default function SchoolsPage() {
                     </span>
                     <span className={`schools-status ${isHidden ? 'warn' : 'ok'}`}>
                       {isHidden ? t('schoolsStatusHidden') : t('schoolsStatusVisible')}
+                    </span>
+                    <span className={`schools-status ${promotionActive ? 'ok' : 'warn'}`}>
+                      {promotionActive
+                        ? t('schoolsMonetizationTopActive')
+                        : `${t('schoolsMonetizationTopOff')} (${currentStatus})`}
                     </span>
                   </div>
                 </div>
@@ -253,6 +488,172 @@ export default function SchoolsPage() {
                   >
                     {isHidden ? `👁 ${t('schoolsShow')}` : `🙈 ${t('schoolsHide')}`}
                   </button>
+                </div>
+
+                <div className="schools-monetization">
+                  <p className="muted">{t('schoolsMonetizationTitle')}</p>
+                  <div className="form-row">
+                    <label className="field">
+                      <span>{t('schoolsMonetizationStatus')}</span>
+                      <select
+                        value={draft.status}
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'status', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      >
+                        {['inactive', 'active', 'paused', 'expired'].map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>{t('schoolsMonetizationPlan')}</span>
+                      <input
+                        className="input"
+                        value={draft.planName}
+                        placeholder="Top placement"
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'planName', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>{t('schoolsMonetizationTariff')}</span>
+                      <select
+                        value={draft.tariffId || tariffs[0]?.id || ''}
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'tariffId', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      >
+                        {tariffs.length ? (
+                          tariffs.map((tariff) => (
+                            <option key={tariff.id} value={tariff.id}>
+                              {`${tariff.name} · ${Number(tariff.price_kzt || 0).toLocaleString('ru-RU')} ₸ · ${tariff.duration_days} дн`}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">{t('schoolsTestPaymentNoTariff')}</option>
+                        )}
+                      </select>
+                    </label>
+                  </div>
+                  {draft.tariffId ? (
+                    <p className="muted">
+                      {(() => {
+                        const selected = tariffs.find((item) => item.id === draft.tariffId);
+                        return selected?.description || '';
+                      })()}
+                    </p>
+                  ) : null}
+                  <div className="form-row">
+                    <label className="field">
+                      <span>{t('schoolsMonetizationPriority')}</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min={0}
+                        value={draft.priorityWeight}
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'priorityWeight', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>{t('schoolsMonetizationStartsAt')}</span>
+                      <input
+                        className="input"
+                        type="date"
+                        value={draft.startsAt}
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'startsAt', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>{t('schoolsMonetizationEndsAt')}</span>
+                      <input
+                        className="input"
+                        type="date"
+                        value={draft.endsAt}
+                        onChange={(event) =>
+                          setDraftField(item.school_id, 'endsAt', event.target.value)
+                        }
+                        disabled={!isSuperadmin}
+                      />
+                    </label>
+                  </div>
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.isPromoted}
+                      onChange={(event) =>
+                        setDraftField(item.school_id, 'isPromoted', event.target.checked)
+                      }
+                      disabled={!isSuperadmin}
+                    />
+                    <span>{t('schoolsMonetizationIsPromoted')}</span>
+                  </label>
+                  {isSuperadmin ? (
+                    <div className="schools-admin-actions">
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => payTestTariff(item)}
+                        disabled={payingSchoolId === item.school_id || !tariffs.length}
+                      >
+                        {payingSchoolId === item.school_id
+                          ? t('schoolsTestPaymentProcessing')
+                          : t('schoolsTestPaymentAction')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => renewCurrentTariff(item)}
+                        disabled={
+                          payingSchoolId === item.school_id ||
+                          !normalizeText(item?.monetization?.last_tariff_id)
+                        }
+                      >
+                        {t('schoolsTestPaymentRenew')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => saveMonetization(item)}
+                      >
+                        {t('schoolsMonetizationSave')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => resetMonetizationDraft(item)}
+                      >
+                        {t('schoolsMonetizationReset')}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="muted">{t('schoolsMonetizationSuperadminOnly')}</p>
+                  )}
+                  <div className="schools-payments">
+                    <p className="muted">{t('schoolsPaymentsHistory')}</p>
+                    {payments.length ? (
+                      payments.slice(0, 5).map((payment) => (
+                        <p key={payment.id} className="muted">
+                          {new Date(payment.paid_at || 0).toLocaleString()} · {payment.tariff_name} ·{' '}
+                          {Number(payment.amount_kzt || 0).toLocaleString('ru-RU')} ₸ · {payment.status}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="muted">{t('schoolsPaymentsEmpty')}</p>
+                    )}
+                  </div>
                 </div>
 
                 {auditLog.length ? (

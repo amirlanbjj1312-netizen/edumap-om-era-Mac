@@ -435,6 +435,22 @@ a {
   border-top: 1px dashed var(--border);
 }
 
+.schools-monetization {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.schools-monetization .muted {
+  margin: 0 0 8px;
+}
+
+.schools-payments {
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
 .profile-notifications {
   margin-bottom: 18px;
   padding: 12px;

@@ -671,6 +671,7 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
   const formattedMonthlyFee = showMonthlyFee
     ? `${Math.round(monthlyFee).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')} ₸`
     : '';
+  const isPromoted = Boolean(item?.promotion?.isPromotedActive);
 
   return (
     <Pressable
@@ -694,6 +695,13 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
       </View>
 
       <View className="flex-1">
+        {isPromoted ? (
+          <View className="self-start rounded-full px-2 py-1 mb-1 bg-amber-100 border border-amber-300">
+            <Text className="text-amber-800 font-exoSemibold text-[10px]">
+              {t ? t('schools.promoted') : 'Sponsored'}
+            </Text>
+          </View>
+        ) : null}
         <Text
           className="text-darkGrayText font-exoSemibold mb-1.5"
           style={{ fontSize: 16, lineHeight: 20 }}
@@ -1289,7 +1297,22 @@ export default function SchoolsScreen() {
       sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     }
 
-    return sorted;
+    const decorated = sorted.map((school, index) => ({ school, index }));
+    decorated.sort((a, b) => {
+      const aPromo = a.school?.promotion || {};
+      const bPromo = b.school?.promotion || {};
+      const aActive = Boolean(aPromo.isPromotedActive);
+      const bActive = Boolean(bPromo.isPromotedActive);
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      if (aActive && bActive) {
+        const aPriority = Number(aPromo.priorityWeight) || 0;
+        const bPriority = Number(bPromo.priorityWeight) || 0;
+        if (aPriority !== bPriority) return bPriority - aPriority;
+      }
+      return a.index - b.index;
+    });
+
+    return decorated.map((item) => item.school);
   }, [
     query,
     schoolCards,
@@ -1319,6 +1342,14 @@ export default function SchoolsScreen() {
   const aiSummary = botQueryApplied
     ? `${aiLabel}: ${filteredSchools.length} ${t('schools.ai.summaryFor')} "${botQueryApplied}"`
     : '';
+  const promotedSchools = useMemo(
+    () => filteredSchools.filter((school) => Boolean(school?.promotion?.isPromotedActive)),
+    [filteredSchools]
+  );
+  const regularSchools = useMemo(
+    () => filteredSchools.filter((school) => !school?.promotion?.isPromotedActive),
+    [filteredSchools]
+  );
 
   const header = (
     <View className="px-6 pt-6">
@@ -1473,11 +1504,40 @@ export default function SchoolsScreen() {
         </View>
       ) : (
       <FlatList
-        data={filteredSchools}
+        data={regularSchools}
         keyExtractor={(item) =>
           item.id != null ? String(item.id) : `${item.name}-${item.address}`
         }
-        ListHeaderComponent={header}
+        ListHeaderComponent={
+          <View>
+            {header}
+            {promotedSchools.length ? (
+              <View className="mb-3">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-white font-exoSemibold text-base">
+                    {t('schools.promoted.sectionTitle')}
+                  </Text>
+                  <Text className="text-white/90 font-exoSemibold text-xs uppercase">
+                    {t('schools.promoted.adLabel')}
+                  </Text>
+                </View>
+                {promotedSchools.map((item) => (
+                  <SchoolCard
+                    key={`promoted-${item.id || item.school_id || item.name}`}
+                    item={item}
+                    t={t}
+                    locale={locale}
+                    onPress={() =>
+                      navigation.navigate('SchoolDetail', {
+                        schoolId: item.school_id || item.id,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        }
         contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 24 }}
         renderItem={({ item }) => (
           <SchoolCard

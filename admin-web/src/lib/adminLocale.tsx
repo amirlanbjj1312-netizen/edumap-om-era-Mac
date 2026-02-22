@@ -349,6 +349,126 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Audit log',
     kk: 'Әрекет журналы',
   },
+  schoolsMonetizationTitle: {
+    ru: 'Монетизация и топ-размещение',
+    en: 'Monetization and top placement',
+    kk: 'Монетизация және топта орналастыру',
+  },
+  schoolsMonetizationTopActive: {
+    ru: 'Топ-размещение активно',
+    en: 'Top placement active',
+    kk: 'Топта орналастыру белсенді',
+  },
+  schoolsMonetizationTopOff: {
+    ru: 'Топ-размещение неактивно',
+    en: 'Top placement inactive',
+    kk: 'Топта орналастыру белсенді емес',
+  },
+  schoolsMonetizationStatus: {
+    ru: 'Статус подписки',
+    en: 'Subscription status',
+    kk: 'Жазылым мәртебесі',
+  },
+  schoolsMonetizationPlan: {
+    ru: 'План',
+    en: 'Plan',
+    kk: 'Жоспар',
+  },
+  schoolsMonetizationTariff: {
+    ru: 'Тариф',
+    en: 'Tariff',
+    kk: 'Тариф',
+  },
+  schoolsMonetizationPriority: {
+    ru: 'Приоритет',
+    en: 'Priority',
+    kk: 'Басымдық',
+  },
+  schoolsMonetizationStartsAt: {
+    ru: 'Начало',
+    en: 'Start date',
+    kk: 'Басталу күні',
+  },
+  schoolsMonetizationEndsAt: {
+    ru: 'Окончание',
+    en: 'End date',
+    kk: 'Аяқталу күні',
+  },
+  schoolsMonetizationIsPromoted: {
+    ru: 'Продвигать в топе',
+    en: 'Promote in top results',
+    kk: 'Топта ілгерілету',
+  },
+  schoolsMonetizationSave: {
+    ru: 'Сохранить монетизацию',
+    en: 'Save monetization',
+    kk: 'Монетизацияны сақтау',
+  },
+  schoolsMonetizationReset: {
+    ru: 'Сбросить черновик',
+    en: 'Reset draft',
+    kk: 'Жобаны қалпына келтіру',
+  },
+  schoolsMonetizationSuperadminOnly: {
+    ru: 'Только superadmin может менять параметры монетизации.',
+    en: 'Only superadmin can change monetization settings.',
+    kk: 'Монетизация параметрлерін тек superadmin өзгерте алады.',
+  },
+  schoolsTestPaymentAction: {
+    ru: 'Оплатить (тест)',
+    en: 'Pay (test)',
+    kk: 'Төлеу (тест)',
+  },
+  schoolsTestPaymentRenew: {
+    ru: 'Продлить по текущему тарифу',
+    en: 'Renew current tariff',
+    kk: 'Ағымдағы тарифпен ұзарту',
+  },
+  schoolsTestPaymentProcessing: {
+    ru: 'Проводим оплату...',
+    en: 'Processing payment...',
+    kk: 'Төлем өңделуде...',
+  },
+  schoolsTestPaymentConfirm: {
+    ru: 'Провести тестовую оплату тарифа',
+    en: 'Run test payment for tariff',
+    kk: 'Тарифке тест төлемін жасау',
+  },
+  schoolsTestPaymentSuccess: {
+    ru: 'Тестовая оплата успешна. Топ-размещение активировано.',
+    en: 'Test payment successful. Top placement activated.',
+    kk: 'Тест төлемі сәтті. Топта орналастыру іске қосылды.',
+  },
+  schoolsTestPaymentFailed: {
+    ru: 'Не удалось провести тестовую оплату.',
+    en: 'Failed to run test payment.',
+    kk: 'Тест төлемін жасау мүмкін болмады.',
+  },
+  schoolsTestPaymentNeedAuth: {
+    ru: 'Нужно обновить сессию и войти заново.',
+    en: 'Session token missing. Please sign in again.',
+    kk: 'Сессия токені жоқ. Қайта кіріңіз.',
+  },
+  schoolsTestPaymentNoTariff: {
+    ru: 'Тарифы недоступны',
+    en: 'No tariffs available',
+    kk: 'Тарифтер қолжетімсіз',
+  },
+  schoolsTestPaymentNoLastTariff: {
+    ru: 'У школы нет предыдущего тарифа для продления.',
+    en: 'No previous tariff to renew.',
+    kk: 'Ұзарту үшін алдыңғы тариф жоқ.',
+  },
+  schoolsPaymentsHistory: {
+    ru: 'История тест-оплат',
+    en: 'Test payments history',
+    kk: 'Тест төлемдер тарихы',
+  },
+  schoolsPaymentsEmpty: {
+    ru: 'Пока нет тест-оплат.',
+    en: 'No test payments yet.',
+    kk: 'Тест төлемдер әлі жоқ.',
+  },
   schoolsForbidden: {
     ru: 'Доступ только для moderator или superadmin.',
     en: 'Access only for moderator or superadmin.',

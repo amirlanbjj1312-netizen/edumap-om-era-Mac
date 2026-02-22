@@ -70,6 +70,68 @@ const buildSchoolsRouter = () => {
     }
     return data.user;
   };
+  const requireSuperadmin = async (req, res) => {
+    if (!supabaseAdmin) {
+      res.status(500).json({ error: 'Supabase admin is not configured' });
+      return null;
+    }
+    const token = getBearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: 'Authorization token is required' });
+      return null;
+    }
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      res.status(401).json({ error: 'Invalid token' });
+      return null;
+    }
+    const role =
+      data.user?.user_metadata?.role || data.user?.app_metadata?.role || '';
+    if (!hasMinRole(role, 'superadmin')) {
+      res.status(403).json({ error: 'Only superadmin can process test payments' });
+      return null;
+    }
+    return data.user;
+  };
+
+  const TEST_BILLING_TARIFFS = [
+    {
+      id: 'starter_30',
+      name: 'Top Starter',
+      description: '1 активный топ-слот в выбранной локации',
+      price_kzt: 30000,
+      duration_days: 30,
+      priority_weight: 10,
+    },
+    {
+      id: 'growth_30',
+      name: 'Top Growth',
+      description: 'Повышенный приоритет в топ-блоке',
+      price_kzt: 60000,
+      duration_days: 30,
+      priority_weight: 25,
+    },
+    {
+      id: 'premium_30',
+      name: 'Top Premium',
+      description: 'Максимальный приоритет в топ-блоке',
+      price_kzt: 120000,
+      duration_days: 30,
+      priority_weight: 50,
+    },
+    {
+      id: 'premium_90',
+      name: 'Top Premium 90',
+      description: 'Максимальный приоритет на 90 дней',
+      price_kzt: 300000,
+      duration_days: 90,
+      priority_weight: 55,
+    },
+  ];
+
+  router.get('/billing/tariffs', async (_req, res) => {
+    res.json({ data: TEST_BILLING_TARIFFS });
+  });
 
   router.get('/', async (req, res, next) => {
     try {
@@ -310,6 +372,110 @@ const buildSchoolsRouter = () => {
 
       await upsertSchool(updatedProfile);
       return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/:id/payments/test', async (req, res, next) => {
+    try {
+      const actor = await requireSuperadmin(req, res);
+      if (!actor) return;
+
+      const schoolId = String(req.params?.id || '').trim();
+      const tariffId = String(req.body?.tariffId || '').trim();
+      if (!schoolId || !tariffId) {
+        return res.status(400).json({ error: 'schoolId and tariffId are required' });
+      }
+
+      const tariff = TEST_BILLING_TARIFFS.find((item) => item.id === tariffId);
+      if (!tariff) {
+        return res.status(400).json({ error: 'Invalid tariffId' });
+      }
+
+      const schools = await readStore();
+      const school = schools.find((item) => item?.school_id === schoolId);
+      if (!school) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+
+      const now = new Date();
+      const startsAtIso = now.toISOString();
+      const endsAt = new Date(now.getTime());
+      endsAt.setDate(endsAt.getDate() + Number(tariff.duration_days || 30));
+      const endsAtIso = endsAt.toISOString();
+      const paymentId = `testpay-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
+      const currentAuditLog = Array.isArray(school?.system?.audit_log)
+        ? school.system.audit_log
+        : [];
+      const currentPayments = Array.isArray(school?.monetization?.payments)
+        ? school.monetization.payments
+        : [];
+
+      const paymentRecord = {
+        id: paymentId,
+        type: 'test',
+        status: 'paid',
+        tariff_id: tariff.id,
+        tariff_name: tariff.name,
+        amount_kzt: tariff.price_kzt,
+        currency: 'KZT',
+        paid_at: startsAtIso,
+        actor: actor.email || actor.id,
+      };
+
+      const updatedProfile = {
+        ...school,
+        monetization: {
+          ...(school?.monetization || {}),
+          is_promoted: true,
+          subscription_status: 'active',
+          plan_name: tariff.name,
+          priority_weight: Number(tariff.priority_weight) || 0,
+          starts_at: startsAtIso,
+          ends_at: endsAtIso,
+          last_tariff_id: tariff.id,
+          last_payment_id: paymentId,
+          payments: [paymentRecord, ...currentPayments].slice(0, 50),
+        },
+        system: {
+          ...(school?.system || {}),
+          updated_at: startsAtIso,
+          audit_log: [
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              at: startsAtIso,
+              action: 'payment_test_success',
+              actor: actor.email || actor.id,
+              school_id: schoolId,
+              payment_id: paymentId,
+              tariff_id: tariff.id,
+              amount_kzt: tariff.price_kzt,
+            },
+            ...currentAuditLog,
+          ].slice(0, 100),
+        },
+      };
+
+      const saved = await upsertSchool(updatedProfile);
+
+      res.json({
+        data: {
+          school_id: schoolId,
+          payment: {
+            id: paymentId,
+            status: 'paid',
+            tariff_id: tariff.id,
+            amount_kzt: tariff.price_kzt,
+            paid_at: startsAtIso,
+          },
+          monetization: saved?.monetization || updatedProfile.monetization,
+          profile: saved,
+        },
+      });
     } catch (error) {
       next(error);
     }

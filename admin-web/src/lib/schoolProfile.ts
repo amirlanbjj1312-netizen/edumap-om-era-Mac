@@ -144,6 +144,16 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       audit_log: [],
       notifications: [],
     },
+    monetization: {
+      is_promoted: false,
+      subscription_status: 'inactive',
+      plan_name: '',
+      priority_weight: 0,
+      starts_at: '',
+      ends_at: '',
+      last_tariff_id: '',
+      payments: [],
+    },
   };
 
   return mergeDeep(base, overrides);
