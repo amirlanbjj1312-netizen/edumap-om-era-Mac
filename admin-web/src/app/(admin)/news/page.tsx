@@ -38,9 +38,12 @@ export default function AdminNewsPage() {
   const { t } = useAdminLocale();
   const [authReady, setAuthReady] = useState(false);
   const [actorRole, setActorRole] = useState('user');
+  const [actorEmail, setActorEmail] = useState('');
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [mediaMessage, setMediaMessage] = useState('');
   const [message, setMessage] = useState('');
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
@@ -52,6 +55,7 @@ export default function AdminNewsPage() {
       if (!mounted) return;
       const session = data?.session;
       setToken(session?.access_token || '');
+      setActorEmail(session?.user?.email || '');
       setActorRole(
         session?.user?.user_metadata?.role || session?.user?.app_metadata?.role || 'user'
       );
@@ -82,10 +86,12 @@ export default function AdminNewsPage() {
   const resetForm = useCallback(() => {
     setEditId('');
     setForm(initialForm);
+    setMediaMessage('');
   }, []);
 
   const startEdit = useCallback((item: any) => {
     setEditId(item?.id || '');
+    setMediaMessage('');
     setForm({
       title: item?.title || '',
       titleEn: item?.titleEn || '',
@@ -100,6 +106,88 @@ export default function AdminNewsPage() {
       publishedAt: item?.publishedAt || '',
     });
   }, []);
+  const uploadNewsImages = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return [];
+      const configuredBucket = (process.env.NEXT_PUBLIC_MEDIA_BUCKET || '').trim();
+      const buckets = Array.from(
+        new Set([configuredBucket, 'school media', 'school-media'].filter(Boolean))
+      );
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const baseId = (actorEmail || 'moderator').replace(/[^a-zA-Z0-9-_.]/g, '-');
+      const uploadedUrls: string[] = [];
+      let lastError: any = null;
+
+      for (const file of files) {
+        const safeName = file.name.replace(/\s+/g, '-').toLowerCase();
+        const dotIndex = safeName.lastIndexOf('.');
+        const baseName = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
+        const ext = dotIndex > 0 ? safeName.slice(dotIndex + 1) : 'bin';
+        const path = `news/${baseId}/images/${Date.now()}-${baseName}.${ext}`;
+
+        let uploaded = false;
+        for (const bucket of buckets) {
+          const { error } = await supabase.storage.from(bucket).upload(path, file, {
+            upsert: true,
+            contentType: file.type || undefined,
+          });
+          if (error) {
+            lastError = error;
+            if (/bucket not found/i.test(error.message || '')) {
+              continue;
+            }
+            throw error;
+          }
+          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          const publicUrl =
+            data?.publicUrl ||
+            (supabaseUrl
+              ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(
+                  bucket
+                )}/${path}`
+              : '');
+          if (publicUrl) {
+            uploadedUrls.push(publicUrl);
+          }
+          uploaded = true;
+          break;
+        }
+        if (!uploaded) {
+          throw lastError || new Error('Bucket not found');
+        }
+      }
+      return uploadedUrls;
+    },
+    [actorEmail]
+  );
+  const handleImageUpload = useCallback(
+    async (event: any) => {
+      const files = Array.from(event?.target?.files || []) as File[];
+      if (!files.length) return;
+      try {
+        setUploadingImages(true);
+        setMediaMessage('');
+        const urls = await uploadNewsImages(files);
+        if (urls.length) {
+          setForm((prev) => ({
+            ...prev,
+            imageUrls: joinList([...splitList(prev.imageUrls), ...urls]),
+          }));
+          setMediaMessage(t('saved'));
+        }
+      } catch (error: any) {
+        setMediaMessage(
+          error?.message || t('newsAdminImageUploadError')
+        );
+      } finally {
+        if (event?.currentTarget) {
+          event.currentTarget.value = '';
+        }
+        setUploadingImages(false);
+      }
+    },
+    [t, uploadNewsImages]
+  );
 
   const submit = useCallback(async () => {
     if (!token || !isModerator(actorRole)) return;
@@ -193,6 +281,22 @@ export default function AdminNewsPage() {
         <Field label="Category" value={form.category} onChange={(value) => setForm((p) => ({ ...p, category: value }))} />
         <Field label="Tags (comma separated)" value={form.tags} onChange={(value) => setForm((p) => ({ ...p, tags: value }))} />
         <Field label="Image URLs (comma separated)" value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{t('newsAdminImageUploadLabel')}</span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            disabled={uploadingImages || saving}
+          />
+        </label>
+        <p className="upload-choice-note">
+          <span className="or-badge">ИЛИ</span>
+          {t('newsAdminImageUploadHint')}
+          {uploadingImages ? ` ${t('newsAdminImageUploading')}` : ''}
+        </p>
+        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <Field label="Video URLs (comma separated)" value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
         <Field label="Content (RU)" value={form.content} onChange={(value) => setForm((p) => ({ ...p, content: value }))} textarea rows={6} />
         <Field label="Content (EN)" value={form.contentEn} onChange={(value) => setForm((p) => ({ ...p, contentEn: value }))} textarea rows={6} />

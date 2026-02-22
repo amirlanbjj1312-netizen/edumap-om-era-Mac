@@ -669,6 +669,26 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Access only for moderator or superadmin.',
     kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
   },
+  newsAdminImageUploadLabel: {
+    ru: 'Загрузка фото (файлы)',
+    en: 'Upload photos (files)',
+    kk: 'Фото жүктеу (файлдар)',
+  },
+  newsAdminImageUploadHint: {
+    ru: 'Можно вставить URL или загрузить файлы. Загруженные ссылки автоматически добавятся в Image URLs.',
+    en: 'You can paste URLs or upload files. Uploaded links will be added to Image URLs automatically.',
+    kk: 'URL енгізуге немесе файл жүктеуге болады. Жүктелген сілтемелер Image URLs өрісіне автоматты түрде қосылады.',
+  },
+  newsAdminImageUploading: {
+    ru: 'Загружаем...',
+    en: 'Uploading...',
+    kk: 'Жүктелуде...',
+  },
+  newsAdminImageUploadError: {
+    ru: 'Не удалось загрузить фото. Проверьте настройки Storage bucket в Supabase.',
+    en: 'Failed to upload image. Check Supabase Storage bucket settings.',
+    kk: 'Фото жүктеу сәтсіз. Supabase Storage bucket баптауларын тексеріңіз.',
+  },
   coursesAdminTitle: {
     ru: 'Управление курсами',
     en: 'Courses management',
