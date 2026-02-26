@@ -36,3 +36,15 @@ export const askSchoolChat = async (message, schoolIds = []) => {
   });
   return payload?.data || null;
 };
+
+export const loadAiLimits = async () => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Authorization token is required');
+  }
+  const payload = await requestJson('/ai/limits', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return payload?.data || null;
+};

@@ -91,26 +91,65 @@ const buildAiRouter = (config) => {
     }
     return data.user;
   };
-  const consumeRateLimit = (actorId, key) => {
+  const getRateLimitState = (actorId, key) => {
     const policy = RATE_LIMITS[key];
-    if (!policy) return { ok: true };
+    if (!policy) return { ok: true, limit: 0, windowMs: 0, used: 0, remaining: 0, retryAfterSec: 0 };
     const now = Date.now();
     const bucketKey = `${actorId}:${key}`;
     const existing = rateBuckets.get(bucketKey) || [];
     const recent = existing.filter((ts) => now - ts < policy.windowMs);
-    if (recent.length >= policy.max) {
-      const oldest = recent[0];
-      const retryAfterSec = Math.max(
-        1,
-        Math.ceil((policy.windowMs - (now - oldest)) / 1000)
-      );
-      rateBuckets.set(bucketKey, recent);
-      return { ok: false, retryAfterSec };
+    rateBuckets.set(bucketKey, recent);
+    const used = recent.length;
+    const remaining = Math.max(0, policy.max - used);
+    const retryAfterSec =
+      used > 0
+        ? Math.max(1, Math.ceil((policy.windowMs - (now - recent[0])) / 1000))
+        : 0;
+    return {
+      ok: used < policy.max,
+      limit: policy.max,
+      windowMs: policy.windowMs,
+      used,
+      remaining,
+      retryAfterSec,
+    };
+  };
+  const consumeRateLimit = (actorId, key) => {
+    const state = getRateLimitState(actorId, key);
+    if (!state.ok) {
+      return { ok: false, retryAfterSec: state.retryAfterSec };
     }
-    recent.push(now);
+    const bucketKey = `${actorId}:${key}`;
+    const recent = rateBuckets.get(bucketKey) || [];
+    recent.push(Date.now());
     rateBuckets.set(bucketKey, recent);
     return { ok: true };
   };
+
+  router.get('/limits', async (req, res) => {
+    const actor = await requireActor(req, res);
+    if (!actor) return;
+    const queryState = getRateLimitState(actor.id, 'school_query');
+    const chatState = getRateLimitState(actor.id, 'school_chat');
+    return res.json({
+      data: {
+        school_query: {
+          limit: queryState.limit,
+          window_sec: Math.floor(queryState.windowMs / 1000),
+          used: queryState.used,
+          remaining: queryState.remaining,
+          retry_after_sec: queryState.ok ? 0 : queryState.retryAfterSec,
+        },
+        school_chat: {
+          limit: chatState.limit,
+          window_sec: Math.floor(chatState.windowMs / 1000),
+          used: chatState.used,
+          remaining: chatState.remaining,
+          retry_after_sec: chatState.ok ? 0 : chatState.retryAfterSec,
+        },
+      },
+    });
+  });
 
   router.post('/school-query', async (req, res, next) => {
     const actor = await requireActor(req, res);
