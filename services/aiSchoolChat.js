@@ -18,10 +18,10 @@ const requestJson = async (path, options = {}) => {
   return payload;
 };
 
-export const askSchoolChat = async (message, schools) => {
+export const askSchoolChat = async (message, schoolIds = []) => {
   const payload = await requestJson('/ai/school-chat', {
     method: 'POST',
-    body: JSON.stringify({ message, schools }),
+    body: JSON.stringify({ message, schoolIds }),
   });
   return payload?.data || null;
 };

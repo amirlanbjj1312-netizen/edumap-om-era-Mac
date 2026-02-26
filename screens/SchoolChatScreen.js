@@ -20,8 +20,21 @@ import { askSchoolChat } from '../services/aiSchoolChat';
 
 const MAX_SCHOOLS = 30;
 
+const extractText = (value) => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    const parts = [];
+    if (typeof value.ru === 'string') parts.push(value.ru);
+    if (typeof value.en === 'string') parts.push(value.en);
+    return parts.join(' ');
+  }
+  return '';
+};
+
 const toTokens = (value) =>
-  value
+  extractText(value)
     .toLowerCase()
     .replace(/[^a-zа-я0-9\s]/gi, ' ')
     .split(/\s+/)
@@ -41,6 +54,7 @@ const buildSchoolText = (school) =>
     school.specialists,
     school.region,
   ]
+    .map(extractText)
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -62,54 +76,9 @@ const rankSchools = (cards, message) => {
   return sorted.map((entry) => entry.card).slice(0, MAX_SCHOOLS);
 };
 
-const createChatSchoolPayload = (profile, fallbackCard) => {
-  const id =
-    profile?.school_id ||
-    fallbackCard.school_id ||
-    String(fallbackCard.id || '');
-  const basicInfo = profile?.basic_info || {};
-  const education = profile?.education || {};
-  const services = profile?.services || {};
-  const finance = profile?.finance || {};
-  const system = profile?.system || {};
-  const reviews = profile?.reviews || {};
-
-  return {
-    school_id: id,
-    name: basicInfo.name || fallbackCard.name || '',
-    type: basicInfo.type || fallbackCard.type || '',
-    city: basicInfo.city || fallbackCard.city || '',
-    district: basicInfo.district || '',
-    address: basicInfo.address || fallbackCard.address || '',
-    monthly_fee: finance.monthly_fee || fallbackCard.monthlyFee || '',
-    languages: education.languages || fallbackCard.languages || '',
-    programs: education.programs || '',
-    curricula:
-      education.curricula?.other ||
-      education.curricula?.international?.join?.(', ') ||
-      fallbackCard.curricula ||
-      '',
-    advanced_subjects:
-      education.advanced_subjects || fallbackCard.advancedSubjects || '',
-    clubs: services.clubs || fallbackCard.clubs || '',
-    meals: services.meals || fallbackCard.meals || '',
-    specialists: services.specialists || fallbackCard.specialists || '',
-    rating:
-      reviews.average_rating ??
-      system.rating ??
-      fallbackCard.rating ??
-      '',
-    reviews_count:
-      reviews.count ??
-      system.reviews_count ??
-      fallbackCard.reviewsCount ??
-      '',
-  };
-};
-
 export default function SchoolChatScreen() {
   const navigation = useNavigation();
-  const { schoolCards, profiles } = useSchools();
+  const { schoolCards } = useSchools();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
@@ -120,16 +89,6 @@ export default function SchoolChatScreen() {
   ]);
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
-
-  const profilesById = useMemo(() => {
-    const map = new Map();
-    profiles.forEach((profile) => {
-      if (profile.school_id) {
-        map.set(profile.school_id, profile);
-      }
-    });
-    return map;
-  }, [profiles]);
 
   const cardsById = useMemo(() => {
     const map = new Map();
@@ -164,12 +123,12 @@ export default function SchoolChatScreen() {
     setSending(true);
 
     const ranked = rankSchools(schoolCards, text);
-    const schoolsPayload = ranked.map((card) =>
-      createChatSchoolPayload(profilesById.get(card.school_id), card)
-    );
+    const schoolIds = ranked
+      .map((card) => card.school_id || String(card.id || ''))
+      .filter(Boolean);
 
     try {
-      const result = await askSchoolChat(text, schoolsPayload);
+      const result = await askSchoolChat(text, schoolIds);
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -190,7 +149,7 @@ export default function SchoolChatScreen() {
     } finally {
       setSending(false);
     }
-  }, [appendMessage, input, profilesById, schoolCards, sending]);
+  }, [appendMessage, input, schoolCards, sending]);
 
   const renderRecommendations = (ids = []) => {
     if (!ids.length) return null;
