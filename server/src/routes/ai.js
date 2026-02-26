@@ -1,4 +1,5 @@
 const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
 const { parseSchoolQueryWithLlm } = require('../services/llmSchoolParser');
 const { chatWithSchools } = require('../services/llmSchoolChat');
 const { readStore } = require('../services/schoolsStore');
@@ -52,14 +53,79 @@ const toChatSchoolPayload = (school) => ({
   rating: school?.reviews?.average_rating ?? school?.system?.rating ?? '',
   reviews_count: school?.reviews?.count ?? school?.system?.reviews_count ?? '',
 });
+const RATE_LIMITS = {
+  school_query: { windowMs: 60 * 1000, max: 20 },
+  school_chat: { windowMs: 60 * 1000, max: 10 },
+};
+const rateBuckets = new Map();
 
 const buildAiRouter = (config) => {
   const router = express.Router();
+  const supabaseAdmin =
+    config.supabase?.url && config.supabase?.serviceRoleKey
+      ? createClient(config.supabase.url, config.supabase.serviceRoleKey, {
+          auth: { persistSession: false },
+        })
+      : null;
+  const getBearerToken = (req) => {
+    const header = req.headers.authorization || '';
+    if (header.startsWith('Bearer ')) {
+      return header.slice(7).trim();
+    }
+    return null;
+  };
+  const requireActor = async (req, res) => {
+    if (!supabaseAdmin) {
+      res.status(500).json({ error: 'Supabase admin is not configured.' });
+      return null;
+    }
+    const token = getBearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: 'Authorization token is required.' });
+      return null;
+    }
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      res.status(401).json({ error: 'Invalid token.' });
+      return null;
+    }
+    return data.user;
+  };
+  const consumeRateLimit = (actorId, key) => {
+    const policy = RATE_LIMITS[key];
+    if (!policy) return { ok: true };
+    const now = Date.now();
+    const bucketKey = `${actorId}:${key}`;
+    const existing = rateBuckets.get(bucketKey) || [];
+    const recent = existing.filter((ts) => now - ts < policy.windowMs);
+    if (recent.length >= policy.max) {
+      const oldest = recent[0];
+      const retryAfterSec = Math.max(
+        1,
+        Math.ceil((policy.windowMs - (now - oldest)) / 1000)
+      );
+      rateBuckets.set(bucketKey, recent);
+      return { ok: false, retryAfterSec };
+    }
+    recent.push(now);
+    rateBuckets.set(bucketKey, recent);
+    return { ok: true };
+  };
 
   router.post('/school-query', async (req, res, next) => {
+    const actor = await requireActor(req, res);
+    if (!actor) return;
+    const rate = consumeRateLimit(actor.id, 'school_query');
+    if (!rate.ok) {
+      res.setHeader('Retry-After', String(rate.retryAfterSec));
+      return res.status(429).json({ error: 'Too many AI requests. Try again later.' });
+    }
     const query = typeof req.body?.query === 'string' ? req.body.query.trim() : '';
     if (!query) {
       return res.status(400).json({ error: 'Query is required.' });
+    }
+    if (query.length > 1500) {
+      return res.status(400).json({ error: 'Query is too long.' });
     }
 
     try {
@@ -83,6 +149,13 @@ const buildAiRouter = (config) => {
   });
 
   router.post('/school-chat', async (req, res, next) => {
+    const actor = await requireActor(req, res);
+    if (!actor) return;
+    const rate = consumeRateLimit(actor.id, 'school_chat');
+    if (!rate.ok) {
+      res.setHeader('Retry-After', String(rate.retryAfterSec));
+      return res.status(429).json({ error: 'Too many AI requests. Try again later.' });
+    }
     const message =
       typeof req.body?.message === 'string' ? req.body.message.trim() : '';
     const schoolIds = Array.isArray(req.body?.schoolIds)
@@ -93,6 +166,9 @@ const buildAiRouter = (config) => {
     const schools = Array.isArray(req.body?.schools) ? req.body.schools : [];
     if (!message) {
       return res.status(400).json({ error: 'Message is required.' });
+    }
+    if (message.length > 2000) {
+      return res.status(400).json({ error: 'Message is too long.' });
     }
     const MAX_SCHOOLS = 12;
 
