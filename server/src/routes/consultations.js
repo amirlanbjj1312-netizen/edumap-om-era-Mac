@@ -12,6 +12,12 @@ const REQUIRED_FIELDS = [
   'childName',
   'childGrade',
 ];
+const POST_RATE_LIMITS = {
+  byIp: { windowMs: 15 * 60 * 1000, max: 10 },
+  byPhone: { windowMs: 60 * 60 * 1000, max: 3 },
+};
+const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
+const postBuckets = new Map();
 
 const validatePayload = (body = {}) => {
   for (const field of REQUIRED_FIELDS) {
@@ -20,6 +26,33 @@ const validatePayload = (body = {}) => {
     }
   }
   return null;
+};
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '');
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  const candidate = req.ip || req.socket?.remoteAddress || '';
+  return String(candidate).replace(/^::ffff:/, '').trim();
+};
+const consumeRateLimit = (key, policy) => {
+  const now = Date.now();
+  const current = postBuckets.get(key) || [];
+  const recent = current.filter((ts) => now - ts < policy.windowMs);
+  if (recent.length >= policy.max) {
+    const oldest = recent[0];
+    const retryAfterSec = Math.max(
+      1,
+      Math.ceil((policy.windowMs - (now - oldest)) / 1000)
+    );
+    postBuckets.set(key, recent);
+    return { ok: false, retryAfterSec };
+  }
+  recent.push(now);
+  postBuckets.set(key, recent);
+  return { ok: true };
 };
 
 const buildConsultationsRouter = (config) => {
@@ -119,6 +152,47 @@ const buildConsultationsRouter = (config) => {
     }
 
     try {
+      const ip = getClientIp(req);
+      const parentPhone = normalizePhone(req.body.parentPhone);
+      const schoolId = normalizeText(req.body.schoolId);
+      const childName = normalizeText(req.body.childName);
+
+      const ipLimit = consumeRateLimit(`ip:${ip}`, POST_RATE_LIMITS.byIp);
+      if (!ipLimit.ok) {
+        res.setHeader('Retry-After', String(ipLimit.retryAfterSec));
+        return res.status(429).json({ error: 'Too many requests from this IP. Try later.' });
+      }
+
+      const phoneLimit = consumeRateLimit(
+        `phone:${parentPhone}`,
+        POST_RATE_LIMITS.byPhone
+      );
+      if (!phoneLimit.ok) {
+        res.setHeader('Retry-After', String(phoneLimit.retryAfterSec));
+        return res
+          .status(429)
+          .json({ error: 'Too many requests from this phone number. Try later.' });
+      }
+
+      const existing = await store.list();
+      const now = Date.now();
+      const duplicate = existing.find((item) => {
+        const createdAt = new Date(item?.createdAt || 0).getTime();
+        if (!Number.isFinite(createdAt) || now - createdAt > DEDUPE_WINDOW_MS) {
+          return false;
+        }
+        return (
+          normalizePhone(item?.parentPhone) === parentPhone &&
+          normalizeText(item?.schoolId) === schoolId &&
+          normalizeText(item?.childName) === childName
+        );
+      });
+      if (duplicate) {
+        return res.status(409).json({
+          error: 'A similar consultation request was sent recently. Please wait.',
+        });
+      }
+
       const record = await store.add({
         schoolId: String(req.body.schoolId).trim(),
         schoolName: req.body.schoolName.trim(),
