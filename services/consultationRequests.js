@@ -1,4 +1,5 @@
 import { buildApiUrl } from '../config/apiConfig';
+import { supabase } from './supabaseClient';
 
 const requestJson = async (path, options = {}) => {
   try {
@@ -22,9 +23,20 @@ const requestJson = async (path, options = {}) => {
     throw error;
   }
 };
+const getAccessToken = async () => {
+  if (!supabase) return '';
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.access_token || '';
+};
 
 export const loadConsultationRequests = async () => {
-  const payload = await requestJson('/consultations');
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Authorization token is required');
+  }
+  const payload = await requestJson('/consultations', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return Array.isArray(payload?.data) ? payload.data : [];
 };
 
