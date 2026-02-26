@@ -3,6 +3,11 @@ const { createClient } = require('@supabase/supabase-js');
 const { parseSchoolQueryWithLlm } = require('../services/llmSchoolParser');
 const { chatWithSchools } = require('../services/llmSchoolChat');
 const { readStore } = require('../services/schoolsStore');
+const {
+  ValidationError,
+  validateAiSchoolQueryPayload,
+  validateAiSchoolChatPayload,
+} = require('../validation');
 
 const normalizeText = (value) => {
   if (!value) return '';
@@ -159,12 +164,14 @@ const buildAiRouter = (config) => {
       res.setHeader('Retry-After', String(rate.retryAfterSec));
       return res.status(429).json({ error: 'Too many AI requests. Try again later.' });
     }
-    const query = typeof req.body?.query === 'string' ? req.body.query.trim() : '';
-    if (!query) {
-      return res.status(400).json({ error: 'Query is required.' });
-    }
-    if (query.length > 1500) {
-      return res.status(400).json({ error: 'Query is too long.' });
+    let query;
+    try {
+      query = validateAiSchoolQueryPayload(req.body || {}).query;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(400).json({ error: 'Invalid request payload.' });
     }
 
     try {
@@ -195,20 +202,16 @@ const buildAiRouter = (config) => {
       res.setHeader('Retry-After', String(rate.retryAfterSec));
       return res.status(429).json({ error: 'Too many AI requests. Try again later.' });
     }
-    const message =
-      typeof req.body?.message === 'string' ? req.body.message.trim() : '';
-    const schoolIds = Array.isArray(req.body?.schoolIds)
-      ? req.body.schoolIds
-          .map((value) => String(value || '').trim())
-          .filter(Boolean)
-      : [];
-    const schools = Array.isArray(req.body?.schools) ? req.body.schools : [];
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required.' });
+    let validated;
+    try {
+      validated = validateAiSchoolChatPayload(req.body || {});
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(400).json({ error: 'Invalid request payload.' });
     }
-    if (message.length > 2000) {
-      return res.status(400).json({ error: 'Message is too long.' });
-    }
+    const { message, schoolIds, schools } = validated;
     const MAX_SCHOOLS = 12;
 
     let trimmedSchools = [];

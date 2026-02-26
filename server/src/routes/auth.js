@@ -2,6 +2,13 @@ const express = require('express');
 const sgMail = require('@sendgrid/mail');
 const { createClient } = require('@supabase/supabase-js');
 const { OtpStore } = require('../services/otpStore');
+const {
+  ValidationError,
+  validateSendCodePayload,
+  validateVerifyCodePayload,
+  validateSetRolePayload,
+  validateUserStatusPayload,
+} = require('../validation');
 
 const buildAuthRouter = (config) => {
   const router = express.Router();
@@ -89,10 +96,7 @@ const buildAuthRouter = (config) => {
 
   router.post('/send-code', async (req, res, next) => {
     try {
-      const { email } = req.body || {};
-      if (!email || !String(email).trim()) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
+      const { email } = validateSendCodePayload(req.body || {});
       ensureSendGrid();
 
       if (!store.canResend(email)) {
@@ -113,15 +117,24 @@ const buildAuthRouter = (config) => {
 
       res.json({ ok: true });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
 
   router.post('/verify-code', (req, res) => {
-    const { email, code } = req.body || {};
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email and code are required' });
+    let validated;
+    try {
+      validated = validateVerifyCodePayload(req.body || {});
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(400).json({ error: 'Invalid request payload' });
     }
+    const { email, code } = validated;
     const entry = store.get(email);
     if (!entry) {
       return res.status(400).json({ error: 'Code not found or expired' });
@@ -216,15 +229,11 @@ const buildAuthRouter = (config) => {
           .json({ error: 'Only moderator or superadmin can manage roles' });
       }
 
-      const email = String(req.body?.email || '').trim().toLowerCase();
-      const role = String(req.body?.role || '').trim();
+      const { email, role } = validateSetRolePayload(req.body || {});
       const allowedRoles =
         actorRole === 'superadmin'
           ? ['moderator', 'superadmin', 'admin', 'user']
           : ['moderator', 'admin', 'user'];
-      if (!email) {
-        return res.status(400).json({ error: 'Field "email" is required' });
-      }
       if (!allowedRoles.includes(role)) {
         return res.status(400).json({ error: 'Invalid role value' });
       }
@@ -259,6 +268,9 @@ const buildAuthRouter = (config) => {
         },
       });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
@@ -277,11 +289,9 @@ const buildAuthRouter = (config) => {
           .json({ error: 'Only moderator or superadmin can manage users' });
       }
 
-      const userId = String(req.params?.id || '').trim();
-      if (!userId) {
-        return res.status(400).json({ error: 'User id is required' });
-      }
-      const active = req.body?.active !== false;
+      const { userId, active } = validateUserStatusPayload(req.body || {}, {
+        userId: req.params?.id,
+      });
 
       if (actorRole !== 'superadmin') {
         const { data: targetUser, error: targetError } =
@@ -311,6 +321,9 @@ const buildAuthRouter = (config) => {
         },
       });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
