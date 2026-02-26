@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabaseClient';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://edumap-backend-nkr6.onrender.com/api';
 
 export const buildApiUrl = (path: string) => `${API_BASE_URL}${path}`;
@@ -32,14 +33,20 @@ export async function loadSchools() {
 }
 
 export async function upsertSchool(profile: any) {
-  return requestJson<{ data: any }>('/schools', {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ data: any }>('/schools', {
+    token,
     method: 'POST',
     body: safeStringify(profile),
   });
 }
 
 export async function deleteSchool(schoolId: string) {
-  return requestJson<{ data: any[] }>(`/schools/${encodeURIComponent(schoolId)}`, {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ data: any[] }>(`/schools/${encodeURIComponent(schoolId)}`, {
+    token,
     method: 'DELETE',
   });
 }
@@ -55,6 +62,10 @@ async function authRequestJson<T>(path: string, options: AuthRequestOptions): Pr
       Authorization: `Bearer ${token}`,
     },
   });
+}
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.access_token || '';
 }
 
 export async function loadAuthUsers(token: string) {

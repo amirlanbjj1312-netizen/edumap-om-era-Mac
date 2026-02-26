@@ -34,6 +34,21 @@ const buildSchoolsRouter = () => {
     }
     return null;
   };
+  const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+  const buildFallbackSchoolId = (email) => {
+    const base = normalizeEmail(email)
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return `local-${base || 'school'}`;
+  };
+  const isAdminOwnSchool = (actor, profile) => {
+    const actorEmail = normalizeEmail(actor?.email);
+    if (!actorEmail) return false;
+    const schoolEmail = normalizeEmail(profile?.basic_info?.email);
+    const schoolId = String(profile?.school_id || '').trim().toLowerCase();
+    const fallbackSchoolId = buildFallbackSchoolId(actorEmail);
+    return schoolEmail === actorEmail || schoolId === fallbackSchoolId;
+  };
 
   const ROLE_PRIORITY = {
     user: 0,
@@ -88,7 +103,9 @@ const buildSchoolsRouter = () => {
     const role =
       data.user?.user_metadata?.role || data.user?.app_metadata?.role || '';
     if (!hasMinRole(role, 'admin')) {
-      res.status(403).json({ error: 'Only admin/superadmin can process payments' });
+      res
+        .status(403)
+        .json({ error: 'Only admin/superadmin can manage schools and payments' });
       return null;
     }
     return { user: data.user, role };
@@ -235,7 +252,26 @@ const buildSchoolsRouter = () => {
 
   router.post('/', async (req, res, next) => {
     try {
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
       const profile = req.body;
+      const schoolId = String(profile?.school_id || '').trim();
+
+      if (actorRole === 'admin') {
+        const schools = await readStore();
+        const existing = schools.find((item) => item?.school_id === schoolId);
+        const isOwn = existing
+          ? isAdminOwnSchool(actor, existing)
+          : isAdminOwnSchool(actor, profile);
+        if (!isOwn) {
+          return res
+            .status(403)
+            .json({ error: 'Admin can update only own school profile' });
+        }
+      }
+
       const saved = await upsertSchool(profile);
       res.json({ data: saved });
     } catch (error) {
@@ -245,9 +281,23 @@ const buildSchoolsRouter = () => {
 
   router.put('/:id', async (req, res, next) => {
     try {
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
+      const schools = await readStore();
+      const existing = schools.find((item) => item?.school_id === req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+      if (actorRole === 'admin' && !isAdminOwnSchool(actor, existing)) {
+        return res
+          .status(403)
+          .json({ error: 'Admin can update only own school profile' });
+      }
       const profile = {
         ...req.body,
-        school_id: req.body?.school_id || req.params.id,
+        school_id: req.params.id,
       };
       const saved = await upsertSchool(profile);
       res.json({ data: saved });
@@ -258,6 +308,20 @@ const buildSchoolsRouter = () => {
 
   router.delete('/:id', async (req, res, next) => {
     try {
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
+      const schools = await readStore();
+      const existing = schools.find((item) => item?.school_id === req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+      if (actorRole === 'admin' && !isAdminOwnSchool(actor, existing)) {
+        return res
+          .status(403)
+          .json({ error: 'Admin can delete only own school profile' });
+      }
       const data = await deleteSchool(req.params.id);
       res.json({ data });
     } catch (error) {
