@@ -208,7 +208,13 @@ const buildAuthRouter = (config) => {
         }
       }
 
-      const existingUser = await resolveUserByEmail(email);
+      let existingUser = null;
+      try {
+        existingUser = await resolveUserByEmail(email);
+      } catch (lookupError) {
+        // Fallback: continue and rely on createUser duplicate check.
+        console.warn('[auth/register-with-code] user lookup failed:', lookupError?.message);
+      }
       if (existingUser) {
         store.delete(email);
         return res.status(409).json({ error: 'User with this email already exists' });
@@ -238,6 +244,10 @@ const buildAuthRouter = (config) => {
     } catch (error) {
       if (error instanceof ValidationError) {
         return res.status(400).json({ error: error.message });
+      }
+      const message = String(error?.message || '');
+      if (message) {
+        return res.status(500).json({ error: `register-with-code failed: ${message}` });
       }
       next(error);
     }

@@ -500,6 +500,66 @@ const validateVerifyCodePayload = (payload) => {
   return { email, code };
 };
 
+const normalizePublicRole = (value) => {
+  const role = trim(value).toLowerCase();
+  if (role === 'student') return 'user';
+  return role;
+};
+
+const sanitizeRegistrationMetadata = (value) => {
+  if (!isObject(value)) return {};
+  const allowedKeys = [
+    'role',
+    'firstName',
+    'name',
+    'lastName',
+    'organization',
+    'bin',
+    'iin',
+    'licenseNumber',
+    'licenseIssuedAt',
+    'licenseExpiresAt',
+    'contactPhone',
+    'website',
+    'schoolVerified',
+    'verificationStatus',
+    'verificationSource',
+  ];
+  const result = {};
+  for (const key of allowedKeys) {
+    const raw = value[key];
+    if (raw == null || raw === '') continue;
+    if (typeof raw === 'boolean') {
+      result[key] = raw;
+      continue;
+    }
+    const text = trim(raw);
+    if (!text) continue;
+    ensureMaxLen(text, 220, `metadata.${key}`);
+    result[key] = text;
+  }
+  ensureEmail(value?.email, 'metadata.email');
+  ensurePhone(value?.contactPhone, 'metadata.contactPhone');
+  if (result.website) {
+    ensure(isUrl(result.website), 'metadata.website must be valid URL');
+  }
+  return result;
+};
+
+const validateRegisterWithCodePayload = (payload) => {
+  ensure(isObject(payload), 'payload must be object');
+  const { email, code } = validateVerifyCodePayload(payload);
+  const password = String(payload.password || '');
+  ensure(password.length >= 8, 'Password must be at least 8 characters');
+  ensure(password.length <= 128, 'Password is too long');
+  ensure(/[A-Za-z]/.test(password), 'Password must include at least one letter');
+  ensure(/\d/.test(password), 'Password must include at least one digit');
+  const role = normalizePublicRole(payload.role || payload.metadata?.role || 'user');
+  ensure(['user', 'admin'].includes(role), 'Invalid role value');
+  const metadata = sanitizeRegistrationMetadata(payload.metadata || {});
+  return { email, code, password, role, metadata };
+};
+
 const validateSetRolePayload = (payload) => {
   ensure(isObject(payload), 'payload must be object');
   const email = trim(payload.email).toLowerCase();
@@ -597,4 +657,5 @@ module.exports = {
   validateUserStatusPayload,
   validateAiSchoolQueryPayload,
   validateAiSchoolChatPayload,
+  validateRegisterWithCodePayload,
 };
