@@ -8,10 +8,18 @@ const {
   validateVerifyCodePayload,
   validateSetRolePayload,
   validateUserStatusPayload,
+  validateRegisterWithCodePayload,
 } = require('../validation');
 
 const buildAuthRouter = (config) => {
   const router = express.Router();
+  const isOtpBypassEnabled =
+    String(process.env.DEV_OTP_BYPASS || '').trim().toLowerCase() === 'true' ||
+    String(process.env.DEV_OTP_BYPASS || '').trim() === '1';
+  const otpBypassCode =
+    String(process.env.DEV_OTP_CODE || '111111')
+      .replace(/\D/g, '')
+      .slice(0, 6) || '111111';
   const store = new OtpStore({
     ttlMinutes: config.email.codeTtlMinutes,
     maxAttempts: config.email.maxAttempts,
@@ -97,6 +105,18 @@ const buildAuthRouter = (config) => {
   router.post('/send-code', async (req, res, next) => {
     try {
       const { email } = validateSendCodePayload(req.body || {});
+      if (isOtpBypassEnabled) {
+        if (!store.canResend(email)) {
+          return res.status(429).json({ error: 'Wait before resending code' });
+        }
+        store.generate(email, otpBypassCode);
+        return res.json({
+          ok: true,
+          mode: 'dev_bypass',
+          message: 'DEV_OTP_BYPASS is enabled. Use configured fixed OTP code.',
+        });
+      }
+
       ensureSendGrid();
 
       if (!store.canResend(email)) {
@@ -120,6 +140,12 @@ const buildAuthRouter = (config) => {
       if (error instanceof ValidationError) {
         return res.status(400).json({ error: error.message });
       }
+      if (String(error?.message || '').includes('Email sending is not configured')) {
+        return res.status(500).json({
+          error:
+            'Email sending is not configured (SENDGRID_API_KEY/FROM_EMAIL).',
+        });
+      }
       next(error);
     }
   });
@@ -135,6 +161,13 @@ const buildAuthRouter = (config) => {
       return res.status(400).json({ error: 'Invalid request payload' });
     }
     const { email, code } = validated;
+    if (isOtpBypassEnabled) {
+      if (code !== otpBypassCode) {
+        return res.status(400).json({ error: 'Invalid code' });
+      }
+      return res.json({ ok: true, mode: 'dev_bypass' });
+    }
+
     const entry = store.get(email);
     if (!entry) {
       return res.status(400).json({ error: 'Code not found or expired' });
@@ -148,6 +181,66 @@ const buildAuthRouter = (config) => {
     }
     store.delete(email);
     return res.json({ ok: true });
+  });
+
+  router.post('/register-with-code', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const { email, code, password, role, metadata } =
+        validateRegisterWithCodePayload(req.body || {});
+      if (isOtpBypassEnabled) {
+        if (code !== otpBypassCode) {
+          return res.status(400).json({ error: 'Invalid code' });
+        }
+      } else {
+        const entry = store.get(email);
+        if (!entry) {
+          return res.status(400).json({ error: 'Code not found or expired' });
+        }
+        if (entry.attempts >= config.email.maxAttempts) {
+          return res.status(429).json({ error: 'Too many attempts' });
+        }
+        if (entry.code !== code) {
+          store.incrementAttempt(email);
+          return res.status(400).json({ error: 'Invalid code' });
+        }
+      }
+
+      const existingUser = await resolveUserByEmail(email);
+      if (existingUser) {
+        store.delete(email);
+        return res.status(409).json({ error: 'User with this email already exists' });
+      }
+
+      const userMetadata = { ...metadata, role };
+      const appMetadata = { role };
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: userMetadata,
+        app_metadata: appMetadata,
+      });
+      if (error || !data?.user) {
+        return res.status(400).json({ error: error?.message || 'Failed to register user' });
+      }
+
+      store.delete(email);
+      return res.json({
+        data: {
+          id: data.user.id,
+          email: data.user.email || email,
+          role,
+        },
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      next(error);
+    }
   });
 
   router.post('/delete-account', async (req, res, next) => {
