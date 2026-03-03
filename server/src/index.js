@@ -9,6 +9,7 @@ const { buildAiRouter } = require('./routes/ai');
 const { buildSchoolsRouter } = require('./routes/schools');
 const { buildNewsRouter } = require('./routes/news');
 const { buildCoursesRouter } = require('./routes/courses');
+const { buildChatRouter } = require('./routes/chat');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -43,6 +44,7 @@ app.use('/api/ai', buildAiRouter(config));
 app.use('/api/schools', buildSchoolsRouter());
 app.use('/api/news', buildNewsRouter(config));
 app.use('/api/courses', buildCoursesRouter(config));
+app.use('/api/chat', buildChatRouter(config));
 
 app.use((err, req, res, next) => {
   console.error(err);
