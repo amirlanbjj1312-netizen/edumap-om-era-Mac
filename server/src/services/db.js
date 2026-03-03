@@ -90,10 +90,55 @@ const ensureCoursesTestsTable = async () => {
   `);
 };
 
+const ensureChatTables = async () => {
+  const db = getPool();
+  if (!db) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS chat_rooms (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL DEFAULT 'direct',
+      created_by TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_message_at TIMESTAMPTZ
+    );
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS chat_room_members (
+      room_id TEXT NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (room_id, user_id)
+    );
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      room_id TEXT NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+      sender_id TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_chat_room_members_user
+    ON chat_room_members (user_id);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_room_created
+    ON chat_messages (room_id, created_at DESC);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_chat_rooms_last_message
+    ON chat_rooms (last_message_at DESC NULLS LAST, updated_at DESC);
+  `);
+};
+
 module.exports = {
   getPool,
   ensureSchoolsTable,
   ensureProgramAnalyticsTable,
   ensureNewsTable,
   ensureCoursesTestsTable,
+  ensureChatTables,
 };
