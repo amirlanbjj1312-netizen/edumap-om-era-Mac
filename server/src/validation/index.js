@@ -560,6 +560,17 @@ const validateRegisterWithCodePayload = (payload) => {
   return { email, code, password, role, metadata };
 };
 
+const validateResetPasswordWithCodePayload = (payload) => {
+  ensure(isObject(payload), 'payload must be object');
+  const { email, code } = validateVerifyCodePayload(payload);
+  const password = String(payload.password || '');
+  ensure(password.length >= 8, 'Password must be at least 8 characters');
+  ensure(password.length <= 128, 'Password is too long');
+  ensure(/[A-Za-z]/.test(password), 'Password must include at least one letter');
+  ensure(/\d/.test(password), 'Password must include at least one digit');
+  return { email, code, password };
+};
+
 const validateSetRolePayload = (payload) => {
   ensure(isObject(payload), 'payload must be object');
   const email = trim(payload.email).toLowerCase();
@@ -645,6 +656,42 @@ const validateAiSchoolChatPayload = (payload) => {
   return { message, schoolIds, schools };
 };
 
+const validateChatUserSearchPayload = (query = {}) => {
+  const q = trim(query.q || '');
+  const limitRaw = trim(query.limit || '20');
+  ensure(/^\d+$/.test(limitRaw), 'limit must be numeric');
+  const limit = Math.max(1, Math.min(50, Number(limitRaw)));
+  ensureMaxLen(q, 120, 'q');
+  return { q, limit };
+};
+
+const validateCreateDirectRoomPayload = (payload) => {
+  ensure(isObject(payload), 'payload must be object');
+  const targetUserId = trim(payload.targetUserId);
+  ensure(targetUserId, 'targetUserId is required');
+  ensure(targetUserId.length <= 120, 'targetUserId is too long');
+  return { targetUserId };
+};
+
+const validateListRoomMessagesPayload = (query = {}) => {
+  const limitRaw = trim(query.limit || '50');
+  ensure(/^\d+$/.test(limitRaw), 'limit must be numeric');
+  const limit = Math.max(1, Math.min(100, Number(limitRaw)));
+  const before = trim(query.before || '');
+  if (before) {
+    ensureDateString(before, 'before');
+  }
+  return { limit, before };
+};
+
+const validateCreateChatMessagePayload = (payload) => {
+  ensure(isObject(payload), 'payload must be object');
+  const body = trim(payload.body);
+  ensure(body, 'body is required');
+  ensureMaxLen(body, 3000, 'body');
+  return { body };
+};
+
 module.exports = {
   ValidationError,
   validateNewsPayload,
@@ -658,4 +705,9 @@ module.exports = {
   validateAiSchoolQueryPayload,
   validateAiSchoolChatPayload,
   validateRegisterWithCodePayload,
+  validateResetPasswordWithCodePayload,
+  validateChatUserSearchPayload,
+  validateCreateDirectRoomPayload,
+  validateListRoomMessagesPayload,
+  validateCreateChatMessagePayload,
 };

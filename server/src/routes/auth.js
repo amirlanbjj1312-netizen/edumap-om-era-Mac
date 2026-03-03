@@ -9,6 +9,7 @@ const {
   validateSetRolePayload,
   validateUserStatusPayload,
   validateRegisterWithCodePayload,
+  validateResetPasswordWithCodePayload,
 } = require('../validation');
 
 const buildAuthRouter = (config) => {
@@ -248,6 +249,56 @@ const buildAuthRouter = (config) => {
       const message = String(error?.message || '');
       if (message) {
         return res.status(500).json({ error: `register-with-code failed: ${message}` });
+      }
+      next(error);
+    }
+  });
+
+  router.post('/reset-password-with-code', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const { email, code, password } = validateResetPasswordWithCodePayload(
+        req.body || {}
+      );
+      if (isOtpBypassEnabled) {
+        if (code !== otpBypassCode) {
+          return res.status(400).json({ error: 'Invalid code' });
+        }
+      } else {
+        const entry = store.get(email);
+        if (!entry) {
+          return res.status(400).json({ error: 'Code not found or expired' });
+        }
+        if (entry.attempts >= config.email.maxAttempts) {
+          return res.status(429).json({ error: 'Too many attempts' });
+        }
+        if (entry.code !== code) {
+          store.incrementAttempt(email);
+          return res.status(400).json({ error: 'Invalid code' });
+        }
+      }
+
+      const user = await resolveUserByEmail(email);
+      if (!user?.id) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        password,
+      });
+      if (error) {
+        return res
+          .status(400)
+          .json({ error: error.message || 'Failed to reset password' });
+      }
+
+      store.delete(email);
+      return res.json({ ok: true });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
       }
       next(error);
     }
