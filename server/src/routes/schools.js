@@ -10,6 +10,7 @@ const {
   getProgramAnalyticsSummary,
 } = require('../services/programAnalyticsStore');
 const { buildConfig } = require('../utils/config');
+const { ValidationError, validateSchoolPayload } = require('../validation');
 
 const buildSchoolsRouter = () => {
   const router = express.Router();
@@ -146,6 +147,64 @@ const buildSchoolsRouter = () => {
     },
   ];
 
+  const SUBSCRIPTION_LIMITS = {
+    starter: { photos: 20, clubs: 10, staff: 30 },
+    growth: { photos: 200, clubs: 50, staff: 100 },
+    pro: { photos: 500, clubs: 120, staff: 250 },
+  };
+
+  const splitCsv = (value) =>
+    String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  const resolvePlanKey = (profile = {}) => {
+    const lastTariffId = String(profile?.monetization?.last_tariff_id || '')
+      .trim()
+      .toLowerCase();
+    const planName = String(profile?.monetization?.plan_name || '')
+      .trim()
+      .toLowerCase();
+
+    const source = `${lastTariffId} ${planName}`.trim();
+    if (!source) return 'starter';
+    if (source.includes('premium') || source.includes('pro')) return 'pro';
+    if (source.includes('growth')) return 'growth';
+    if (source.includes('starter')) return 'starter';
+    return 'starter';
+  };
+
+  const validatePlanContentLimits = (profile = {}) => {
+    const planKey = resolvePlanKey(profile);
+    const limits = SUBSCRIPTION_LIMITS[planKey] || SUBSCRIPTION_LIMITS.starter;
+
+    const photosCount = splitCsv(profile?.media?.photos).length;
+    if (photosCount > limits.photos) {
+      throw new ValidationError(
+        `Photos limit exceeded for ${planKey} plan: ${photosCount}/${limits.photos}`
+      );
+    }
+
+    const clubsCount = Array.isArray(profile?.services?.clubs_catalog)
+      ? profile.services.clubs_catalog.length
+      : 0;
+    if (clubsCount > limits.clubs) {
+      throw new ValidationError(
+        `Clubs/sections limit exceeded for ${planKey} plan: ${clubsCount}/${limits.clubs}`
+      );
+    }
+
+    const staffCount = Array.isArray(profile?.services?.teaching_staff?.members)
+      ? profile.services.teaching_staff.members.length
+      : 0;
+    if (staffCount > limits.staff) {
+      throw new ValidationError(
+        `Teaching staff cards limit exceeded for ${planKey} plan: ${staffCount}/${limits.staff}`
+      );
+    }
+  };
+
   router.get('/billing/tariffs', async (_req, res) => {
     res.json({ data: TEST_BILLING_TARIFFS });
   });
@@ -186,20 +245,28 @@ const buildSchoolsRouter = () => {
       const schoolId = String(req.body?.schoolId || '').trim();
       const programName = String(req.body?.programName || '').trim();
       const eventType = String(req.body?.eventType || '').trim();
+      const locale = String(req.body?.locale || '').trim();
+      const source = String(req.body?.source || 'mobile').trim();
 
       if (!schoolId || !programName || !eventType) {
         return res.status(400).json({
           error: 'schoolId, programName and eventType are required',
         });
       }
+      if (schoolId.length > 120 || programName.length > 200 || source.length > 40) {
+        return res.status(400).json({ error: 'Invalid analytics payload length' });
+      }
+      if (locale && !['ru', 'en', 'kk'].includes(locale)) {
+        return res.status(400).json({ error: 'Invalid locale' });
+      }
 
       await recordProgramAnalyticsEvent({
         schoolId,
         programName,
         eventType,
-        locale: req.body?.locale,
+        locale,
         expanded: Boolean(req.body?.expanded),
-        source: req.body?.source || 'mobile',
+        source,
       });
 
       res.json({ ok: true });
@@ -256,7 +323,7 @@ const buildSchoolsRouter = () => {
       if (!actorPayload) return;
       const actor = actorPayload.user;
       const actorRole = actorPayload.role;
-      const profile = req.body;
+      const profile = validateSchoolPayload(req.body || {});
       const schoolId = String(profile?.school_id || '').trim();
 
       if (actorRole === 'admin') {
@@ -271,10 +338,14 @@ const buildSchoolsRouter = () => {
             .json({ error: 'Admin can update only own school profile' });
         }
       }
+      validatePlanContentLimits(profile);
 
       const saved = await upsertSchool(profile);
       res.json({ data: saved });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
@@ -299,9 +370,14 @@ const buildSchoolsRouter = () => {
         ...req.body,
         school_id: req.params.id,
       };
+      validateSchoolPayload(profile, { expectedSchoolId: req.params.id });
+      validatePlanContentLimits(profile);
       const saved = await upsertSchool(profile);
       res.json({ data: saved });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
