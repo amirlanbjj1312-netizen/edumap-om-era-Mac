@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   loadSchools,
   upsertSchool,
-  loadTestBillingTariffs,
-  runSchoolTestPayment,
 } from '@/lib/api';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { buildFallbackSchoolId } from '@/lib/auth';
@@ -427,6 +425,36 @@ const TEACHER_CATEGORY_OPTIONS = [
 ];
 const TEACHER_LANGUAGE_OPTIONS = ['Kazakh', 'Russian', 'English', 'German', 'French', 'Chinese'];
 const TEACHER_EXAM_OPTIONS = ['ЕНТ', 'IELTS', 'TOEFL', 'SAT', 'NIS', 'Олимпиады'];
+
+const SCHOOL_SUBSCRIPTION_PLANS = [
+  {
+    id: 'starter_free',
+    name: 'Starter',
+    description: 'Бесплатный базовый тариф',
+    price_kzt: 0,
+    duration_days: 30,
+    priority_weight: 0,
+    is_promoted: false,
+  },
+  {
+    id: 'growth_30',
+    name: 'Growth',
+    description: 'Приоритет в выдаче, лиды/заявки, расширенная аналитика',
+    price_kzt: 89000,
+    duration_days: 30,
+    priority_weight: 25,
+    is_promoted: true,
+  },
+  {
+    id: 'pro_30',
+    name: 'Pro',
+    description: 'Top placement, бейдж “Рекомендуем”, AI-рекомендации',
+    price_kzt: 169000,
+    duration_days: 30,
+    priority_weight: 50,
+    is_promoted: true,
+  },
+];
 const withCurrentOption = (options: string[], current: string) =>
   current && !options.includes(current) ? [current, ...options] : options;
 const withCurrentOptions = (options: string[], currentValues: string[]) => {
@@ -575,8 +603,7 @@ export default function SchoolInfoPage() {
     return profile.school_id;
   }, [profile?.school_id]);
   const [fallbackSchoolId, setFallbackSchoolId] = useState('');
-  const [sessionToken, setSessionToken] = useState('');
-  const [tariffs, setTariffs] = useState<
+  const [tariffs] = useState<
     Array<{
       id: string;
       name: string;
@@ -584,10 +611,11 @@ export default function SchoolInfoPage() {
       price_kzt: number;
       duration_days: number;
       priority_weight: number;
+      is_promoted?: boolean;
     }>
-  >([]);
-  const [selectedTariffId, setSelectedTariffId] = useState('');
-  const [isPayingTariff, setPayingTariff] = useState(false);
+  >(SCHOOL_SUBSCRIPTION_PLANS);
+  const [selectedTariffId, setSelectedTariffId] = useState(SCHOOL_SUBSCRIPTION_PLANS[0].id);
+  const [isApplyingTariff, setApplyingTariff] = useState(false);
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
   const schoolType = useMemo(() => getDeep(profile, 'basic_info.type', ''), [profile]);
@@ -865,7 +893,6 @@ export default function SchoolInfoPage() {
         router.replace('/login');
         return;
       }
-      setSessionToken(session.access_token || '');
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
@@ -1034,28 +1061,6 @@ export default function SchoolInfoPage() {
       ignore = true;
     };
   }, [router]);
-  useEffect(() => {
-    let active = true;
-    const loadTariffs = async () => {
-      try {
-        const result = await loadTestBillingTariffs();
-        if (!active) return;
-        const nextTariffs = Array.isArray(result?.data) ? result.data : [];
-        setTariffs(nextTariffs);
-        if (!selectedTariffId && nextTariffs[0]?.id) {
-          setSelectedTariffId(nextTariffs[0].id);
-        }
-      } catch {
-        if (!active) return;
-        setTariffs([]);
-      }
-    };
-    loadTariffs();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const updateField = (path: string, value: any) => {
     setProfile((prev: SchoolProfile | null) => (prev ? setDeep(prev, path, value) : prev));
   };
@@ -1108,43 +1113,44 @@ export default function SchoolInfoPage() {
       setMessage(detail);
     }
   };
-  const handleTestPayment = async (mode: 'selected' | 'renew') => {
+  const handleApplyTariff = async () => {
     if (!profile?.school_id) return;
-    if (!sessionToken) {
-      window.alert(t('Ошибка сохранения.'));
-      return;
-    }
-    const tariffId =
-      mode === 'renew'
-        ? (lastTariffId || selectedTariffId)
-        : (selectedTariffId || lastTariffId);
+    const tariffId = selectedTariffId || lastTariffId || SCHOOL_SUBSCRIPTION_PLANS[0].id;
     if (!tariffId) {
       window.alert(t('Тарифы недоступны'));
       return;
     }
-    if (mode === 'renew' && !lastTariffId) {
-      window.alert(t('Нет предыдущего тарифа для продления'));
-      return;
-    }
-    const tariffName = tariffs.find((item) => item.id === tariffId)?.name || tariffId;
-    const confirmed = window.confirm(`${t('Оплатить (тест)')} ${tariffName}?`);
+    const tariff = tariffs.find((item) => item.id === tariffId);
+    const tariffName = tariff?.name || tariffId;
+    const confirmed = window.confirm(`${t('Активировать тариф')} ${tariffName}?`);
     if (!confirmed) return;
 
-    setPayingTariff(true);
+    setApplyingTariff(true);
     try {
-      const result = await runSchoolTestPayment(sessionToken, profile.school_id, {
-        tariffId,
+      const now = new Date();
+      const endsAt = new Date(now);
+      endsAt.setDate(endsAt.getDate() + Number(tariff?.duration_days || 30));
+      const nextProfile = createEmptySchoolProfile({
+        ...profile,
+        monetization: {
+          ...(profile?.monetization || {}),
+          is_promoted: Boolean(tariff?.is_promoted),
+          subscription_status: 'active',
+          plan_name: tariffName,
+          priority_weight: Number(tariff?.priority_weight || 0),
+          starts_at: now.toISOString(),
+          ends_at: endsAt.toISOString(),
+          last_tariff_id: tariffId,
+        },
       });
-      const nextProfile = result?.data?.profile;
-      if (nextProfile) {
-        setProfile(createEmptySchoolProfile(nextProfile));
-      }
-      window.alert(t('Тестовая оплата успешна'));
+      setProfile(nextProfile);
+      await save(nextProfile);
+      window.alert(t('Тариф активирован'));
     } catch (error) {
       const detail = (error as any)?.message || t('Ошибка сохранения.');
       window.alert(detail);
     } finally {
-      setPayingTariff(false);
+      setApplyingTariff(false);
     }
   };
 
@@ -1401,7 +1407,7 @@ export default function SchoolInfoPage() {
                         <select
                           value={selectedTariffId || tariffs[0]?.id || ''}
                           onChange={(event) => setSelectedTariffId(event.target.value)}
-                          disabled={isPayingTariff || !tariffs.length}
+                          disabled={isApplyingTariff || !tariffs.length}
                         >
                           {tariffs.length ? (
                             tariffs.map((tariff) => (
@@ -1415,6 +1421,11 @@ export default function SchoolInfoPage() {
                         </select>
                       </label>
                     </FieldRow>
+                    {selectedTariffId ? (
+                      <p className="muted">
+                        {tariffs.find((item) => item.id === selectedTariffId)?.description || ''}
+                      </p>
+                    ) : null}
                     <p className="muted">
                       {`${t('Текущий статус подписки')}: ${monetizationStatus}`}
                     </p>
@@ -1422,18 +1433,10 @@ export default function SchoolInfoPage() {
                       <button
                         type="button"
                         className="button secondary"
-                        onClick={() => handleTestPayment('selected')}
-                        disabled={isPayingTariff || !tariffs.length}
+                        onClick={handleApplyTariff}
+                        disabled={isApplyingTariff || !tariffs.length}
                       >
-                        {isPayingTariff ? t('Проводим оплату...') : t('Оплатить (тест)')}
-                      </button>
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={() => handleTestPayment('renew')}
-                        disabled={isPayingTariff || !lastTariffId}
-                      >
-                        {t('Продлить по текущему тарифу')}
+                        {isApplyingTariff ? t('Сохраняем...') : t('Активировать тариф')}
                       </button>
                     </div>
                   </Section>
