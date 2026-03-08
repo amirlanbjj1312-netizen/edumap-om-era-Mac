@@ -54,6 +54,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Courses',
     kk: 'Курстар',
   },
+  navPricing: {
+    ru: 'Тарифы',
+    en: 'Pricing',
+    kk: 'Тарифтер',
+  },
   logout: {
     ru: 'Выйти',
     en: 'Sign out',

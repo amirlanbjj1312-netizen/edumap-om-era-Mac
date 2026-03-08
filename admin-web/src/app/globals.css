@@ -663,7 +663,225 @@ a {
   border-color: #5667fd;
 }
 
+.pricing-page {
+  border-radius: 28px;
+  border: 1px solid rgba(73, 138, 255, 0.35);
+  background: radial-gradient(70% 65% at 50% 20%, rgba(170, 196, 255, 0.45), rgba(117, 134, 255, 0.92)),
+    linear-gradient(180deg, #7c7dff 0%, #44c3ff 100%);
+  box-shadow: 0 28px 65px rgba(28, 65, 140, 0.25);
+  padding: 42px 34px 34px;
+  color: #f8fbff;
+}
+
+.pricing-hero h1 {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(30px, 4vw, 62px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.pricing-hero p {
+  margin: 14px 0 24px;
+  text-align: center;
+  font-size: clamp(16px, 2.2vw, 30px);
+  opacity: 0.94;
+}
+
+.pricing-switch {
+  margin: 0 auto 30px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pricing-switch-track {
+  width: 86px;
+  height: 34px;
+  border-radius: 999px;
+  background: #090f1f;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.pricing-switch-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1e44ff;
+  box-shadow: 0 0 0 4px rgba(27, 63, 255, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.pricing-switch.yearly .pricing-switch-thumb {
+  transform: translateX(52px);
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.pricing-toolbar {
+  margin: 0 auto 18px;
+  max-width: 980px;
+}
+
+.pricing-toolbar .field {
+  margin-bottom: 6px;
+}
+
+.pricing-toolbar .field span {
+  color: #eef3ff;
+}
+
+.pricing-toolbar .field select {
+  background: rgba(12, 23, 48, 0.72);
+  color: #fff;
+  border-color: rgba(192, 211, 255, 0.32);
+}
+
+.pricing-toolbar .muted {
+  color: rgba(239, 246, 255, 0.88);
+}
+
+.pricing-card {
+  border: 2px solid rgba(10, 22, 53, 0.48);
+  border-radius: 24px;
+  background: rgba(21, 25, 44, 0.84);
+  padding: 26px 22px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-card.highlighted {
+  transform: translateY(-6px);
+  background: rgba(24, 28, 48, 0.93);
+  box-shadow: 0 18px 34px rgba(13, 23, 56, 0.35);
+}
+
+.pricing-plan-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pricing-plan-name-row h2 {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.pricing-recommended {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #eaf0ff;
+  background: rgba(76, 112, 255, 0.55);
+}
+
+.pricing-price-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pricing-price-row strong {
+  font-size: 48px;
+  line-height: 1;
+  color: #1766ff;
+}
+
+.pricing-price-row span {
+  font-size: 24px;
+  color: #2680ff;
+  font-weight: 700;
+}
+
+.pricing-card ul {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.pricing-card li {
+  position: relative;
+  padding-left: 28px;
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+.pricing-card li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #c13cff;
+  font-weight: 900;
+}
+
+.pricing-action-btn {
+  margin-top: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 16px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #edf3ff;
+  background: linear-gradient(90deg, #3e78ff, #2a63f2);
+}
+
+.pricing-action-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.pricing-status-ok,
+.pricing-status-error {
+  margin: 14px 0 0;
+  font-weight: 600;
+  text-align: center;
+}
+
+.pricing-status-ok {
+  color: #e8fff1;
+}
+
+.pricing-status-error {
+  color: #ffe0e0;
+}
+
 @media (max-width: 960px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-card {
+    min-height: auto;
+  }
+
+  .pricing-card li {
+    font-size: 22px;
+  }
+
+  .pricing-action-btn {
+    font-size: 24px;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: flex-start;

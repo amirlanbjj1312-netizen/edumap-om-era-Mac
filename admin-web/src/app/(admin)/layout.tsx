@@ -16,6 +16,7 @@ const NAV_ITEMS: Array<{
   { href: '/schools', labelKey: 'navSchools', minRole: 'moderator' },
   { href: '/news', labelKey: 'navNews', minRole: 'moderator' },
   { href: '/courses', labelKey: 'navCourses', minRole: 'moderator' },
+  { href: '/pricing', labelKey: 'navPricing' },
   { href: '/users', labelKey: 'navUsers', minRole: 'moderator' },
   { href: '/requests', labelKey: 'navRequests' },
   { href: '/statistics', labelKey: 'navStatistics' },
