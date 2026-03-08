@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAdminLocale, type AdminLocale } from '@/lib/adminLocale';
-import { loadSchools, upsertSchool } from '@/lib/api';
+import { loadSchools, updateSchoolMonetization } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 
 type BillingPeriod = 'monthly' | 'yearly';
@@ -333,17 +333,22 @@ export default function PricingPage() {
 
     setSavingPlanId(planId);
     try {
-      const nextProfile = {
+      const monetizationPayload = {
+        ...monetizationByPlan[planId],
+        starts_at: toIso(now),
+        ends_at: toIso(ends),
+      };
+      const saved = await updateSchoolMonetization(
+        selectedSchool.school_id,
+        monetizationPayload
+      );
+      const savedProfile = saved?.data || {
         ...selectedSchool,
         monetization: {
           ...(selectedSchool.monetization || {}),
-          ...monetizationByPlan[planId],
-          starts_at: toIso(now),
-          ends_at: toIso(ends),
+          ...monetizationPayload,
         },
       };
-      const saved = await upsertSchool(nextProfile);
-      const savedProfile = saved?.data || nextProfile;
       setSchools((prev) =>
         prev.map((item) =>
           item.school_id === savedProfile.school_id ? savedProfile : item

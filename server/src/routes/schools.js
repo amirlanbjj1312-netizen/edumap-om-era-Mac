@@ -517,6 +517,84 @@ const buildSchoolsRouter = () => {
     }
   });
 
+  router.post('/:id/monetization', async (req, res, next) => {
+    try {
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
+
+      const schoolId = String(req.params?.id || '').trim();
+      if (!schoolId) {
+        return res.status(400).json({ error: 'schoolId is required' });
+      }
+
+      const schools = await readStore();
+      const school = schools.find((item) => item?.school_id === schoolId);
+      if (!school) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+
+      if (actorRole === 'admin' && !isAdminOwnSchool(actor, school)) {
+        return res
+          .status(403)
+          .json({ error: 'Admin can update only own school monetization' });
+      }
+
+      const input = req.body?.monetization || {};
+      const status = String(input?.subscription_status || 'inactive')
+        .trim()
+        .toLowerCase();
+      if (!['inactive', 'active', 'paused', 'expired'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid subscription_status' });
+      }
+
+      const planName = String(input?.plan_name || '').trim();
+      const lastTariffId = String(input?.last_tariff_id || '').trim();
+      const startsAt = String(input?.starts_at || '').trim();
+      const endsAt = String(input?.ends_at || '').trim();
+      const priorityWeight = Number.parseInt(String(input?.priority_weight ?? 0), 10);
+
+      const nowIso = new Date().toISOString();
+      const currentAuditLog = Array.isArray(school?.system?.audit_log)
+        ? school.system.audit_log
+        : [];
+
+      const updatedProfile = {
+        ...school,
+        monetization: {
+          ...(school?.monetization || {}),
+          is_promoted: input?.is_promoted === true,
+          subscription_status: status,
+          plan_name: planName,
+          priority_weight: Number.isFinite(priorityWeight) ? priorityWeight : 0,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          last_tariff_id: lastTariffId,
+        },
+        system: {
+          ...(school?.system || {}),
+          updated_at: nowIso,
+          audit_log: [
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              at: nowIso,
+              action: 'update_monetization',
+              actor: actor.email || actor.id,
+              school_id: schoolId,
+            },
+            ...currentAuditLog,
+          ].slice(0, 100),
+        },
+      };
+
+      const saved = await upsertSchool(updatedProfile);
+      return res.json({ data: saved });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/:id/payments/test', async (req, res, next) => {
     try {
       const actorPayload = await requireAdminOrSuperadmin(req, res);

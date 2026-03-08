@@ -236,3 +236,27 @@ export async function runSchoolTestPayment(
     body: JSON.stringify(payload),
   });
 }
+
+export async function updateSchoolMonetization(
+  schoolId: string,
+  monetization: {
+    is_promoted: boolean;
+    subscription_status: 'inactive' | 'active' | 'paused' | 'expired';
+    plan_name: string;
+    priority_weight: number;
+    starts_at: string;
+    ends_at: string;
+    last_tariff_id: string;
+  }
+) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ data: any }>(
+    `/schools/${encodeURIComponent(schoolId)}/monetization`,
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify({ monetization }),
+    }
+  );
+}
