@@ -426,35 +426,6 @@ const TEACHER_CATEGORY_OPTIONS = [
 const TEACHER_LANGUAGE_OPTIONS = ['Kazakh', 'Russian', 'English', 'German', 'French', 'Chinese'];
 const TEACHER_EXAM_OPTIONS = ['ЕНТ', 'IELTS', 'TOEFL', 'SAT', 'NIS', 'Олимпиады'];
 
-const SCHOOL_SUBSCRIPTION_PLANS = [
-  {
-    id: 'starter_free',
-    name: 'Starter',
-    description: 'Бесплатный базовый тариф',
-    price_kzt: 0,
-    duration_days: 30,
-    priority_weight: 0,
-    is_promoted: false,
-  },
-  {
-    id: 'growth_30',
-    name: 'Growth',
-    description: 'Приоритет в выдаче, лиды/заявки, расширенная аналитика',
-    price_kzt: 89000,
-    duration_days: 30,
-    priority_weight: 25,
-    is_promoted: true,
-  },
-  {
-    id: 'pro_30',
-    name: 'Pro',
-    description: 'Top placement, бейдж “Рекомендуем”, AI-рекомендации',
-    price_kzt: 169000,
-    duration_days: 30,
-    priority_weight: 50,
-    is_promoted: true,
-  },
-];
 const withCurrentOption = (options: string[], current: string) =>
   current && !options.includes(current) ? [current, ...options] : options;
 const withCurrentOptions = (options: string[], currentValues: string[]) => {
@@ -603,19 +574,6 @@ export default function SchoolInfoPage() {
     return profile.school_id;
   }, [profile?.school_id]);
   const [fallbackSchoolId, setFallbackSchoolId] = useState('');
-  const [tariffs] = useState<
-    Array<{
-      id: string;
-      name: string;
-      description?: string;
-      price_kzt: number;
-      duration_days: number;
-      priority_weight: number;
-      is_promoted?: boolean;
-    }>
-  >(SCHOOL_SUBSCRIPTION_PLANS);
-  const [selectedTariffId, setSelectedTariffId] = useState(SCHOOL_SUBSCRIPTION_PLANS[0].id);
-  const [isApplyingTariff, setApplyingTariff] = useState(false);
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
   const schoolType = useMemo(() => getDeep(profile, 'basic_info.type', ''), [profile]);
@@ -659,14 +617,6 @@ export default function SchoolInfoPage() {
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
   };
-  const monetizationStatus = useMemo(
-    () => String(getDeep(profile, 'monetization.subscription_status', 'inactive') || 'inactive'),
-    [profile]
-  );
-  const lastTariffId = useMemo(
-    () => String(getDeep(profile, 'monetization.last_tariff_id', '') || ''),
-    [profile]
-  );
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
@@ -1113,47 +1063,6 @@ export default function SchoolInfoPage() {
       setMessage(detail);
     }
   };
-  const handleApplyTariff = async () => {
-    if (!profile?.school_id) return;
-    const tariffId = selectedTariffId || lastTariffId || SCHOOL_SUBSCRIPTION_PLANS[0].id;
-    if (!tariffId) {
-      window.alert(t('Тарифы недоступны'));
-      return;
-    }
-    const tariff = tariffs.find((item) => item.id === tariffId);
-    const tariffName = tariff?.name || tariffId;
-    const confirmed = window.confirm(`${t('Активировать тариф')} ${tariffName}?`);
-    if (!confirmed) return;
-
-    setApplyingTariff(true);
-    try {
-      const now = new Date();
-      const endsAt = new Date(now);
-      endsAt.setDate(endsAt.getDate() + Number(tariff?.duration_days || 30));
-      const nextProfile = createEmptySchoolProfile({
-        ...profile,
-        monetization: {
-          ...(profile?.monetization || {}),
-          is_promoted: Boolean(tariff?.is_promoted),
-          subscription_status: 'active',
-          plan_name: tariffName,
-          priority_weight: Number(tariff?.priority_weight || 0),
-          starts_at: now.toISOString(),
-          ends_at: endsAt.toISOString(),
-          last_tariff_id: tariffId,
-        },
-      });
-      setProfile(nextProfile);
-      await save(nextProfile);
-      window.alert(t('Тариф активирован'));
-    } catch (error) {
-      const detail = (error as any)?.message || t('Ошибка сохранения.');
-      window.alert(detail);
-    } finally {
-      setApplyingTariff(false);
-    }
-  };
-
   if (!profile) {
     return <div className="card">{t('Загрузка...')}</div>;
   }
@@ -1400,46 +1309,6 @@ export default function SchoolInfoPage() {
                       updateField('finance.grants_discounts', value)
                     }
                   />
-                  <Section title="Подписка и продвижение">
-                    <FieldRow>
-                      <label className="field">
-                        <span>{t('Тариф')}</span>
-                        <select
-                          value={selectedTariffId || tariffs[0]?.id || ''}
-                          onChange={(event) => setSelectedTariffId(event.target.value)}
-                          disabled={isApplyingTariff || !tariffs.length}
-                        >
-                          {tariffs.length ? (
-                            tariffs.map((tariff) => (
-                              <option key={tariff.id} value={tariff.id}>
-                                {`${tariff.name} · ${Number(tariff.price_kzt || 0).toLocaleString('ru-RU')} ₸ · ${tariff.duration_days} дн`}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="">{t('Тарифы недоступны')}</option>
-                          )}
-                        </select>
-                      </label>
-                    </FieldRow>
-                    {selectedTariffId ? (
-                      <p className="muted">
-                        {tariffs.find((item) => item.id === selectedTariffId)?.description || ''}
-                      </p>
-                    ) : null}
-                    <p className="muted">
-                      {`${t('Текущий статус подписки')}: ${monetizationStatus}`}
-                    </p>
-                    <div className="schools-admin-actions">
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={handleApplyTariff}
-                        disabled={isApplyingTariff || !tariffs.length}
-                      >
-                        {isApplyingTariff ? t('Сохраняем...') : t('Активировать тариф')}
-                      </button>
-                    </div>
-                  </Section>
                 </Section>
               )}
             </>
