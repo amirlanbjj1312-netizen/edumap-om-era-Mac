@@ -12,13 +12,13 @@ import {
   NewspaperIcon,
   UserCircleIcon,
   ChartBarIcon,
+  ChatBubbleLeftRightIcon,
 } from 'react-native-heroicons/solid';
 import NewsScreen from '../screens/NewsScreen';
 import SchoolsScreen from '../screens/SchoolsScreen';
 import StudyingScreen from '../screens/StudyingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { themeColors } from '../theme';
-import RoleSelectScreen from '../screens/RoleSelectScreen';
 import AdminVerificationScreen from '../screens/AdminVerificationScreen';
 import AdminProfileScreen from '../screens/AdminProfileScreen';
 import AdminStatisticsScreen from '../screens/AdminStatisticsScreen';
@@ -42,6 +42,11 @@ import StudentTestsScreen from '../screens/StudentTestsScreen';
 import StudentTestDetailScreen from '../screens/StudentTestDetailScreen';
 import SchoolChatScreen from '../screens/SchoolChatScreen';
 import WelcomeNewUserScreen from '../screens/WelcomeNewUserScreen';
+import IntroOnboardingScreen from '../screens/IntroOnboardingScreen';
+import SchoolCompareScreen from '../screens/SchoolCompareScreen';
+import UserChatsScreen from '../screens/UserChatsScreen';
+import ChatRoomScreen from '../screens/ChatRoomScreen';
+import ParentSubscriptionScreen from '../screens/ParentSubscriptionScreen';
 import { navigationRef } from './navigationRef';
 
 const Tab = createBottomTabNavigator();
@@ -53,11 +58,11 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigation() {
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="RoleSelect">
+      <Stack.Navigator initialRouteName="IntroOnboarding">
         <Stack.Screen
-          name="RoleSelect"
+          name="IntroOnboarding"
           options={{ headerShown: false }}
-          component={RoleSelectScreen}
+          component={IntroOnboardingScreen}
         />
         <Stack.Screen
           name="Home"
@@ -160,9 +165,24 @@ export default function AppNavigation() {
           component={SchoolChatScreen}
         />
         <Stack.Screen
+          name="SchoolCompare"
+          options={{ headerShown: false }}
+          component={SchoolCompareScreen}
+        />
+        <Stack.Screen
+          name="ChatRoom"
+          options={{ headerShown: false }}
+          component={ChatRoomScreen}
+        />
+        <Stack.Screen
           name="WelcomeNewUser"
           options={{ headerShown: false }}
           component={WelcomeNewUserScreen}
+        />
+        <Stack.Screen
+          name="ParentSubscription"
+          options={{ headerShown: false }}
+          component={ParentSubscriptionScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>
@@ -302,6 +322,21 @@ function BottomTabNavigator() {
           ...extraTabOptions,
         }}
       />
+      {!isGuest ? (
+        <Tab.Screen
+          name="Chats"
+          component={UserChatsScreen}
+          options={{
+            headerShown: false,
+            title: t('tabs.chat'),
+            tabBarLabel: t('tabs.chat'),
+            tabBarIcon: ({ color, size }) => (
+              <ChatBubbleLeftRightIcon color={color} size={size - 2} />
+            ),
+            ...extraTabOptions,
+          }}
+        />
+      ) : null}
       {!isGuest ? (
         <Tab.Screen
           name="Studying"
