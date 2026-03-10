@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
+import { setGuestMode } from '@/lib/guestMode';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
+        setGuestMode(false);
         const role = resolvePortalRole(
           data.session.user?.user_metadata?.role || data.session.user?.app_metadata?.role
         );
@@ -37,6 +39,7 @@ export default function LoginPage() {
       setError(signInError.message);
       return;
     }
+    setGuestMode(false);
     const { data } = await supabase.auth.getSession();
     const role = resolvePortalRole(
       data?.session?.user?.user_metadata?.role || data?.session?.user?.app_metadata?.role
@@ -85,6 +88,17 @@ export default function LoginPage() {
             {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
             <button className="button" type="submit" disabled={loading}>
               {loading ? 'Входим...' : 'Войти'}
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              style={{ marginLeft: 10 }}
+              onClick={() => {
+                setGuestMode(true);
+                router.replace('/parent/news');
+              }}
+            >
+              Гостевой режим
             </button>
           </form>
           <div style={{ marginTop: 16 }}>

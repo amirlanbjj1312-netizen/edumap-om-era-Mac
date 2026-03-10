@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAccessToken, getChatMessages, getChatRoom, sendChatMessage } from '@/lib/api';
+import { isGuestMode } from '@/lib/guestMode';
 
 type ChatMessage = {
   id: string;
@@ -25,6 +26,11 @@ export default function ParentChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const roomKey = 'support';
+  const [guest, setGuest] = useState(false);
+
+  useEffect(() => {
+    setGuest(isGuestMode());
+  }, []);
 
   const loadMessages = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -100,6 +106,11 @@ export default function ParentChatPage() {
         </button>
       </div>
       <p className="muted">Чат поддержки родителя.</p>
+      {guest ? (
+        <p style={{ color: '#374151', fontWeight: 600 }}>
+          В гостевом режиме чат недоступен. Войдите в аккаунт родителя.
+        </p>
+      ) : null}
 
       <div
         style={{
@@ -144,8 +155,9 @@ export default function ParentChatPage() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Введите сообщение"
+          disabled={guest}
         />
-        <button type="button" className="button" disabled={!text.trim() || sending} onClick={onSend}>
+        <button type="button" className="button" disabled={guest || !text.trim() || sending} onClick={onSend}>
           {sending ? 'Отправка...' : 'Отправить'}
         </button>
       </div>

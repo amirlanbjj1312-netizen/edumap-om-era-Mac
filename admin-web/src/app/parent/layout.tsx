@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
+import { isGuestMode, setGuestMode } from '@/lib/guestMode';
 
 const NAV_ITEMS = [
   { href: '/parent/news', label: 'Новости' },
@@ -19,6 +20,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -26,9 +28,15 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
       if (!mounted) return;
       const session = data?.session;
       if (!session) {
+        if (isGuestMode()) {
+          setGuest(true);
+          setReady(true);
+          return;
+        }
         router.replace('/login');
         return;
       }
+      setGuest(false);
       const role = resolvePortalRole(
         session.user?.user_metadata?.role || session.user?.app_metadata?.role
       );
@@ -41,9 +49,15 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
+        if (isGuestMode()) {
+          setGuest(true);
+          setReady(true);
+          return;
+        }
         router.replace('/login');
         return;
       }
+      setGuest(false);
       const role = resolvePortalRole(
         session.user?.user_metadata?.role || session.user?.app_metadata?.role
       );
@@ -59,6 +73,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   }, [router]);
 
   const handleSignOut = async () => {
+    setGuestMode(false);
     await supabase.auth.signOut();
     router.replace('/login');
   };
@@ -79,6 +94,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
         <header className="topbar">
           <div className="brand">EDUMAP Parent</div>
           <nav className="topnav">
+            {guest ? <span className="guest-pill">Гость</span> : null}
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { isGuestMode } from '@/lib/guestMode';
 
 type UserState = {
   email: string;
@@ -12,6 +13,7 @@ type UserState = {
 };
 
 export default function ParentProfilePage() {
+  const [guest] = useState(() => isGuestMode());
   const [profile, setProfile] = useState<UserState>({
     email: '',
     firstName: '',
@@ -40,6 +42,7 @@ export default function ParentProfilePage() {
     <div className="card">
       <h2 className="section-title">Профиль</h2>
       <p className="muted">Личный кабинет родителя.</p>
+      {guest ? <p className="muted">Вы находитесь в гостевом режиме.</p> : null}
 
       <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
         <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
@@ -57,6 +60,11 @@ export default function ParentProfilePage() {
           <Link className="button secondary" href="/parent/chat">
             Поддержка
           </Link>
+          {guest ? (
+            <Link className="button secondary" href="/login">
+              Войти в аккаунт
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
