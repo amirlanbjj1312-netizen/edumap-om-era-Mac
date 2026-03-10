@@ -11,10 +11,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
-import { getGeneralMessages, sendGeneralMessage } from '../services/chatApi';
+import { getRoomMessages, sendRoomMessage } from '../services/chatApi';
 
 const formatTime = (value) => {
   if (!value) return '';
@@ -25,9 +25,11 @@ const formatTime = (value) => {
 
 export default function ChatRoomScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { account } = useAuth();
   const { t } = useLocale();
   const title = String(route.params?.title || t('chat.group.title'));
+  const roomId = String(route.params?.roomId || 'general');
   const currentUserId = account?.id || '';
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,22 +37,30 @@ export default function ChatRoomScreen() {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
 
-  const loadMessages = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadMessages = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+    }
+    if (!silent) {
+      setError('');
+    }
     try {
-      const data = await getGeneralMessages();
+      const data = await getRoomMessages(roomId);
       setMessages(data);
     } catch (e) {
       setError(e?.message || 'Не удалось загрузить сообщения');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [roomId]);
 
   useEffect(() => {
     loadMessages();
-    const timer = setInterval(loadMessages, 3500);
+    const timer = setInterval(() => {
+      loadMessages({ silent: true });
+    }, 3500);
     return () => clearInterval(timer);
   }, [loadMessages]);
 
@@ -61,11 +71,11 @@ export default function ChatRoomScreen() {
     setError('');
     setText('');
     try {
-      const sent = await sendGeneralMessage(body);
+      const sent = await sendRoomMessage({ roomKey: roomId, body });
       if (sent) {
         setMessages((prev) => [...prev, sent]);
       } else {
-        await loadMessages();
+        await loadMessages({ silent: true });
       }
     } catch (e) {
       setError(e?.message || 'Не удалось отправить сообщение');
@@ -73,7 +83,7 @@ export default function ChatRoomScreen() {
     } finally {
       setSending(false);
     }
-  }, [loadMessages, sending, text]);
+  }, [loadMessages, roomId, sending, text]);
 
   const sorted = useMemo(
     () =>
@@ -84,48 +94,58 @@ export default function ChatRoomScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={styles.header}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+          >
+            <Text style={styles.backButtonText}>←</Text>
+          </Pressable>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
-        {loading ? (
-          <ActivityIndicator color="#3D63DD" style={{ marginTop: 12 }} />
-        ) : (
-          <FlatList
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            data={sorted}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-              const mine = item.sender_id === currentUserId;
-              return (
-                <View style={[styles.messageRow, mine ? styles.mineRow : styles.otherRow]}>
-                  <View style={[styles.bubble, mine ? styles.mineBubble : styles.otherBubble]}>
-                    {!mine && item?.sender_name ? (
-                      <Text style={styles.senderName} numberOfLines={1}>
-                        {item.sender_name}
-                      </Text>
-                    ) : null}
-                    <Text style={[styles.messageText, mine ? styles.mineText : styles.otherText]}>
-                      {item.body}
+        <FlatList
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          data={sorted}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const mine = item.sender_id === currentUserId;
+            return (
+              <View style={[styles.messageRow, mine ? styles.mineRow : styles.otherRow]}>
+                <View style={[styles.bubble, mine ? styles.mineBubble : styles.otherBubble]}>
+                  {!mine && item?.sender_name ? (
+                    <Text style={styles.senderName} numberOfLines={1}>
+                      {item.sender_name}
                     </Text>
-                    <Text style={[styles.timeText, mine ? styles.mineTime : styles.otherTime]}>
-                      {formatTime(item.created_at)}
-                    </Text>
-                  </View>
+                  ) : null}
+                  <Text style={[styles.messageText, mine ? styles.mineText : styles.otherText]}>
+                    {item.body}
+                  </Text>
+                  <Text style={[styles.timeText, mine ? styles.mineTime : styles.otherTime]}>
+                    {formatTime(item.created_at)}
+                  </Text>
                 </View>
-              );
-            }}
-            ListEmptyComponent={
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            loading ? (
+              <ActivityIndicator color="#3D63DD" style={{ marginTop: 12 }} />
+            ) : (
               <Text style={styles.emptyText}>{t('chat.room.empty')}</Text>
-            }
-          />
-        )}
+            )
+          }
+        />
 
         <View style={styles.inputRow}>
           <TextInput
@@ -154,14 +174,40 @@ export default function ChatRoomScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#EEF1F6' },
+  safe: { flex: 1, backgroundColor: '#E9EEF6' },
   container: { flex: 1, paddingHorizontal: 14 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E3E8F4',
+  },
+  backButtonText: {
+    fontFamily: 'exoSemibold',
+    color: '#1E2740',
+    fontSize: 18,
+    lineHeight: 20,
+  },
+  headerSpacer: {
+    width: 34,
+    height: 34,
+  },
   title: {
     fontFamily: 'exoSemibold',
     fontSize: 20,
     color: '#1E2740',
-    marginTop: 6,
-    marginBottom: 8,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   list: { flex: 1 },
   listContent: { paddingBottom: 12 },
@@ -196,7 +242,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
-    paddingBottom: 8,
+    paddingBottom: 14,
     paddingTop: 8,
   },
   input: {

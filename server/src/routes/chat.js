@@ -8,7 +8,9 @@ const {
 } = require('../validation');
 const {
   GENERAL_ROOM_ID,
+  SUPPORT_ROOM_ID,
   ensureGeneralRoomForUser,
+  ensureSupportRoomForUser,
   listRoomMessages,
   createMessage,
 } = require('../services/chatStore');
@@ -134,6 +136,23 @@ const buildChatRouter = (config = buildConfig()) => {
     }
   });
 
+  router.get('/support', async (req, res, next) => {
+    try {
+      const actorPayload = await requireRegisteredUser(req, res);
+      if (!actorPayload) return;
+      await ensureSupportRoomForUser({ userId: actorPayload.user.id });
+      res.json({
+        data: {
+          roomId: SUPPORT_ROOM_ID,
+          type: 'group',
+          title: 'Support chat',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get('/general/messages', async (req, res, next) => {
     try {
       const actorPayload = await requireRegisteredUser(req, res);
@@ -178,17 +197,65 @@ const buildChatRouter = (config = buildConfig()) => {
     }
   });
 
+  router.get('/support/messages', async (req, res, next) => {
+    try {
+      const actorPayload = await requireRegisteredUser(req, res);
+      if (!actorPayload) return;
+      await ensureSupportRoomForUser({ userId: actorPayload.user.id });
+      const { limit, before } = validateListRoomMessagesPayload(req.query || {});
+      const rows = await listRoomMessages({
+        roomId: SUPPORT_ROOM_ID,
+        limit,
+        before,
+      });
+      const data = await enrichMessagesWithSender(rows);
+      res.json({ data });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      next(error);
+    }
+  });
+
+  router.post('/support/messages', async (req, res, next) => {
+    try {
+      const actorPayload = await requireRegisteredUser(req, res);
+      if (!actorPayload) return;
+      await ensureSupportRoomForUser({ userId: actorPayload.user.id });
+      const { body } = validateCreateChatMessagePayload(req.body || {});
+      const message = await createMessage({
+        roomId: SUPPORT_ROOM_ID,
+        senderId: actorPayload.user.id,
+        body,
+      });
+      const data = (
+        await enrichMessagesWithSender([message])
+      )[0];
+      res.json({ data });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      next(error);
+    }
+  });
+
   router.get('/rooms/:roomId/messages', async (req, res, next) => {
     try {
       const actorPayload = await requireRegisteredUser(req, res);
       if (!actorPayload) return;
       const roomId = String(req.params.roomId || '').trim();
-      if (roomId !== GENERAL_ROOM_ID) {
+      if (roomId !== GENERAL_ROOM_ID && roomId !== SUPPORT_ROOM_ID) {
         return res
           .status(410)
           .json({ error: 'Direct chat is disabled. Use group chat.' });
       }
-      await ensureGeneralRoomForUser({ userId: actorPayload.user.id });
+      if (roomId === GENERAL_ROOM_ID) {
+        await ensureGeneralRoomForUser({ userId: actorPayload.user.id });
+      } else {
+        await ensureSupportRoomForUser({ userId: actorPayload.user.id });
+      }
       const { limit, before } = validateListRoomMessagesPayload(req.query || {});
       const rows = await listRoomMessages({ roomId, limit, before });
       const data = await enrichMessagesWithSender(rows);
@@ -206,12 +273,16 @@ const buildChatRouter = (config = buildConfig()) => {
       const actorPayload = await requireRegisteredUser(req, res);
       if (!actorPayload) return;
       const roomId = String(req.params.roomId || '').trim();
-      if (roomId !== GENERAL_ROOM_ID) {
+      if (roomId !== GENERAL_ROOM_ID && roomId !== SUPPORT_ROOM_ID) {
         return res
           .status(410)
           .json({ error: 'Direct chat is disabled. Use group chat.' });
       }
-      await ensureGeneralRoomForUser({ userId: actorPayload.user.id });
+      if (roomId === GENERAL_ROOM_ID) {
+        await ensureGeneralRoomForUser({ userId: actorPayload.user.id });
+      } else {
+        await ensureSupportRoomForUser({ userId: actorPayload.user.id });
+      }
       const { body } = validateCreateChatMessagePayload(req.body || {});
       const message = await createMessage({
         roomId,
@@ -236,4 +307,3 @@ const buildChatRouter = (config = buildConfig()) => {
 module.exports = {
   buildChatRouter,
 };
-

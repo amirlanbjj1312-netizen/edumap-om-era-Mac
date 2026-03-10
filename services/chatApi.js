@@ -59,3 +59,30 @@ export const sendGeneralMessage = async (body) => {
   const payload = await requestJson('/chat/general/messages', authOptions);
   return payload?.data || null;
 };
+
+export const getRoom = async (roomKey = 'general') => {
+  const key = String(roomKey || 'general').trim().toLowerCase() || 'general';
+  const authOptions = await withAuth();
+  const payload = await requestJson(`/chat/${encodeURIComponent(key)}`, authOptions);
+  return payload?.data || null;
+};
+
+export const getRoomMessages = async (roomKey = 'general') => {
+  const key = String(roomKey || 'general').trim().toLowerCase() || 'general';
+  const authOptions = await withAuth();
+  const payload = await requestJson(
+    `/chat/${encodeURIComponent(key)}/messages?limit=100`,
+    authOptions
+  );
+  return Array.isArray(payload?.data) ? payload.data : [];
+};
+
+export const sendRoomMessage = async ({ roomKey = 'general', body }) => {
+  const key = String(roomKey || 'general').trim().toLowerCase() || 'general';
+  const authOptions = await withAuth({
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+  const payload = await requestJson(`/chat/${encodeURIComponent(key)}/messages`, authOptions);
+  return payload?.data || null;
+};

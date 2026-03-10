@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { getPool, ensureChatTables } = require('./db');
 const GENERAL_ROOM_ID = 'general';
+const SUPPORT_ROOM_ID = 'support';
 
 const ensureGeneralRoomForUser = async ({ userId }) => {
   const db = getPool();
@@ -31,6 +32,37 @@ const ensureGeneralRoomForUser = async ({ userId }) => {
     throw error;
   }
   return GENERAL_ROOM_ID;
+};
+
+const ensureSupportRoomForUser = async ({ userId }) => {
+  const db = getPool();
+  if (!db) throw new Error('Database is not configured');
+  await ensureChatTables();
+
+  await db.query('BEGIN');
+  try {
+    await db.query(
+      `
+        INSERT INTO chat_rooms (id, type, created_by, created_at, updated_at)
+        VALUES ($1, 'group', $2, NOW(), NOW())
+        ON CONFLICT (id) DO NOTHING
+      `,
+      [SUPPORT_ROOM_ID, userId]
+    );
+    await db.query(
+      `
+        INSERT INTO chat_room_members (room_id, user_id, joined_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (room_id, user_id) DO NOTHING
+      `,
+      [SUPPORT_ROOM_ID, userId]
+    );
+    await db.query('COMMIT');
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  }
+  return SUPPORT_ROOM_ID;
 };
 
 const getOrCreateDirectRoom = async ({ userId, targetUserId }) => {
@@ -201,7 +233,9 @@ const createMessage = async ({ roomId, senderId, body }) => {
 
 module.exports = {
   GENERAL_ROOM_ID,
+  SUPPORT_ROOM_ID,
   ensureGeneralRoomForUser,
+  ensureSupportRoomForUser,
   getOrCreateDirectRoom,
   listUserRooms,
   listRoomMembers,

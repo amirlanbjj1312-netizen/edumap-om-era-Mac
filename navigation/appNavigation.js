@@ -244,6 +244,20 @@ function BottomTabNavigator() {
             ...extraTabOptions,
           }}
         />
+        <Tab.Screen
+          name="AdminChats"
+          component={UserChatsScreen}
+          initialParams={{ roomKey: 'support', title: 'Поддержка' }}
+          options={{
+            headerShown: false,
+            title: t('tabs.chat'),
+            tabBarLabel: t('tabs.chat'),
+            tabBarIcon: ({ color, size }) => (
+              <ChatBubbleLeftRightIcon color={color} size={size - 2} />
+            ),
+            ...extraTabOptions,
+          }}
+        />
       </Tab.Navigator>
     );
   }

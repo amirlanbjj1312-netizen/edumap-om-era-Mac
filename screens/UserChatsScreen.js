@@ -1,43 +1,46 @@
 import React, { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLocale } from '../context/LocaleContext';
-import { getGeneralRoom } from '../services/chatApi';
+import { getRoom } from '../services/chatApi';
 
 export default function UserChatsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const roomKey = String(route.params?.roomKey || 'general');
+  const supportTitleRaw = t('chat.group.support');
+  const supportTitle =
+    supportTitleRaw && supportTitleRaw !== 'chat.group.support'
+      ? supportTitleRaw
+      : 'Поддержка';
+  const roomTitle =
+    route.params?.title || (roomKey === 'support' ? supportTitle : t('chat.group.title'));
 
   const openGeneralChat = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const room = await getGeneralRoom();
-      const roomId = String(room?.roomId || 'general');
+      const room = await getRoom(roomKey);
+      const roomId = String(room?.roomId || roomKey);
       navigation.navigate('ChatRoom', {
         roomId,
-        title: t('chat.group.title'),
+        title: roomTitle,
       });
     } catch (e) {
       setError(e?.message || t('chat.group.openError'));
     } finally {
       setLoading(false);
     }
-  }, [navigation, t]);
-
-  useFocusEffect(
-    useCallback(() => {
-      openGeneralChat();
-    }, [openGeneralChat])
-  );
+  }, [navigation, roomKey, roomTitle, t]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
-        <Text style={styles.title}>{t('chat.group.title')}</Text>
+        <Text style={styles.title}>{roomTitle}</Text>
         <Text style={styles.description}>{t('chat.group.description')}</Text>
         <Pressable
           style={[styles.openButton, loading && styles.openButtonDisabled]}
@@ -57,7 +60,7 @@ export default function UserChatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#EEF1F6' },
+  safe: { flex: 1, backgroundColor: '#E9EEF6' },
   container: {
     flex: 1,
     paddingHorizontal: 20,
@@ -95,4 +98,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
