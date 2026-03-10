@@ -63,9 +63,34 @@ async function authRequestJson<T>(path: string, options: AuthRequestOptions): Pr
     },
   });
 }
-async function getAccessToken() {
+export async function getAccessToken() {
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token || '';
+}
+
+export async function getChatRoom(token: string, roomKey: string) {
+  return authRequestJson<{ data?: { roomId: string; title?: string } }>(
+    `/chat/${encodeURIComponent(roomKey)}`,
+    { token }
+  );
+}
+
+export async function getChatMessages(token: string, roomKey: string) {
+  return authRequestJson<{ data?: Array<any> }>(
+    `/chat/${encodeURIComponent(roomKey)}/messages?limit=100`,
+    { token }
+  );
+}
+
+export async function sendChatMessage(token: string, roomKey: string, body: string) {
+  return authRequestJson<{ data?: any }>(
+    `/chat/${encodeURIComponent(roomKey)}/messages`,
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }
+  );
 }
 
 export async function loadAuthUsers(token: string) {

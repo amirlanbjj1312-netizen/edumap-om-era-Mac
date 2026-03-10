@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
+import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 
 const NAV_ITEMS: Array<{
   href: string;
@@ -19,7 +20,7 @@ const NAV_ITEMS: Array<{
   { href: '/pricing', labelKey: 'navPricing' },
   { href: '/users', labelKey: 'navUsers', minRole: 'moderator' },
   { href: '/requests', labelKey: 'navRequests' },
-  { href: '/statistics', labelKey: 'navStatistics' },
+  { href: '/statistics', labelKey: 'navStatistics', minRole: 'moderator' },
   { href: '/profile', labelKey: 'navProfile' },
 ];
 
@@ -45,9 +46,14 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
         router.replace('/login');
       } else {
         const nextRole =
-          data.session.user?.user_metadata?.role ||
-          data.session.user?.app_metadata?.role ||
-          'user';
+          resolvePortalRole(
+            data.session.user?.user_metadata?.role ||
+            data.session.user?.app_metadata?.role
+          );
+        if (nextRole === 'user') {
+          router.replace(portalHomeByRole(nextRole));
+          return;
+        }
         setRole(nextRole);
         setReady(true);
       }
@@ -57,9 +63,14 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
         router.replace('/login');
       } else {
         const nextRole =
-          session.user?.user_metadata?.role ||
-          session.user?.app_metadata?.role ||
-          'user';
+          resolvePortalRole(
+            session.user?.user_metadata?.role ||
+            session.user?.app_metadata?.role
+          );
+        if (nextRole === 'user') {
+          router.replace(portalHomeByRole(nextRole));
+          return;
+        }
         setRole(nextRole);
       }
     });

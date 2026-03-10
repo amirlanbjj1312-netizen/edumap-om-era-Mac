@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,7 +16,10 @@ export default function LoginPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        router.replace('/school-info');
+        const role = resolvePortalRole(
+          data.session.user?.user_metadata?.role || data.session.user?.app_metadata?.role
+        );
+        router.replace(portalHomeByRole(role));
       }
     });
   }, [router]);
@@ -33,14 +37,18 @@ export default function LoginPage() {
       setError(signInError.message);
       return;
     }
-    router.replace('/school-info');
+    const { data } = await supabase.auth.getSession();
+    const role = resolvePortalRole(
+      data?.session?.user?.user_metadata?.role || data?.session?.user?.app_metadata?.role
+    );
+    router.replace(portalHomeByRole(role));
   };
 
   return (
     <div className="page">
       <div className="container">
         <div className="card" style={{ maxWidth: 520, margin: '40px auto' }}>
-          <h1 style={{ marginTop: 0 }}>Вход администратора</h1>
+          <h1 style={{ marginTop: 0 }}>Вход в кабинет EDUMAP</h1>
           <p className="muted">Используйте тот же логин/пароль, что и в приложении.</p>
           <form onSubmit={handleSubmit}>
             <div className="field">
@@ -80,7 +88,7 @@ export default function LoginPage() {
             </button>
           </form>
           <div style={{ marginTop: 16 }}>
-            <a className="muted" href="/school-registration">
+            <a className="muted" href="/register">
               Нет аккаунта? Зарегистрироваться
             </a>
           </div>
