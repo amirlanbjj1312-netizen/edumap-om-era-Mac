@@ -160,7 +160,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="page">
-      <div className="container">
+      <div className="container parent-layout-shell">
         {!isMapFullscreen ? (
           <header className="topbar">
             <div className="topbar-brand-wrap">
@@ -185,7 +185,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             </nav>
           </header>
         ) : null}
-        <main>{children}</main>
+        <main className="parent-layout-main">{children}</main>
         {!isMapFullscreen ? (
           <footer className="app-footer parent-app-footer">
             <div className="app-footer-main">
