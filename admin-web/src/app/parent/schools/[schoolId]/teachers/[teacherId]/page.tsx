@@ -8,6 +8,12 @@ import { loadSchools } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolTeachers } from '@/lib/clubViews';
 
+const getSchoolId = (value: unknown): string => {
+  if (!value || typeof value !== 'object') return '';
+  const raw = (value as Record<string, unknown>).school_id;
+  return typeof raw === 'string' ? raw : '';
+};
+
 export default function ParentSchoolTeacherPage() {
   const { locale } = useParentLocale();
   const params = useParams<{ schoolId: string; teacherId: string }>();
@@ -36,7 +42,7 @@ export default function ParentSchoolTeacherPage() {
   }, []);
 
   const school = useMemo(
-    () => rows.find((item) => String(item?.school_id || '') === schoolId) || null,
+    () => rows.find((item) => getSchoolId(item) === schoolId) || null,
     [rows, schoolId]
   );
   const teachers = useMemo(() => buildSchoolTeachers(school, locale), [school, locale]);

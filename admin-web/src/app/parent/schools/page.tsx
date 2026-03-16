@@ -481,8 +481,6 @@ export default function ParentSchoolsPage() {
         return sortUi.priceAsc;
       case 'priceDesc':
         return sortUi.priceDesc;
-      case 'distance':
-        return sortUi.distance;
       case 'name':
         return sortUi.name;
       case 'updated':
@@ -1286,7 +1284,6 @@ export default function ParentSchoolsPage() {
                     { key: 'priceDesc', label: sortUi.priceDesc, disabled: false },
                     { key: 'rating', label: sortUi.rating, disabled: false },
                     { key: 'reviews', label: sortUi.reviews, disabled: false },
-                    { key: 'distance', label: sortUi.distance, disabled: true },
                     { key: 'name', label: sortUi.name, disabled: false },
                     { key: 'updated', label: sortUi.updated, disabled: false },
                   ].map((item) => (

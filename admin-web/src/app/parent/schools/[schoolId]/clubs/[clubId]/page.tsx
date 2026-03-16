@@ -8,6 +8,12 @@ import { loadSchools } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolClubs, buildSchoolTeachers } from '@/lib/clubViews';
 
+const getSchoolId = (value: unknown): string => {
+  if (!value || typeof value !== 'object') return '';
+  const raw = (value as Record<string, unknown>).school_id;
+  return typeof raw === 'string' ? raw : '';
+};
+
 const getName = (school: unknown, locale: 'ru' | 'en' | 'kk') => {
   const root = school && typeof school === 'object' ? (school as Record<string, unknown>) : {};
   const basicInfo =
@@ -16,7 +22,8 @@ const getName = (school: unknown, locale: 'ru' | 'en' | 'kk') => {
       : {};
   const displayName = basicInfo.display_name;
   if (displayName && typeof displayName === 'object') {
-    return displayName[locale] || displayName.ru || displayName.en || displayName.kk || '';
+    const localized = displayName as Partial<Record<'ru' | 'en' | 'kk', unknown>>;
+    return String(localized[locale] || localized.ru || localized.en || localized.kk || '');
   }
   return '';
 };
@@ -51,7 +58,7 @@ export default function ParentSchoolClubDetailsPage() {
   }, []);
 
   const school = useMemo(
-    () => rows.find((item) => String(item?.school_id || '') === schoolId) || null,
+    () => rows.find((item) => getSchoolId(item) === schoolId) || null,
     [rows, schoolId]
   );
   const schoolName = useMemo(() => getName(school, locale), [school, locale]);
