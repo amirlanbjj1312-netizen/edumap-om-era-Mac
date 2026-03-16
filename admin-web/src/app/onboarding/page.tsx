@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { localeOptions, useParentLocale } from '@/lib/parentLocale';
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const searchParams = useSearchParams();
   const email = String(searchParams.get('email') || '').trim();
   const { locale, setLocale, t } = useParentLocale();
@@ -63,5 +64,13 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingContent />
+    </Suspense>
   );
 }
