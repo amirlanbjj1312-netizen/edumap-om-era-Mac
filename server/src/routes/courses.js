@@ -2,6 +2,11 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { buildConfig } = require('../utils/config');
 const {
+  ValidationError,
+  validateCourseQuestionPayload,
+  validateCourseTestPayload,
+} = require('../validation');
+const {
   readCoursesTests,
   upsertCourseTest,
   upsertCourseQuestion,
@@ -76,11 +81,15 @@ const buildCoursesRouter = (configArg) => {
     try {
       const actor = await requireModerator(req, res);
       if (!actor) return;
-      const subjectId = req.body?.subjectId;
-      const test = req.body?.test;
+      const validated = validateCourseTestPayload(req.body || {});
+      const subjectId = validated.subjectId;
+      const test = validated.test;
       const data = await upsertCourseTest({ subjectId, test });
       res.json({ data });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });
@@ -89,12 +98,16 @@ const buildCoursesRouter = (configArg) => {
     try {
       const actor = await requireModerator(req, res);
       if (!actor) return;
-      const subjectId = req.body?.subjectId;
-      const testId = req.body?.testId;
-      const question = req.body?.question;
+      const validated = validateCourseQuestionPayload(req.body || {});
+      const subjectId = validated.subjectId;
+      const testId = validated.testId;
+      const question = validated.question;
       const data = await upsertCourseQuestion({ subjectId, testId, question });
       res.json({ data });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });

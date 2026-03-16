@@ -44,8 +44,17 @@ export const integralDemoProfile = createEmptySchoolProfile({
     average_class_size: '18',
     entrance_exam: {
       required: true,
-      type: 'Math + English',
-      format: 'Written test + interview',
+      format: 'Other',
+      format_other: {
+        ru: 'Письменный тест и собеседование',
+        en: 'Written test and interview',
+      },
+      subjects: 'Mathematics, English Language',
+      subjects_other: { ru: '', en: '' },
+      stages: {
+        ru: 'Письменный тест, затем собеседование',
+        en: 'Written test, then interview',
+      },
     },
   },
   services: {

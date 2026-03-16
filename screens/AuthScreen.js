@@ -6,9 +6,9 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,17 +16,18 @@ import {
   EnvelopeIcon,
   LockClosedIcon,
   UserIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from 'react-native-heroicons/outline';
 import { images } from '../assets';
 import { ROLES, useRole } from '../context/RoleContext';
 import { useLocale } from '../context/LocaleContext';
 import { supabase } from '../services/supabaseClient';
-import Constants from 'expo-constants';
+import { buildApiUrl } from '../config/apiConfig';
 import rawSchools from '../assets/data/schools.json';
 
-const gradientColors = ['#786AFF', '#4FCCFF'];
-const placeholderColor = 'rgba(255,255,255,0.75)';
-const DEFAULT_SCHEME = 'edumap';
+const gradientColors = ['#E9EEF6', '#E9EEF6'];
+const placeholderColor = 'rgba(17,24,39,0.5)';
 
 const MODERATOR_ACCOUNTS = [
   {
@@ -142,6 +143,8 @@ const AuthInput = ({
   onChangeText,
   placeholder,
   secureTextEntry,
+  onToggleSecure,
+  isSecureVisible = false,
   autoCapitalize = 'none',
   keyboardType = 'default',
 }) => (
@@ -158,6 +161,19 @@ const AuthInput = ({
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
       />
+      {typeof onToggleSecure === 'function' ? (
+        <Pressable
+          onPress={onToggleSecure}
+          hitSlop={8}
+          style={styles.inputToggle}
+        >
+          {isSecureVisible ? (
+            <EyeSlashIcon size={20} color={placeholderColor} />
+          ) : (
+            <EyeIcon size={20} color={placeholderColor} />
+          )}
+        </Pressable>
+      ) : null}
     </View>
   </View>
 );
@@ -175,7 +191,7 @@ const PrimaryButton = ({ label, onPress, disabled, loading }) => (
       style={styles.primaryButtonGradient}
     >
       {loading ? (
-        <ActivityIndicator color="#FFFFFF" />
+        <ActivityIndicator color="#111827" />
       ) : (
         <Text style={styles.primaryButtonLabel}>{label}</Text>
       )}
@@ -191,11 +207,8 @@ export default function AuthScreen({ initialMode = 'login' }) {
   const [formMessage, setFormMessage] = useState('');
   const [formMessageTone, setFormMessageTone] = useState('error');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const appScheme = Constants?.expoConfig?.scheme ?? DEFAULT_SCHEME;
-  const schoolRedirectUrl = 'https://ed-kappa-one.vercel.app/school-registration';
-  const emailRedirectTo =
-    role === ROLES.ADMIN ? schoolRedirectUrl : `${appScheme}://auth-callback`;
-
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   useEffect(() => {
     setMode(initialMode);
     setFormMessage('');
@@ -392,38 +405,60 @@ export default function AuthScreen({ initialMode = 'login' }) {
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email: emailInput,
-        password: passwordInput,
-        options: { data: buildSignupMetadata(), emailRedirectTo },
+      const metadata = buildSignupMetadata();
+      const otpResp = await fetch(buildApiUrl('/auth/send-code'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput }),
       });
-      if (error) throw error;
-
-      if (!data?.session) {
-        const confirmMessage =
-          role === ROLES.ADMIN
-            ? t('auth.errors.confirmEmailSchool')
-            : t('auth.errors.confirmEmailUser');
-        setFormMessage(confirmMessage);
-        setFormMessageTone('info');
-        return;
+      const otpPayload = await otpResp.json().catch(() => ({}));
+      if (!otpResp.ok) {
+        throw new Error(otpPayload?.error || t('auth.errors.generic'));
       }
-
-      setGuest(false);
-      navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'WelcomeNewUser',
-            params: {
-              firstName: signupValues.name,
-              lastName: signupValues.lastName,
-            },
-          },
-        ],
+      navigation.navigate('VerifyCode', {
+        email: emailInput,
+        signupValues: {
+          ...signupValues,
+          password: passwordInput,
+          role,
+          metadata,
+        },
       });
+      setFormMessage('');
+      setFormMessageTone('info');
     } catch (error) {
       setFormMessage(error?.message ?? t('auth.errors.generic'));
+      setFormMessageTone('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const emailInput = normalizeEmail(loginValues.email);
+    if (!emailInput) {
+      setFormMessage(t('auth.errors.resetEmailMissing'));
+      setFormMessageTone('error');
+      return;
+    }
+    setIsSubmitting(true);
+    setFormMessage('');
+    try {
+      const resp = await fetch(buildApiUrl('/auth/send-code'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error || t('auth.errors.resetEmailFailed'));
+      }
+      navigation.navigate('VerifyCode', {
+        email: emailInput,
+        mode: 'reset_password',
+      });
+    } catch (error) {
+      setFormMessage(error?.message || t('auth.errors.resetEmailFailed'));
       setFormMessageTone('error');
     } finally {
       setIsSubmitting(false);
@@ -453,7 +488,9 @@ export default function AuthScreen({ initialMode = 'login' }) {
           value: loginValues.password,
           onChangeText: (text) =>
             setLoginValues((prev) => ({ ...prev, password: text })),
-          secureTextEntry: true,
+          secureTextEntry: !showLoginPassword,
+          onToggleSecure: () => setShowLoginPassword((prev) => !prev),
+          isSecureVisible: showLoginPassword,
         },
       ];
 
@@ -502,7 +539,9 @@ export default function AuthScreen({ initialMode = 'login' }) {
         value: signupValues.password,
         onChangeText: (text) =>
           setSignupValues((prev) => ({ ...prev, password: text })),
-        secureTextEntry: true,
+        secureTextEntry: !showSignupPassword,
+        onToggleSecure: () => setShowSignupPassword((prev) => !prev),
+        isSecureVisible: showSignupPassword,
       },
     ];
 
@@ -582,7 +621,7 @@ export default function AuthScreen({ initialMode = 'login' }) {
     }
 
     return fields;
-  }, [isLogin, loginValues, signupValues, role, t]);
+  }, [isLogin, loginValues, signupValues, role, t, showLoginPassword, showSignupPassword]);
 
   return (
     <LinearGradient
@@ -592,20 +631,15 @@ export default function AuthScreen({ initialMode = 'login' }) {
       style={styles.gradient}
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          enableOnAndroid
+          extraScrollHeight={24}
         >
-          <Image source={images.authHero} style={styles.hero} resizeMode="contain" />
-
-          <Pressable
-            onPress={() => navigation.navigate('RoleSelect')}
-            className="self-center mb-6"
-          >
-            <Text className="text-white/80 font-exo underline text-sm">
-              {t('auth.changeRole')}
-            </Text>
-          </Pressable>
+          <Image source={images.authLogo} style={styles.hero} resizeMode="contain" />
 
           <View style={styles.card}>
             <View style={styles.tabs}>
@@ -632,6 +666,8 @@ export default function AuthScreen({ initialMode = 'login' }) {
                   secureTextEntry,
                   autoCapitalize,
                   keyboardType,
+                  onToggleSecure,
+                  isSecureVisible,
                 }) => (
                   <AuthInput
                     key={key}
@@ -642,10 +678,22 @@ export default function AuthScreen({ initialMode = 'login' }) {
                     secureTextEntry={secureTextEntry}
                     autoCapitalize={autoCapitalize}
                     keyboardType={keyboardType}
+                    onToggleSecure={onToggleSecure}
+                    isSecureVisible={isSecureVisible}
                   />
                 ),
               )}
             </View>
+
+            {isLogin ? (
+              <Pressable
+                onPress={handleForgotPassword}
+                disabled={isSubmitting}
+                style={styles.forgotPasswordLinkContainer}
+              >
+                <Text style={styles.forgotPasswordLink}>{t('auth.forgotPassword')}</Text>
+              </Pressable>
+            ) : null}
 
             <PrimaryButton
               label={isLogin ? t('auth.logIn') : t('auth.register')}
@@ -691,7 +739,7 @@ export default function AuthScreen({ initialMode = 'login' }) {
               </>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -719,14 +767,19 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(17,24,39,0.12)',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 28,
     paddingHorizontal: 20,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#E5E7EB',
     borderRadius: 999,
     padding: 4,
     marginBottom: 22,
@@ -749,10 +802,10 @@ const styles = StyleSheet.create({
     fontFamily: 'exoSemibold',
   },
   tabLabelActive: {
-    color: '#3D4BA0',
+    color: '#111827',
   },
   tabLabelInactive: {
-    color: 'rgba(255,255,255,0.85)',
+    color: '#4B5563',
   },
   form: {
     marginBottom: 12,
@@ -764,9 +817,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(17,24,39,0.12)',
     paddingHorizontal: 16,
     height: 52,
   },
@@ -777,7 +830,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'exo',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#111827',
+  },
+  inputToggle: {
+    marginLeft: 10,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  forgotPasswordLinkContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 12,
+  },
+  forgotPasswordLink: {
+    fontFamily: 'exoSemibold',
+    fontSize: 14,
+    color: '#374151',
+    textDecorationLine: 'underline',
   },
   primaryButton: {
     borderRadius: 16,
@@ -792,7 +862,7 @@ const styles = StyleSheet.create({
   primaryButtonLabel: {
     fontFamily: 'exoSemibold',
     fontSize: 18,
-    color: '#FFFFFF',
+    color: '#111827',
   },
   primaryButtonDisabled: {
     opacity: 0.7,
@@ -804,10 +874,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   formMessageError: {
-    color: '#FDE68A',
+    color: '#B91C1C',
   },
   formMessageInfo: {
-    color: '#D1FAE5',
+    color: '#047857',
   },
   divider: {
     flexDirection: 'row',
@@ -817,12 +887,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(17,24,39,0.15)',
   },
   dividerText: {
     fontFamily: 'exo',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#4B5563',
     marginHorizontal: 12,
   },
   guestLinkContainer: {
@@ -831,7 +901,7 @@ const styles = StyleSheet.create({
   guestLink: {
     fontFamily: 'exoSemibold',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#111827',
     textDecorationLine: 'underline',
   },
 });

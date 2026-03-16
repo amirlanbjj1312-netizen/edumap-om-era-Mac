@@ -6,11 +6,40 @@ import {
   upsertSchool,
   loadTestBillingTariffs,
   runSchoolTestPayment,
+  createSchoolAccount,
+  loadSchoolAccessLog,
+  clearSchoolAccessLog,
+  loadAuthUsers,
+  upsertSchoolAccessLogEntry,
+  deleteSchoolAccessLogEntryFull,
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
 
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
+type SchoolAccessLogItem = {
+  id: string;
+  email: string;
+  password: string;
+  schoolId: string;
+  createdAt: string;
+  status: 'создан' | 'выдан' | 'заполнен';
+};
+
+const isPlaceholderSchoolId = (value: string): boolean => {
+  const normalized = normalizeText(value).toLowerCase();
+  return !normalized || normalized.startsWith('school-astana.private');
+};
+
+const chooseBetterLogItem = (current: SchoolAccessLogItem, candidate: SchoolAccessLogItem): SchoolAccessLogItem => {
+  const currentScore = (current.password && current.password !== '—' ? 1 : 0) + (isPlaceholderSchoolId(current.schoolId) ? 0 : 1);
+  const candidateScore = (candidate.password && candidate.password !== '—' ? 1 : 0) + (isPlaceholderSchoolId(candidate.schoolId) ? 0 : 1);
+  if (candidateScore > currentScore) return candidate;
+  if (candidateScore < currentScore) return current;
+  const currentTs = Date.parse(current.createdAt || '') || 0;
+  const candidateTs = Date.parse(candidate.createdAt || '') || 0;
+  return candidateTs > currentTs ? candidate : current;
+};
 type MonetizationDraft = {
   isPromoted: boolean;
   status: string;
@@ -23,6 +52,27 @@ type MonetizationDraft = {
 
 const normalizeText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
+const toLocalSchoolIdFromEmail = (email: string) => {
+  const normalized = String(email || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return normalized ? `local-${normalized}` : '';
+};
+const inferSchoolIdFromAdminEmail = (email: string) => {
+  const localPart = String(email || '')
+    .trim()
+    .toLowerCase()
+    .split('@')[0];
+  const normalized = localPart
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return normalized ? `school-${normalized}` : '';
+};
 const formatDateInput = (value: unknown) => {
   if (typeof value !== 'string') return '';
   const trimmed = value.trim();
@@ -81,7 +131,55 @@ const getPaymentHistory = (
 };
 
 export default function SchoolsPage() {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
+  const accessLogUi =
+    locale === 'en'
+      ? {
+          title: 'Issued school access',
+          clear: 'Clear log',
+          clearConfirm: 'Clear issued access log?',
+          loadError: 'Log failed to load',
+          empty: 'Log is empty.',
+          headers: ['Date', 'Email', 'Password', 'School ID', 'Status', 'Action'],
+          statusCreated: 'created',
+          statusIssued: 'issued',
+          statusFilled: 'completed',
+          delete: 'Delete',
+          deleteConfirm: 'Delete fully: school admin account, school profile and log entry?',
+          deleteError: 'Failed to delete entry',
+          dateLocale: 'en-US',
+        }
+      : locale === 'kk'
+        ? {
+            title: 'Мектепке берілген қолжетімділіктер',
+            clear: 'Журналды тазалау',
+            clearConfirm: 'Берілген қолжетімділік журналын тазалау керек пе?',
+            loadError: 'Журнал жүктелмеді',
+            empty: 'Журнал әзірге бос.',
+            headers: ['Күні', 'Email', 'Құпиясөз', 'School ID', 'Мәртебе', 'Әрекет'],
+            statusCreated: 'құрылды',
+            statusIssued: 'берілді',
+            statusFilled: 'толтырылды',
+            delete: 'Жою',
+            deleteConfirm: 'Толық жою керек пе: мектеп admin аккаунты, мектеп профилі және журнал жазбасы?',
+            deleteError: 'Жазбаны жою мүмкін болмады',
+            dateLocale: 'kk-KZ',
+          }
+        : {
+            title: 'Выданные доступы школам',
+            clear: 'Очистить журнал',
+            clearConfirm: 'Очистить журнал выданных доступов?',
+            loadError: 'Журнал не загрузился',
+            empty: 'Журнал пока пуст.',
+            headers: ['Дата', 'Email', 'Пароль', 'School ID', 'Статус', 'Действие'],
+            statusCreated: 'создан',
+            statusIssued: 'выдан',
+            statusFilled: 'заполнен',
+            delete: 'Удалить',
+            deleteConfirm: 'Удалить полностью: аккаунт школы, профиль школы и запись журнала?',
+            deleteError: 'Не удалось удалить запись',
+            dateLocale: 'ru-RU',
+          };
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
   const [query, setQuery] = useState('');
@@ -102,34 +200,224 @@ export default function SchoolsPage() {
   const [monetizationDrafts, setMonetizationDrafts] = useState<
     Record<string, MonetizationDraft>
   >({});
+  const [newSchoolAccountEmail, setNewSchoolAccountEmail] = useState('');
+  const [newSchoolAccountPassword, setNewSchoolAccountPassword] = useState('');
+  const [creatingSchoolAccount, setCreatingSchoolAccount] = useState(false);
+  const [schoolAccountStatus, setSchoolAccountStatus] = useState('');
+  const [schoolAccessLog, setSchoolAccessLog] = useState<SchoolAccessLogItem[]>([]);
+  const [schoolAccessLogError, setSchoolAccessLogError] = useState('');
+  const [updatingLogStatusId, setUpdatingLogStatusId] = useState('');
+  const [deletingLogId, setDeletingLogId] = useState('');
+  const [savingLogPasswordId, setSavingLogPasswordId] = useState('');
+  const [logPasswordDrafts, setLogPasswordDrafts] = useState<Record<string, string>>({});
+  const [loadStatus, setLoadStatus] = useState('');
+  const isSuperadmin = actorRole === 'superadmin';
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSessionToken(data?.session?.access_token || '');
-      setActorEmail(data?.session?.user?.email || '');
-      setActorRole(
-        data?.session?.user?.user_metadata?.role ||
-          data?.session?.user?.app_metadata?.role ||
-          'user'
-      );
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSessionToken(data?.session?.access_token || '');
+        setActorEmail(data?.session?.user?.email || '');
+        setActorRole(
+          data?.session?.user?.user_metadata?.role ||
+            data?.session?.user?.app_metadata?.role ||
+            'user'
+        );
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setSessionToken('');
+        setActorEmail('');
+        setActorRole('user');
+      });
     return () => {
       mounted = false;
     };
   }, []);
+  const reloadSchoolAccessLog = useCallback(async () => {
+    if (!isSuperadmin || !sessionToken) {
+      setSchoolAccessLog([]);
+      setSchoolAccessLogError('');
+      return;
+    }
+    try {
+      const [result, usersResult] = await Promise.all([
+        loadSchoolAccessLog(sessionToken),
+        loadAuthUsers(sessionToken),
+      ]);
+      const rows = Array.isArray(result?.data) ? result.data : [];
+      const byId = new Map<string, SchoolAccessLogItem>();
+      const byEmail = new Map<string, SchoolAccessLogItem>();
+      const registerRow = (row: SchoolAccessLogItem) => {
+        const emailKey = normalizeText(row.email).toLowerCase();
+        const existingByEmail = emailKey ? byEmail.get(emailKey) : null;
+        if (existingByEmail) {
+          const chosen = chooseBetterLogItem(existingByEmail, row);
+          byEmail.set(emailKey, chosen);
+          byId.delete(existingByEmail.id);
+          byId.set(chosen.id, chosen);
+          return;
+        }
+        byId.set(row.id, row);
+        if (emailKey) byEmail.set(emailKey, row);
+      };
+
+      rows.forEach((item) => {
+        const row: SchoolAccessLogItem = {
+          id: String(item?.id || ''),
+          email: normalizeText(item?.email),
+          password: String(item?.password || ''),
+          schoolId: normalizeText(item?.schoolId),
+          createdAt: String(item?.createdAt || ''),
+          status:
+            ['создан', 'выдан', 'заполнен'].includes(String(item?.status || '').toLowerCase())
+              ? (String(item?.status || '').toLowerCase() as SchoolAccessLogItem['status'])
+              : 'создан',
+        };
+        if (!row.id || !row.email) return;
+        registerRow(row);
+      });
+      const users = Array.isArray(usersResult?.data) ? usersResult.data : [];
+      users
+        .filter((user) => String(user?.role || '').toLowerCase() === 'admin')
+        .forEach((user) => {
+          const userId = String(user?.id || '').trim();
+          const email = String(user?.email || '')
+            .trim()
+            .toLowerCase();
+          if (!userId || !email) return;
+          const legacyId = `legacy-${userId}`;
+          if (byId.has(legacyId)) return;
+          registerRow({
+            id: legacyId,
+            email,
+            password: '—',
+            schoolId: inferSchoolIdFromAdminEmail(email),
+            createdAt: String(user?.createdAt || ''),
+            status: 'создан',
+          });
+        });
+      setSchoolAccessLog(
+        Array.from(byId.values())
+          .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0))
+          .map((item) => ({
+          id: String(item?.id || ''),
+          email: normalizeText(item?.email),
+          password: String(item?.password || ''),
+          schoolId: normalizeText(item?.schoolId),
+          createdAt: String(item?.createdAt || ''),
+          status:
+            ['создан', 'выдан', 'заполнен'].includes(String(item?.status || '').toLowerCase())
+              ? (String(item?.status || '').toLowerCase() as SchoolAccessLogItem['status'])
+              : 'создан',
+          }))
+      );
+      setLogPasswordDrafts({});
+      setSchoolAccessLogError('');
+    } catch (error) {
+      setSchoolAccessLog([]);
+      const message =
+        error instanceof Error && error.message ? error.message : 'Не удалось загрузить журнал';
+      setSchoolAccessLogError(message);
+    }
+  }, [isSuperadmin, sessionToken]);
+  const onChangeSchoolAccessStatus = useCallback(
+    async (id: string, status: SchoolAccessLogItem['status']) => {
+      if (!sessionToken || !id) return;
+      setUpdatingLogStatusId(id);
+      try {
+        const row = schoolAccessLog.find((item) => item.id === id);
+        if (!row) return;
+        await upsertSchoolAccessLogEntry(sessionToken, {
+          id: row.id,
+          email: row.email,
+          password: row.password === '—' ? '' : row.password,
+          schoolId: row.schoolId,
+          createdAt: row.createdAt,
+          status,
+        });
+        setSchoolAccessLog((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, status } : item))
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : 'Не удалось обновить статус';
+        setSchoolAccessLogError(message);
+      } finally {
+        setUpdatingLogStatusId('');
+      }
+    },
+    [schoolAccessLog, sessionToken]
+  );
+  const saveLogPassword = useCallback(
+    async (row: SchoolAccessLogItem) => {
+      if (!sessionToken || !row?.id) return;
+      const nextPassword = String(logPasswordDrafts[row.id] ?? row.password ?? '');
+      setSavingLogPasswordId(row.id);
+      try {
+        await upsertSchoolAccessLogEntry(sessionToken, {
+          id: row.id,
+          email: row.email,
+          password: nextPassword,
+          schoolId: row.schoolId,
+          createdAt: row.createdAt,
+          status: row.status,
+        });
+        setSchoolAccessLog((prev) =>
+          prev.map((item) =>
+            item.id === row.id
+              ? {
+                  ...item,
+                  password: nextPassword,
+                }
+              : item
+          )
+        );
+        setLogPasswordDrafts((prev) => {
+          const next = { ...prev };
+          delete next[row.id];
+          return next;
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : 'Не удалось сохранить пароль';
+        setSchoolAccessLogError(message);
+      } finally {
+        setSavingLogPasswordId('');
+      }
+    },
+    [logPasswordDrafts, sessionToken]
+  );
+  useEffect(() => {
+    reloadSchoolAccessLog();
+  }, [reloadSchoolAccessLog]);
 
   const reload = useCallback(async () => {
     if (!['moderator', 'superadmin'].includes(actorRole)) {
       setLoading(false);
       setItems([]);
+      setLoadStatus('');
       return;
     }
     setLoading(true);
+    setLoadStatus('');
     try {
       const result = await loadSchools();
       setItems(Array.isArray(result?.data) ? result.data : []);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Не удалось загрузить школы. Проверьте backend (http://localhost:4000).';
+      setItems([]);
+      setLoadStatus(message);
     } finally {
       setLoading(false);
     }
@@ -257,7 +545,61 @@ export default function SchoolsPage() {
     localStorage.setItem(SELECTED_SCHOOL_STORAGE_KEY, schoolId);
     window.location.href = '/school-info';
   }, []);
-  const isSuperadmin = actorRole === 'superadmin';
+  const generateTempPassword = useCallback(() => {
+    const chunk = Math.random().toString(36).slice(2, 8);
+    const suffix = Math.floor(100 + Math.random() * 900);
+    const next = `Edumap${chunk}${suffix}`;
+    setNewSchoolAccountPassword(next);
+  }, []);
+  const createSchoolAdminAccount = useCallback(async () => {
+    if (!isSuperadmin || !sessionToken) return;
+    const rawEmail = normalizeText(newSchoolAccountEmail).toLowerCase();
+    const email = rawEmail.includes('@') ? rawEmail : `${rawEmail}@edumap.kz`;
+    const password = String(newSchoolAccountPassword || '');
+    if (!email || password.length < 8) {
+      setSchoolAccountStatus('Заполните email и пароль (минимум 8 символов).');
+      return;
+    }
+    if (!email.endsWith('@edumap.kz')) {
+      setSchoolAccountStatus('Email должен заканчиваться на @edumap.kz');
+      return;
+    }
+
+    setCreatingSchoolAccount(true);
+    setSchoolAccountStatus('');
+    try {
+      const result = await createSchoolAccount(sessionToken, { email, password });
+      const generatedSchoolId = result?.data?.schoolId || '';
+      setSchoolAccountStatus(`Аккаунт создан: ${email}. Роль admin. ID: ${generatedSchoolId}`);
+      await reloadSchoolAccessLog();
+      setNewSchoolAccountEmail('');
+      setNewSchoolAccountPassword('');
+    } catch (error) {
+      const rawMessage =
+        error instanceof Error && error.message ? error.message : '';
+      if (
+        !rawMessage ||
+        rawMessage === 'Request failed' ||
+        rawMessage.includes('Failed to fetch')
+      ) {
+        setSchoolAccountStatus(
+          'Не удалось вызвать API создания аккаунта. Проверь, что backend обновлен и содержит POST /api/auth/create-school-account.'
+        );
+      } else {
+      setSchoolAccountStatus(
+          rawMessage || 'Не удалось создать аккаунт школы'
+      );
+      }
+    } finally {
+      setCreatingSchoolAccount(false);
+    }
+  }, [
+    isSuperadmin,
+    newSchoolAccountEmail,
+    newSchoolAccountPassword,
+    reloadSchoolAccessLog,
+    sessionToken,
+  ]);
   const getDraft = useCallback(
     (profile: any) =>
       monetizationDrafts[profile.school_id] || buildMonetizationDraft(profile),
@@ -390,8 +732,15 @@ export default function SchoolsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => {
+    const actorLocalSchoolId =
+      isSuperadmin && actorEmail ? toLocalSchoolIdFromEmail(actorEmail) : '';
+    const visibleItems = items.filter((item) => {
+      const schoolId = normalizeText(item?.school_id);
+      if (actorLocalSchoolId && schoolId === actorLocalSchoolId) return false;
+      return true;
+    });
+    if (!q) return visibleItems;
+    return visibleItems.filter((item) => {
       const displayName =
         normalizeText(item?.basic_info?.display_name?.ru) ||
         normalizeText(item?.basic_info?.name?.ru);
@@ -400,7 +749,7 @@ export default function SchoolsPage() {
       const haystack = `${displayName} ${email} ${schoolId}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [items, query]);
+  }, [actorEmail, isSuperadmin, items, query]);
 
   if (!['moderator', 'superadmin'].includes(actorRole)) {
     return <div className="card">{t('schoolsForbidden')}</div>;
@@ -425,8 +774,238 @@ export default function SchoolsPage() {
         />
       </label>
 
+      {isSuperadmin ? (
+        <div
+          className="card"
+          style={{ marginTop: 12, padding: 12, border: '1px solid var(--line)' }}
+        >
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Выдать доступ школе</h3>
+          <p className="muted" style={{ marginTop: 0 }}>
+            Создает новый пустой аккаунт школы с ролью `admin`. Существующие школы не удаляются.
+          </p>
+          <div className="form-row">
+            <label className="field">
+              <span>Email для входа (@edumap.kz)</span>
+              <input
+                className="input"
+                value={newSchoolAccountEmail}
+                onChange={(event) => setNewSchoolAccountEmail(event.target.value)}
+                placeholder="school-admin"
+              />
+            </label>
+            <label className="field">
+              <span>Пароль</span>
+              <input
+                className="input"
+                value={newSchoolAccountPassword}
+                onChange={(event) => setNewSchoolAccountPassword(event.target.value)}
+                placeholder="Минимум 8 символов"
+              />
+            </label>
+          </div>
+          <div className="schools-admin-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={generateTempPassword}
+              disabled={creatingSchoolAccount}
+            >
+              Сгенерировать пароль
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={createSchoolAdminAccount}
+              disabled={creatingSchoolAccount}
+            >
+              {creatingSchoolAccount ? 'Создание...' : 'Создать аккаунт'}
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                setNewSchoolAccountEmail('');
+                setNewSchoolAccountPassword('');
+                setSchoolAccountStatus('');
+              }}
+              disabled={creatingSchoolAccount}
+            >
+              Очистить
+            </button>
+            {schoolAccountStatus ? (
+              <span className="muted" style={{ maxWidth: 640 }}>
+                {schoolAccountStatus}
+              </span>
+            ) : null}
+          </div>
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+            <div className="requests-head" style={{ marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>{accessLogUi.title}</h3>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={async () => {
+                  if (!window.confirm(accessLogUi.clearConfirm)) return;
+                  if (!sessionToken) return;
+                  await clearSchoolAccessLog(sessionToken);
+                  await reloadSchoolAccessLog();
+                }}
+              >
+                {accessLogUi.clear}
+              </button>
+            </div>
+            {schoolAccessLogError ? (
+              <p className="muted" style={{ color: 'var(--danger)', marginTop: 0 }}>
+                {accessLogUi.loadError}: {schoolAccessLogError}
+              </p>
+            ) : null}
+            {!schoolAccessLog.length ? (
+              <p className="muted" style={{ marginTop: 0 }}>
+                {accessLogUi.empty}
+              </p>
+            ) : null}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+                <thead>
+                  <tr>
+                    {accessLogUi.headers.map((head) => (
+                      <th
+                        key={head}
+                        style={{
+                          textAlign: 'left',
+                          padding: '8px 10px',
+                          borderBottom: '1px solid var(--line)',
+                          color: 'var(--muted)',
+                          fontSize: 13,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {head}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {schoolAccessLog.map((row) => (
+                    <tr key={row.id}>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        {row.createdAt ? new Date(row.createdAt).toLocaleString(accessLogUi.dateLocale) : '—'}
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        {row.email}
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input
+                            className="input"
+                            style={{ minWidth: 160 }}
+                            value={logPasswordDrafts[row.id] ?? row.password}
+                            onChange={(event) =>
+                              setLogPasswordDrafts((prev) => ({
+                                ...prev,
+                                [row.id]: event.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={savingLogPasswordId === row.id}
+                            onClick={() => saveLogPassword(row)}
+                          >
+                            {savingLogPasswordId === row.id ? '...' : 'Сохранить'}
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        {row.schoolId || '—'}
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        <select
+                          value={row.status}
+                          disabled={updatingLogStatusId === row.id}
+                          style={
+                            row.status === 'заполнен'
+                              ? {
+                                  background: '#dcfce7',
+                                  color: '#166534',
+                                  borderColor: '#86efac',
+                                  fontWeight: 700,
+                                }
+                              : undefined
+                          }
+                          onChange={(event) =>
+                            onChangeSchoolAccessStatus(
+                              row.id,
+                              event.target.value as SchoolAccessLogItem['status']
+                            )
+                          }
+                        >
+                          <option value="создан">{accessLogUi.statusCreated}</option>
+                          <option value="выдан">{accessLogUi.statusIssued}</option>
+                          <option value="заполнен">{accessLogUi.statusFilled}</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={deletingLogId === row.id}
+                          onClick={async () => {
+                            if (!sessionToken) return;
+                            if (!window.confirm(accessLogUi.deleteConfirm)) return;
+                            setDeletingLogId(row.id);
+                            const deletedEmail = normalizeText(row.email).toLowerCase();
+                            const deletedSchoolId = normalizeText(row.schoolId);
+                            const previousLog = schoolAccessLog;
+                            setSchoolAccessLog((prev) =>
+                              prev.filter((item) => {
+                                const sameId = item.id === row.id;
+                                const sameEmail =
+                                  deletedEmail &&
+                                  normalizeText(item.email).toLowerCase() === deletedEmail;
+                                const sameSchool =
+                                  deletedSchoolId &&
+                                  normalizeText(item.schoolId) === deletedSchoolId;
+                                return !(sameId || sameEmail || sameSchool);
+                              })
+                            );
+                            try {
+                              await deleteSchoolAccessLogEntryFull(sessionToken, {
+                                id: row.id,
+                                email: row.email,
+                                schoolId: row.schoolId,
+                              });
+                            } catch (error) {
+                              setSchoolAccessLog(previousLog);
+                              const message =
+                                error instanceof Error && error.message
+                                  ? error.message
+                                  : accessLogUi.deleteError;
+                              setSchoolAccessLogError(message);
+                            } finally {
+                              setDeletingLogId('');
+                            }
+                          }}
+                        >
+                          {accessLogUi.delete}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {loading ? (
         <p className="muted">{t('schoolsLoading')}</p>
+      ) : loadStatus ? (
+        <p className="muted" style={{ color: 'var(--danger)' }}>
+          {loadStatus}
+        </p>
       ) : filtered.length ? (
         <div className="schools-admin-list">
           {filtered.map((item) => {

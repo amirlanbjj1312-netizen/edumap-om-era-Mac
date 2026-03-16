@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Alert, ScrollView, Text, View, Pressable, TextInput, Linking, useWindowDimensions, Image } from 'react-native';
+import { Alert, Text, View, Pressable, TextInput, Linking, useWindowDimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNews } from '../context/NewsContext';
 import { PlusIcon } from 'react-native-heroicons/outline';
@@ -8,6 +8,7 @@ import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor'
 import RenderHTML from 'react-native-render-html';
 import { formatCategoryLabel, getCategoryChoices, NEWS_CATEGORY_CHOICES } from '../data/newsCategories';
 import { useLocale } from '../context/LocaleContext';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const Chip = ({ label }) => (
   <View className="px-2 py-1 bg-bgPurple/10 rounded-full mr-2 mb-2">
@@ -187,17 +188,21 @@ export default function ModeratorNewsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
       <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+        colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={{ flex: 1 }}
       >
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingBottom: 32 }}
           className="px-6 pt-6"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          enableOnAndroid
+          extraScrollHeight={24}
         >
           <Text className="text-white font-exoSemibold text-3xl mb-4">
             Manage news
@@ -478,7 +483,7 @@ export default function ModeratorNewsScreen() {
         {sortedNews.map((item) => (
           <NewsCard key={item.id} item={item} onEdit={startEdit} />
         ))}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
     </SafeAreaView>
   );

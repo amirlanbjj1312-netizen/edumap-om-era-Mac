@@ -14,6 +14,7 @@ import {
   Platform,
   Image as RNImage,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,7 +49,7 @@ import {
 } from '../utils/schoolLabels';
 
 const SCHOOL_TYPES = ['State', 'Private', 'International', 'Autonomous'];
-const GRADIENT_COLORS = ['#786AFF', '#4FCCFF'];
+const GRADIENT_COLORS = ['#E9EEF6', '#E9EEF6'];
 const CITY_OPTIONS = [
   {
     name: 'Almaty',
@@ -2510,6 +2511,14 @@ export default function AdminSchoolInfoScreen() {
   };
 
   const logoPreviewUri = (form.media.logo_local_uri || form.media.logo || '').trim();
+  const mediaOrLabel =
+    contentLocale === 'en' ? 'OR' : contentLocale === 'kk' ? 'НЕМЕСЕ' : 'ИЛИ';
+  const mediaOrHint =
+    contentLocale === 'en'
+      ? 'Use URL or file upload. If both are filled, file has priority.'
+      : contentLocale === 'kk'
+      ? 'URL немесе файл жүктеуін қолданыңыз. Екеуі толтырылған болса, файл басым болады.'
+      : 'Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.';
 
   return (
     <AdminLocaleContext.Provider value={{ t }}>
@@ -2521,10 +2530,13 @@ export default function AdminSchoolInfoScreen() {
           style={styles.gradient}
         />
         <SafeAreaView style={styles.safeArea}>
-          <ScrollView
+          <KeyboardAwareScrollView
             className="px-6 pt-6"
             contentContainerStyle={{ paddingBottom: 40 }}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            enableOnAndroid
+            extraScrollHeight={24}
           >
             <Text className="text-white font-exoSemibold text-3xl mb-4">
               {t('adminSchool.title')}
@@ -3089,6 +3101,10 @@ export default function AdminSchoolInfoScreen() {
             placeholder={t('adminSchool.placeholder.logoUrl')}
             multiline
           />
+          <View style={styles.orHintRow}>
+            <Text style={styles.orBadge}>{mediaOrLabel}</Text>
+            <Text style={styles.orHintText}>{mediaOrHint}</Text>
+          </View>
           <Pressable style={styles.pickButton} onPress={handleLogoPickPress}>
             <Text style={styles.pickButtonText}>
               {t('adminSchool.action.pickMedia')}
@@ -3110,14 +3126,17 @@ export default function AdminSchoolInfoScreen() {
               {t('adminSchool.message.logoHint')}
             </Text>
           )}
+          <View style={styles.mediaDivider} />
           <PhotosSelector
             value={form.media.photos}
             onChange={(value) => updateSectionField('media', 'photos', value)}
           />
+          <View style={styles.mediaDivider} />
           <VideosSelector
             value={form.media.videos}
             onChange={(value) => updateSectionField('media', 'videos', value)}
           />
+          <View style={styles.mediaDivider} />
           <FormField
             label={t('adminSchool.field.certificates')}
             value={form.media.certificates}
@@ -3301,7 +3320,7 @@ export default function AdminSchoolInfoScreen() {
             {t('adminSchool.action.save')}
           </Text>
         </Pressable>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </SafeAreaView>
       </View>
     </AdminLocaleContext.Provider>
@@ -3511,6 +3530,38 @@ const styles = StyleSheet.create({
     fontFamily: 'exoSemibold',
     fontSize: 12,
     color: '#5B6EE1',
+  },
+  orHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -2,
+    marginBottom: 10,
+  },
+  orBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(86,103,253,0.35)',
+    color: '#5667FD',
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'exoSemibold',
+    fontSize: 11,
+    overflow: 'hidden',
+  },
+  orHintText: {
+    flex: 1,
+    marginLeft: 8,
+    fontFamily: 'exo',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+  },
+  mediaDivider: {
+    borderTopWidth: 2,
+    borderTopColor: '#5667FD',
+    opacity: 0.55,
+    marginVertical: 12,
   },
   selectContainer: {
     height: 54,

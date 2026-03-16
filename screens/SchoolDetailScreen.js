@@ -11,16 +11,20 @@ import {
   TextInput,
   Keyboard,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { Image as RNImage } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSchools } from '../context/SchoolsContext';
 import { TiledMapView } from '../components/map';
 import { XMarkIcon, StarIcon as OutlineStarIcon } from 'react-native-heroicons/outline';
-import { StarIcon as FilledStarIcon } from 'react-native-heroicons/solid';
+import { StarIcon as FilledStarIcon, ChatBubbleLeftRightIcon } from 'react-native-heroicons/solid';
 import { addConsultationRequest } from '../services/consultationRequests';
+import { getActivePlan } from '../services/subscriptionAccess';
 import Rating from '../components/home/rating';
 import { useAuth } from '../context/AuthContext';
 import { recordVisit } from '../services/visitHistory';
@@ -28,6 +32,7 @@ import { trackProgramInfoEvent } from '../services/programInfoAnalytics';
 import { useLocale } from '../context/LocaleContext';
 import { useRole } from '../context/RoleContext';
 import { getLocalizedText } from '../utils/localizedText';
+import { mapUnifiedToDisplay } from '../utils/clubsSchedule';
 import { parseCoordinate } from '../utils/coordinates';
 import { getCurriculaInfo } from '../utils/curriculaInfo';
 import {
@@ -53,6 +58,15 @@ const CONSULTATION_TYPE_KEYS = [
 ];
 
 const GRADE_CHOICES = ['Pre-K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const SOCIAL_ICON_MAP = {
+  instagram: { name: 'instagram', color: '#E4405F' },
+  tiktok: { name: 'tiktok', color: '#111827' },
+  youtube: { name: 'youtube', color: '#FF0000' },
+  facebook: { name: 'facebook', color: '#1877F2' },
+  vk: { name: 'vk', color: '#2787F5' },
+  telegram: { name: 'telegram', color: '#2AABEE' },
+  whatsapp: { name: 'whatsapp', color: '#25D366' },
+};
 
 const initialConsultForm = {
   parentName: '',
@@ -115,7 +129,7 @@ const formatReviewDate = (value) => {
   });
 };
 
-const DetailRow = ({ label, value, labelColor }) => {
+const DetailRow = ({ label, value, rowStyle, labelStyle, valueStyle }) => {
   const normalizedValue = (() => {
     if (!value) return '';
     if (Array.isArray(value)) {
@@ -129,11 +143,11 @@ const DetailRow = ({ label, value, labelColor }) => {
   if (!normalizedValue) return null;
 
   return (
-    <View style={styles.detailRow}>
-      <Text style={[styles.detailLabel, labelColor ? { color: labelColor } : null]}>
+    <View style={[styles.detailRow, rowStyle]}>
+      <Text style={[styles.detailLabel, labelStyle]}>
         {label}
       </Text>
-      <Text style={styles.detailValue}>{normalizedValue}</Text>
+      <Text style={[styles.detailValue, valueStyle]}>{normalizedValue}</Text>
     </View>
   );
 };
@@ -142,7 +156,7 @@ const ProgramChipsRow = ({ label, items, hint, onPress }) => {
   if (!items.length) return null;
   return (
     <View style={styles.programsRow}>
-      <Text style={[styles.detailLabel, { color: '#2563EB' }]}>{label}</Text>
+      <Text style={styles.detailLabel}>{label}</Text>
       <View style={styles.programsChipWrap}>
         {items.map((item) => (
           <Pressable
@@ -171,12 +185,20 @@ const ProgramChipsRow = ({ label, items, hint, onPress }) => {
   );
 };
 
-const ExpandableSection = ({ icon, title, isOpen, onToggle, children }) => (
+const ExpandableSection = ({ iconName, title, isOpen, onToggle, children }) => (
   <View style={styles.expandableSection}>
     <Pressable style={styles.expandableHeader} onPress={onToggle}>
-      <Text style={styles.expandableHeaderText}>
-        {icon} {title}
-      </Text>
+      <View style={styles.expandableHeaderTitleWrap}>
+        <View style={styles.sectionIconBadge}>
+          <FontAwesome6
+            name={iconName}
+            size={13}
+            color="#1D4ED8"
+            iconStyle="solid"
+          />
+        </View>
+        <Text style={styles.expandableHeaderText}>{title}</Text>
+      </View>
       <Text style={styles.expandableHeaderChevron}>
         {isOpen ? '▲' : '▼'}
       </Text>
@@ -256,6 +278,12 @@ const parseCsvList = (value) =>
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+
+const buildWhatsAppUrl = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return `https://wa.me/${digits}`;
+};
 
 const matchesExperienceFilter = (value, filter) => {
   const years = Number(value);
@@ -350,6 +378,7 @@ export default function SchoolDetailScreen() {
     info: null,
   });
   const [programModalExpanded, setProgramModalExpanded] = useState(false);
+  const [isChatFabVisible, setChatFabVisible] = useState(true);
   const visitUserKey = useMemo(() => {
     if (account?.email) return account.email.toLowerCase();
     if (account?.organization) return account.organization.toLowerCase();
@@ -382,16 +411,29 @@ export default function SchoolDetailScreen() {
     media = {},
     location = {},
   } = profile || {};
+  const currentSchoolId = profile?.school_id || basic_info?.name;
+  const schoolWhatsApp = useMemo(() => {
+    const candidates = [
+      basic_info.whatsapp_phone,
+      profile?.contact_info?.whatsapp,
+    ];
+    const match = candidates.find((value) =>
+      typeof value === 'string' && value.trim().length
+    );
+    return match ? match.trim() : '';
+  }, [basic_info.whatsapp_phone, profile?.contact_info?.whatsapp]);
+  const whatsappChatUrl = buildWhatsAppUrl(schoolWhatsApp);
   const socialLinks = media?.social_links || {};
   const socialRows = [
-    { key: 'instagram', labelKey: 'schoolDetail.field.social.instagram', symbol: 'IG' },
-    { key: 'tiktok', labelKey: 'schoolDetail.field.social.tiktok', symbol: 'TT' },
-    { key: 'youtube', labelKey: 'schoolDetail.field.social.youtube', symbol: 'YT' },
-    { key: 'facebook', labelKey: 'schoolDetail.field.social.facebook', symbol: 'FB' },
-    { key: 'vk', labelKey: 'schoolDetail.field.social.vk', symbol: 'VK' },
-    { key: 'telegram', labelKey: 'schoolDetail.field.social.telegram', symbol: 'TG' },
+    { key: 'instagram', labelKey: 'schoolDetail.field.social.instagram', symbol: 'IG', url: socialLinks.instagram },
+    { key: 'tiktok', labelKey: 'schoolDetail.field.social.tiktok', symbol: 'TT', url: socialLinks.tiktok },
+    { key: 'youtube', labelKey: 'schoolDetail.field.social.youtube', symbol: 'YT', url: socialLinks.youtube },
+    { key: 'facebook', labelKey: 'schoolDetail.field.social.facebook', symbol: 'FB', url: socialLinks.facebook },
+    { key: 'vk', labelKey: 'schoolDetail.field.social.vk', symbol: 'VK', url: socialLinks.vk },
+    { key: 'telegram', labelKey: 'schoolDetail.field.social.telegram', symbol: 'TG', url: socialLinks.telegram },
+    { key: 'whatsapp', labelKey: 'schoolDetail.field.social.whatsapp', symbol: 'WA', url: whatsappChatUrl },
   ].filter((item) => {
-    const value = socialLinks[item.key];
+    const value = item.url;
     return value && typeof value === 'string' && /^https?:\/\//i.test(value.trim());
   });
 
@@ -510,28 +552,16 @@ export default function SchoolDetailScreen() {
     getLocalizedMapText(services.clubs_other),
   ]);
   const clubsCatalog = useMemo(() => {
-    const raw = Array.isArray(services?.clubs_catalog) ? services.clubs_catalog : [];
-    return raw
-      .map((club, index) => {
-        const name = getLocalizedText(club?.name, locale).trim();
-        const description = getLocalizedText(club?.description, locale).trim();
-        const schedule = getLocalizedText(club?.schedule, locale).trim();
-        const teacherName = String(club?.teacher_name || '').trim();
-        const grades = String(club?.grades || '').trim();
-        const priceMonthly = String(club?.price_monthly || '').trim();
-        const hasContent = name || description || schedule || teacherName || grades || priceMonthly;
-        if (!hasContent) return null;
-        return {
-          id: club?.id || `club-${index}`,
-          name: name || t('schoolDetail.value.unknown'),
-          description,
-          schedule,
-          teacherName,
-          grades,
-          priceLabel: formatClubPrice(priceMonthly, locale),
-        };
-      })
-      .filter(Boolean);
+    const normalized = mapUnifiedToDisplay(services, locale);
+    return normalized.map((club, index) => ({
+      id: club.id || `club-${index}`,
+      name: club.name || t('schoolDetail.value.unknown'),
+      description: club.description,
+      schedule: club.schedule,
+      teacherName: club.teacherName,
+      grades: club.grades,
+      priceLabel: formatClubPrice(club.priceMonthly, locale),
+    }));
   }, [services, locale, t]);
   const photos = splitToList(media.photos).filter(isValidRemoteImage);
   const serviceArea = getLocalizedMapText(location.service_area);
@@ -754,22 +784,27 @@ export default function SchoolDetailScreen() {
     const parts = [];
     if (fundingState) parts.push(t('schoolDetail.funding.state'));
     if (fundingSelf) parts.push(t('schoolDetail.funding.self'));
-    return parts.length ? parts.join(' • ') : t('schoolDetail.value.unknown');
+    return parts.length ? parts.join(', ') : t('schoolDetail.value.unknown');
   })();
   const shouldShowPrice =
     !isStateSchool && (!isAutonomousSchool || fundingSelf);
 
   const quickStats = [
-    { key: 'type', icon: '🏫', label: t('schoolDetail.quick.type'), value: displayType },
+    {
+      key: 'type',
+      iconName: 'school',
+      label: t('schoolDetail.quick.type'),
+      value: displayType,
+    },
     isAutonomousSchool && {
       key: 'funding',
-      icon: '🏛️',
+      iconName: 'building-columns',
       label: t('schoolDetail.quick.funding'),
       value: fundingLabel,
     },
     shouldShowPrice && {
       key: 'price',
-      icon: '💰',
+      iconName: 'coins',
       label: t('schoolDetail.quick.price'),
       value:
         finance?.monthly_fee && displayPaymentLabel
@@ -780,19 +815,19 @@ export default function SchoolDetailScreen() {
     },
     {
       key: 'address',
-      icon: '📍',
+      iconName: 'location-dot',
       label: t('schoolDetail.quick.address'),
       value: addressText || t('schoolDetail.value.unknown'),
     },
     {
       key: 'city',
-      icon: '🏙️',
+      iconName: 'city',
       label: t('schoolDetail.quick.city'),
       value: displayCity,
     },
     {
       key: 'district',
-      icon: '🗺️',
+      iconName: 'map',
       label: t('schoolDetail.quick.district'),
       value: displayDistrict,
     },
@@ -918,17 +953,6 @@ export default function SchoolDetailScreen() {
     );
   }, [consultForm]);
 
-  const schoolWhatsApp = useMemo(() => {
-    const candidates = [
-      basic_info.whatsapp_phone,
-      profile?.contact_info?.whatsapp,
-    ];
-    const match = candidates.find((value) =>
-      typeof value === 'string' && value.trim().length
-    );
-    return match ? match.trim() : '';
-  }, [basic_info.whatsapp_phone, profile?.contact_info?.whatsapp]);
-
   const handleConsultSubmit = async () => {
     if (isGuest) {
       Alert.alert(
@@ -998,8 +1022,30 @@ export default function SchoolDetailScreen() {
   };
 
   const handleOpenReviewModal = () => {
-    resetReviewForm();
-    setReviewModalVisible(true);
+    if (isGuest) {
+      Alert.alert(
+        t('schoolDetail.consult.guestTitle'),
+        t('schoolDetail.consult.guestBody')
+      );
+      return;
+    }
+    const checkAccess = async () => {
+      const userKey = account?.id || account?.email || 'guest';
+      const activePlan = await getActivePlan(userKey);
+      if (activePlan?.planId === 'trial') {
+        if (locale === 'en') {
+          Alert.alert('Reviews', 'Writing reviews is available on Monthly and Pro plans.');
+        } else if (locale === 'kk') {
+          Alert.alert('Пікірлер', 'Пікір жазу Monthly және Pro тарифтерінде қолжетімді.');
+        } else {
+          Alert.alert('Отзывы', 'Написание отзывов доступно в тарифах Monthly и Pro.');
+        }
+        return;
+      }
+      resetReviewForm();
+      setReviewModalVisible(true);
+    };
+    checkAccess();
   };
 
   const handleCloseReviewModal = () => {
@@ -1012,6 +1058,17 @@ export default function SchoolDetailScreen() {
   };
 
   const handleSubmitReview = async () => {
+    const activePlan = await getActivePlan(account?.id || account?.email || 'guest');
+    if (activePlan?.planId === 'trial') {
+      if (locale === 'en') {
+        Alert.alert('Reviews', 'Writing reviews is available on Monthly and Pro plans.');
+      } else if (locale === 'kk') {
+        Alert.alert('Пікірлер', 'Пікір жазу Monthly және Pro тарифтерінде қолжетімді.');
+      } else {
+        Alert.alert('Отзывы', 'Написание отзывов доступно в тарифах Monthly и Pro.');
+      }
+      return;
+    }
     const trimmedText = reviewForm.text.trim();
     if (!trimmedText.length) {
       Alert.alert(
@@ -1078,7 +1135,7 @@ export default function SchoolDetailScreen() {
 
   return (
     <LinearGradient
-      colors={['#7E73F4', '#44C5F5']}
+      colors={['#E9EEF6', '#E9EEF6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
@@ -1117,22 +1174,69 @@ export default function SchoolDetailScreen() {
           </View>
 
           <View style={styles.quickStats}>
-            {quickStats.map(({ key, icon, label, value }) => {
+            {quickStats.map(({ key, iconName, label, value }) => {
               const important =
                 key === 'type' ||
+                key === 'funding' ||
                 key === 'price' ||
                 key === 'address' ||
                 key === 'city' ||
                 key === 'district';
+              const funding = key === 'funding';
               return (
-          <View key={label} style={[styles.statItem, important && styles.statItemImportant]}>
-            <Text style={styles.statIcon}>{icon}</Text>
-            <Text style={[styles.statText, important && styles.statTextImportant]}>{label}</Text>
-            <Text style={[styles.statValue, important && styles.statValueImportant]}>{value}</Text>
+          <View key={key} style={[styles.statItem, important && styles.statItemImportant]}>
+            <View style={styles.statIconBadge}>
+              <FontAwesome6
+                name={iconName}
+                size={12}
+                color="#1D4ED8"
+                iconStyle="solid"
+              />
+            </View>
+            <Text
+              style={[
+                styles.statText,
+                important && styles.statTextImportant,
+                funding && styles.statTextCompact,
+              ]}
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+            <Text
+              style={[
+                styles.statValue,
+                important && styles.statValueImportant,
+                funding && styles.statValueCompact,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit={funding}
+              minimumFontScale={0.72}
+            >
+              {value}
+            </Text>
           </View>
               );
             })}
       </View>
+
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => {
+              if (isGuest) {
+                Alert.alert(
+                  t('schoolDetail.consult.guestTitle'),
+                  t('schoolDetail.consult.guestBody')
+                );
+                return;
+              }
+              setShowConsultationModal(true);
+            }}
+          >
+            <Text style={styles.primaryButtonText}>
+              {t('schoolDetail.consult.request')}
+            </Text>
+          </Pressable>
 
           <View style={styles.mapCard}>
             {currentMarker ? (
@@ -1169,46 +1273,68 @@ export default function SchoolDetailScreen() {
           </View>
 
           <ExpandableSection
-            icon="👩‍🏫"
+            iconName="graduation-cap"
             title={t('schoolDetail.section.studying')}
             isOpen={expanded.studying}
             onToggle={() => toggle('studying')}
           >
-            <DetailRow
-              label={t('schoolDetail.field.languages')}
-              value={languages.join(', ')}
-              labelColor="#2563EB"
-            />
-            {programsToShow.length ? (
-              <ProgramChipsRow
-                label={t('schoolDetail.field.programs')}
-                items={programsToShow}
-                hint={programsUiText.hint}
-                onPress={handleOpenProgramInfo}
+            <View style={styles.studyingBlock}>
+              <DetailRow
+                label={t('schoolDetail.field.languages')}
+                value={languages.join(', ')}
+                valueStyle={styles.detailValuePrimary}
               />
+            </View>
+
+            <View style={styles.studyingDivider} />
+
+            {programsToShow.length || curriculaItems.length ? (
+              <View style={styles.studyingBlock}>
+                {programsToShow.length ? (
+                  <ProgramChipsRow
+                    label={t('schoolDetail.field.programs')}
+                    items={programsToShow}
+                    hint={programsUiText.hint}
+                    onPress={handleOpenProgramInfo}
+                  />
+                ) : null}
+                {curriculaItems.length ? (
+                  <ProgramChipsRow
+                    label={t('schoolDetail.field.curricula')}
+                    items={curriculaItems}
+                    hint={programsUiText.hint}
+                    onPress={handleOpenProgramInfo}
+                  />
+                ) : null}
+              </View>
             ) : null}
-            {curriculaItems.length ? (
-              <ProgramChipsRow
-                label={t('schoolDetail.field.curricula')}
-                items={curriculaItems}
-                hint={programsUiText.hint}
-                onPress={handleOpenProgramInfo}
+
+            <View style={styles.studyingDivider} />
+
+            <View style={styles.studyingBlock}>
+              <DetailRow
+                label={t('schoolDetail.field.advancedSubjects')}
+                value={subjects.join(', ')}
+                valueStyle={styles.detailValuePrimary}
               />
+            </View>
+
+            <View style={styles.studyingDivider} />
+
+            {education.average_class_size ? (
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>
+                  {t('schoolDetail.field.averageClassSize')}
+                </Text>
+                <Text style={styles.metricValue}>
+                  {String(education.average_class_size)}
+                </Text>
+              </View>
             ) : null}
-            <DetailRow
-              label={t('schoolDetail.field.advancedSubjects')}
-              value={subjects.join(', ')}
-              labelColor="#2563EB"
-            />
-            <DetailRow
-              label={t('schoolDetail.field.averageClassSize')}
-              value={education.average_class_size}
-              labelColor="#2563EB"
-            />
           </ExpandableSection>
 
           <ExpandableSection
-            icon="ℹ️"
+            iconName="circle-info"
             title={t('schoolDetail.section.contacts')}
             isOpen={expanded.contacts}
             onToggle={() => toggle('contacts')}
@@ -1218,11 +1344,16 @@ export default function SchoolDetailScreen() {
               value={basic_info.phone}
               labelColor="#2563EB"
             />
-            <DetailRow
-              label={t('schoolDetail.field.whatsapp')}
-              value={basic_info.whatsapp_phone}
-              labelColor="#2563EB"
-            />
+            {schoolWhatsApp ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>
+                  {t('schoolDetail.field.whatsapp')}
+                </Text>
+                <Pressable onPress={() => openSocialLink(whatsappChatUrl)}>
+                  <Text style={styles.detailValueLink}>{schoolWhatsApp}</Text>
+                </Pressable>
+              </View>
+            ) : null}
             <DetailRow
               label={t('schoolDetail.field.email')}
               value={basic_info.email}
@@ -1247,7 +1378,7 @@ export default function SchoolDetailScreen() {
 
           {socialRows.length ? (
             <ExpandableSection
-              icon="🌐"
+              iconName="globe"
               title={t('schoolDetail.section.socials')}
               isOpen={expanded.socials}
               onToggle={() => toggle('socials')}
@@ -1257,10 +1388,19 @@ export default function SchoolDetailScreen() {
                   <Pressable
                     key={item.key}
                     style={styles.socialCard}
-                    onPress={() => openSocialLink(socialLinks[item.key])}
+                    onPress={() => openSocialLink(item.url)}
                   >
                     <View style={styles.socialBadge}>
-                      <Text style={styles.socialBadgeText}>{item.symbol}</Text>
+                      {SOCIAL_ICON_MAP[item.key] ? (
+                        <FontAwesome6
+                          name={SOCIAL_ICON_MAP[item.key].name}
+                          iconStyle="brands"
+                          size={18}
+                          color={SOCIAL_ICON_MAP[item.key].color}
+                        />
+                      ) : (
+                        <Text style={styles.socialBadgeText}>{item.symbol}</Text>
+                      )}
                     </View>
                     <Text style={styles.socialLabel}>{t(item.labelKey)}</Text>
                   </Pressable>
@@ -1270,7 +1410,7 @@ export default function SchoolDetailScreen() {
           ) : null}
 
           <ExpandableSection
-            icon="✅"
+            iconName="shield-halved"
             title={t('schoolDetail.section.services')}
             isOpen={expanded.services}
             onToggle={() => toggle('services')}
@@ -1314,44 +1454,65 @@ export default function SchoolDetailScreen() {
             />
             {clubsCatalog.length ? (
               <View style={styles.clubCatalogWrap}>
-                <Text style={[styles.detailLabel, { color: '#2563EB' }]}>
+                <Text style={styles.detailLabel}>
                   {t('schoolDetail.field.clubs')}
                 </Text>
                 <View style={styles.clubCatalogList}>
-                  {clubsCatalog.map((club) => (
-                    <View key={club.id} style={styles.clubCatalogCard}>
-                      <Text style={styles.clubCatalogTitle}>{club.name}</Text>
-                      {club.description ? (
-                        <Text style={styles.clubCatalogText}>{club.description}</Text>
-                      ) : null}
+                  {clubsCatalog.slice(0, 4).map((club) => (
+                    <Pressable
+                      key={club.id}
+                      style={styles.clubCatalogCard}
+                      onPress={() =>
+                        navigation.navigate('SchoolClubDetail', {
+                          schoolId: currentSchoolId,
+                          clubId: club.id,
+                        })
+                      }
+                    >
+                      <View style={styles.clubCatalogHeader}>
+                        <View style={styles.clubCatalogHeaderMain}>
+                          <Text style={styles.clubCatalogTitle}>{club.name}</Text>
+                          <Text style={styles.clubCatalogHeaderPrice}>
+                            {club.priceLabel}
+                          </Text>
+                        </View>
+                        <Text style={styles.clubCatalogChevron}>›</Text>
+                      </View>
                       {club.schedule ? (
-                        <Text style={styles.clubCatalogMeta}>
-                          {`${t('schoolDetail.club.schedule')}: ${club.schedule}`}
-                        </Text>
+                        <View style={styles.clubCatalogBody}>
+                          <Text style={styles.clubCatalogMeta}>
+                            {`${t('schoolDetail.club.schedule')}: ${club.schedule}`}
+                          </Text>
+                        </View>
                       ) : null}
-                      {club.teacherName ? (
-                        <Text style={styles.clubCatalogMeta}>
-                          {`${t('schoolDetail.club.teacher')}: ${club.teacherName}`}
-                        </Text>
-                      ) : null}
-                      {club.grades ? (
-                        <Text style={styles.clubCatalogMeta}>
-                          {`${t('schoolDetail.club.grades')}: ${club.grades}`}
-                        </Text>
-                      ) : null}
-                      <Text style={styles.clubCatalogPrice}>
-                        {`${t('schoolDetail.club.price')}: ${club.priceLabel}`}
-                      </Text>
-                    </View>
+                    </Pressable>
                   ))}
+                  <Pressable
+                    style={styles.clubCatalogMoreBtn}
+                    onPress={() =>
+                      navigation.navigate('SchoolClubs', {
+                        schoolId: currentSchoolId,
+                      })
+                    }
+                  >
+                    <Text style={styles.clubCatalogMoreBtnText}>
+                      {locale === 'ru'
+                        ? 'Все кружки'
+                        : locale === 'kk'
+                          ? 'Барлық үйірмелер'
+                          : 'All clubs'}
+                    </Text>
+                  </Pressable>
                 </View>
               </View>
             ) : null}
-            <DetailRow
-              label={t('schoolDetail.field.clubs')}
-              value={clubs.join(', ')}
-              labelColor="#2563EB"
-            />
+            {!clubsCatalog.length ? (
+              <DetailRow
+                label={t('schoolDetail.field.clubs')}
+                value={clubs.join(', ')}
+                labelColor="#2563EB"
+              />
+            ) : null}
             <DetailRow
               label={t('schoolDetail.field.foreignTeachers')}
               value={foreignTeachersLabel}
@@ -1396,7 +1557,7 @@ export default function SchoolDetailScreen() {
           </ExpandableSection>
 
           <ExpandableSection
-            icon="💬"
+            iconName="comments"
             title={t('schoolDetail.section.reviews')}
             isOpen={expanded.reviews}
             onToggle={() => toggle('reviews')}
@@ -1448,7 +1609,7 @@ export default function SchoolDetailScreen() {
 
           {staffMembers.length ? (
             <ExpandableSection
-              icon="👩‍🏫"
+              iconName="user-tie"
               title={t('schoolDetail.section.staff')}
               isOpen={expanded.staff}
               onToggle={() => toggle('staff')}
@@ -1668,27 +1829,36 @@ export default function SchoolDetailScreen() {
             </Text>
           </View>
 
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => {
-              if (isGuest) {
-                Alert.alert(
-                  t('schoolDetail.consult.guestTitle'),
-                  t('schoolDetail.consult.guestBody')
-                );
-                return;
-              }
-              setShowConsultationModal(true);
-            }}
-          >
-            <Text style={styles.primaryButtonText}>
-              {t('schoolDetail.consult.request')}
-            </Text>
-          </Pressable>
-
           <View style={{ height: 24 }} />
         </ScrollView>
       </SafeAreaView>
+      {isChatFabVisible ? (
+        <View style={styles.floatingChatWrap}>
+          <Pressable
+            onPress={() => setChatFabVisible(false)}
+            style={styles.floatingChatClose}
+          >
+            <XMarkIcon color="#FFFFFF" size={13} />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('SchoolChat')}
+            style={styles.floatingChatButton}
+          >
+            <ChatBubbleLeftRightIcon color="#FFFFFF" size={24} />
+          </Pressable>
+          <View style={styles.floatingChatLabel}>
+            <Text style={styles.floatingChatLabelText}>AI чат</Text>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setChatFabVisible(true)}
+          style={styles.floatingChatRestore}
+        >
+          <ChatBubbleLeftRightIcon color="#2563EB" size={16} />
+          <Text style={styles.floatingChatRestoreText}>AI чат</Text>
+        </Pressable>
+      )}
       <Modal
         visible={isReviewModalVisible}
         animationType="fade"
@@ -1696,91 +1866,97 @@ export default function SchoolDetailScreen() {
         onRequestClose={handleCloseReviewModal}
       >
         <View style={styles.reviewModalBackdrop}>
-          <View style={styles.reviewModalCard}>
-            <View style={styles.reviewModalHeader}>
-              <Text style={styles.reviewModalTitle}>
-                {t('schoolDetail.reviews.write')}
-              </Text>
-              <Pressable
-                style={styles.reviewModalClose}
-                onPress={handleCloseReviewModal}
-              >
-                <XMarkIcon color="#0F172A" size={20} />
-              </Pressable>
-            </View>
-            <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>
-                {t('schoolDetail.reviews.modal.name')}
-              </Text>
-              <TextInput
-                style={styles.reviewModalInput}
-                placeholder={t('schoolDetail.reviews.modal.namePlaceholder')}
-                placeholderTextColor="rgba(71,85,105,0.6)"
-                value={reviewForm.author}
-                onChangeText={(text) => updateReviewField('author', text)}
-              />
-            </View>
-            <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>
-                {t('schoolDetail.reviews.modal.rating')}
-              </Text>
-              <View style={styles.reviewStarsRow}>
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <Pressable
-                    key={value}
-                    style={styles.reviewStarButton}
-                    onPress={() => updateReviewField('rating', value)}
-                  >
-                    {value <= reviewForm.rating ? (
-                      <FilledStarIcon color="#FBBF24" size={26} />
-                    ) : (
-                      <OutlineStarIcon color="#CBD5F5" size={26} />
-                    )}
-                  </Pressable>
-                ))}
-                <Text style={styles.reviewStarValue}>
-                  {reviewForm.rating.toFixed ? reviewForm.rating.toFixed(1) : reviewForm.rating}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={12}
+            style={styles.modalKeyboardWrap}
+          >
+            <View style={styles.reviewModalCard}>
+              <View style={styles.reviewModalHeader}>
+                <Text style={styles.reviewModalTitle}>
+                  {t('schoolDetail.reviews.write')}
                 </Text>
+                <Pressable
+                  style={styles.reviewModalClose}
+                  onPress={handleCloseReviewModal}
+                >
+                  <XMarkIcon color="#0F172A" size={20} />
+                </Pressable>
+              </View>
+              <View style={styles.reviewModalField}>
+                <Text style={styles.reviewModalLabel}>
+                  {t('schoolDetail.reviews.modal.name')}
+                </Text>
+                <TextInput
+                  style={styles.reviewModalInput}
+                  placeholder={t('schoolDetail.reviews.modal.namePlaceholder')}
+                  placeholderTextColor="rgba(71,85,105,0.6)"
+                  value={reviewForm.author}
+                  onChangeText={(text) => updateReviewField('author', text)}
+                />
+              </View>
+              <View style={styles.reviewModalField}>
+                <Text style={styles.reviewModalLabel}>
+                  {t('schoolDetail.reviews.modal.rating')}
+                </Text>
+                <View style={styles.reviewStarsRow}>
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Pressable
+                      key={value}
+                      style={styles.reviewStarButton}
+                      onPress={() => updateReviewField('rating', value)}
+                    >
+                      {value <= reviewForm.rating ? (
+                        <FilledStarIcon color="#FBBF24" size={26} />
+                      ) : (
+                        <OutlineStarIcon color="#CBD5F5" size={26} />
+                      )}
+                    </Pressable>
+                  ))}
+                  <Text style={styles.reviewStarValue}>
+                    {reviewForm.rating.toFixed ? reviewForm.rating.toFixed(1) : reviewForm.rating}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.reviewModalField}>
+                <Text style={styles.reviewModalLabel}>
+                  {t('schoolDetail.reviews.modal.feedback')}
+                </Text>
+                <TextInput
+                  style={[styles.reviewModalInput, styles.reviewModalTextarea]}
+                  placeholder={t('schoolDetail.reviews.modal.feedbackPlaceholder')}
+                  placeholderTextColor="rgba(71,85,105,0.6)"
+                  multiline
+                  value={reviewForm.text}
+                  onChangeText={(text) => updateReviewField('text', text)}
+                />
+              </View>
+              <View style={styles.reviewModalActions}>
+                <Pressable
+                  style={styles.reviewModalSecondary}
+                  onPress={handleCloseReviewModal}
+                >
+                  <Text style={styles.reviewModalSecondaryText}>
+                    {t('schoolDetail.reviews.modal.cancel')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.reviewModalPrimary,
+                    isSubmittingReview && styles.reviewModalPrimaryDisabled,
+                  ]}
+                  onPress={handleSubmitReview}
+                  disabled={isSubmittingReview}
+                >
+                  <Text style={styles.reviewModalPrimaryText}>
+                    {isSubmittingReview
+                      ? t('schoolDetail.reviews.modal.sending')
+                      : t('schoolDetail.reviews.modal.submit')}
+                  </Text>
+                </Pressable>
               </View>
             </View>
-            <View style={styles.reviewModalField}>
-              <Text style={styles.reviewModalLabel}>
-                {t('schoolDetail.reviews.modal.feedback')}
-              </Text>
-              <TextInput
-                style={[styles.reviewModalInput, styles.reviewModalTextarea]}
-                placeholder={t('schoolDetail.reviews.modal.feedbackPlaceholder')}
-                placeholderTextColor="rgba(71,85,105,0.6)"
-                multiline
-                value={reviewForm.text}
-                onChangeText={(text) => updateReviewField('text', text)}
-              />
-            </View>
-            <View style={styles.reviewModalActions}>
-              <Pressable
-                style={styles.reviewModalSecondary}
-                onPress={handleCloseReviewModal}
-              >
-                <Text style={styles.reviewModalSecondaryText}>
-                  {t('schoolDetail.reviews.modal.cancel')}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.reviewModalPrimary,
-                  isSubmittingReview && styles.reviewModalPrimaryDisabled,
-                ]}
-                onPress={handleSubmitReview}
-                disabled={isSubmittingReview}
-              >
-                <Text style={styles.reviewModalPrimaryText}>
-                  {isSubmittingReview
-                    ? t('schoolDetail.reviews.modal.sending')
-                    : t('schoolDetail.reviews.modal.submit')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -2012,12 +2188,32 @@ export default function SchoolDetailScreen() {
       >
         <View style={styles.reviewModalBackdrop}>
           <View style={styles.teacherModalCard}>
-            <View style={styles.reviewModalHeader}>
-              <Text style={styles.reviewModalTitle}>
-                {teacherModal.member?.full_name ||
-                  t('schoolDetail.staff.defaultName')}
-              </Text>
-              <Pressable style={styles.reviewModalClose} onPress={handleCloseTeacher}>
+            <View style={styles.teacherModalHeader}>
+              <View style={styles.teacherHeaderProfile}>
+                {isValidRemoteImage(teacherModal.member?.photo_url) ? (
+                  <RNImage
+                    source={{ uri: teacherModal.member.photo_url }}
+                    style={styles.teacherHeaderPhoto}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.teacherHeaderPhotoFallback}>
+                    <Text style={styles.teacherHeaderPhotoFallbackText}>
+                      {String(
+                        teacherModal.member?.full_name ||
+                          t('schoolDetail.staff.defaultName')
+                      )
+                        .charAt(0)
+                        .toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.teacherModalTitle} numberOfLines={3}>
+                  {teacherModal.member?.full_name ||
+                    t('schoolDetail.staff.defaultName')}
+                </Text>
+              </View>
+              <Pressable style={styles.teacherModalClose} onPress={handleCloseTeacher}>
                 <XMarkIcon color="#0F172A" size={20} />
               </Pressable>
             </View>
@@ -2026,13 +2222,6 @@ export default function SchoolDetailScreen() {
               contentContainerStyle={styles.teacherModalContent}
               showsVerticalScrollIndicator
             >
-              {isValidRemoteImage(teacherModal.member?.photo_url) ? (
-                <RNImage
-                  source={{ uri: teacherModal.member.photo_url }}
-                  style={styles.teacherModalPhoto}
-                  resizeMode="cover"
-                />
-              ) : null}
               <View style={styles.teacherMetaList}>
               {teacherModal.member?.position ? (
                 <DetailRow
@@ -2080,7 +2269,8 @@ export default function SchoolDetailScreen() {
                   <DetailRow
                     label={t('schoolDetail.staff.bio')}
                     value={getLocalizedText(teacherModal.member.bio, locale)}
-                    labelColor="#2563EB"
+                    rowStyle={styles.teacherBioRow}
+                    valueStyle={styles.teacherBioValue}
                   />
                 ) : null}
               </View>
@@ -2096,18 +2286,23 @@ export default function SchoolDetailScreen() {
         onRequestClose={() => setShowConsultationModal(false)}
       >
         <View style={styles.consultModalBackdrop}>
-          <View style={styles.consultModalCard}>
-            <View style={styles.consultHeader}>
-              <Text style={styles.consultTitle}>
-                {t('schoolDetail.consult.title')}
-              </Text>
-              <Pressable
-                style={styles.consultCloseButton}
-                onPress={() => setShowConsultationModal(false)}
-              >
-                <XMarkIcon color="#0F172A" size={20} />
-              </Pressable>
-            </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={12}
+            style={styles.modalKeyboardWrap}
+          >
+            <View style={styles.consultModalCard}>
+              <View style={styles.consultHeader}>
+                <Text style={styles.consultTitle}>
+                  {t('schoolDetail.consult.title')}
+                </Text>
+                <Pressable
+                  style={styles.consultCloseButton}
+                  onPress={() => setShowConsultationModal(false)}
+                >
+                  <XMarkIcon color="#0F172A" size={20} />
+                </Pressable>
+              </View>
 
             <ScrollView
               style={styles.consultScroll}
@@ -2247,21 +2442,22 @@ export default function SchoolDetailScreen() {
               </View>
             </ScrollView>
 
-            <Pressable
-              style={[
-                styles.consultSubmitButton,
-                (!isConsultValid || isSubmittingConsult) && styles.consultSubmitButtonDisabled,
-              ]}
-              disabled={!isConsultValid || isSubmittingConsult}
-              onPress={handleConsultSubmit}
-            >
-              <Text style={styles.consultSubmitLabel}>
-                {isSubmittingConsult
-                  ? t('schoolDetail.consult.sending')
-                  : t('schoolDetail.consult.send')}
-              </Text>
-            </Pressable>
-          </View>
+              <Pressable
+                style={[
+                  styles.consultSubmitButton,
+                  (!isConsultValid || isSubmittingConsult) && styles.consultSubmitButtonDisabled,
+                ]}
+                disabled={!isConsultValid || isSubmittingConsult}
+                onPress={handleConsultSubmit}
+              >
+                <Text style={styles.consultSubmitLabel}>
+                  {isSubmittingConsult
+                    ? t('schoolDetail.consult.sending')
+                    : t('schoolDetail.consult.send')}
+                </Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </LinearGradient>
@@ -2277,7 +2473,85 @@ const styles = StyleSheet.create({
   backText: {
     fontFamily: 'exoSemibold',
     fontSize: 18,
-    color: '#FFFFFF',
+    color: '#111827',
+  },
+  floatingChatWrap: {
+    position: 'absolute',
+    right: 24,
+    bottom: 96,
+    alignItems: 'center',
+    zIndex: 40,
+  },
+  floatingChatClose: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.85)',
+    zIndex: 41,
+  },
+  floatingChatButton: {
+    width: 58,
+    height: 58,
+    borderRadius: 999,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+  },
+  floatingChatLabel: {
+    marginTop: 6,
+    paddingHorizontal: 10,
+    height: 24,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingChatLabelText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#111827',
+  },
+  floatingChatRestore: {
+    position: 'absolute',
+    right: 24,
+    bottom: 96,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.14)',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+    zIndex: 40,
+  },
+  floatingChatRestoreText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#111827',
+    marginLeft: 8,
   },
   container: {
     paddingHorizontal: 20,
@@ -2363,29 +2637,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(37,99,235,0.28)',
   },
-  statIcon: {
-    fontSize: 18,
+  statIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statText: {
     flex: 1,
     marginLeft: 8,
-    fontFamily: 'exoSemibold',
-    fontSize: 13,
-    color: '#0F172A',
+    fontFamily: 'exo',
+    fontSize: 11,
+    color: '#6B7280',
   },
   statTextImportant: {
-    color: '#1D4ED8',
+    color: '#6B7280',
   },
   statValue: {
-    fontFamily: 'exo',
-    fontSize: 13,
-    color: '#0F172A',
+    fontFamily: 'exoSemibold',
+    fontSize: 16,
+    color: '#111827',
     flexShrink: 1,
     textAlign: 'right',
   },
   statValueImportant: {
     fontFamily: 'exoSemibold',
-    color: '#0B3AAE',
+    color: '#111827',
+  },
+  statTextCompact: {
+    fontSize: 10,
+  },
+  statValueCompact: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#111827',
   },
   mapCard: {
     borderRadius: 20,
@@ -2446,6 +2733,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  expandableHeaderTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionIconBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   expandableHeaderText: {
     fontFamily: 'exoSemibold',
     fontSize: 16,
@@ -2465,15 +2765,52 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailLabel: {
-    fontFamily: 'exoSemibold',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    color: '#475569',
+    fontFamily: 'exo',
+    fontSize: 11,
+    color: '#6B7280',
   },
   detailValue: {
+    fontFamily: 'exoSemibold',
+    fontSize: 16,
+    color: '#111827',
+  },
+  detailValuePrimary: {
+    fontSize: 17,
+    color: '#0F172A',
+  },
+  detailValueLink: {
+    fontFamily: 'exoSemibold',
+    fontSize: 16,
+    color: '#1D4ED8',
+    textDecorationLine: 'underline',
+  },
+  studyingBlock: {
+    gap: 8,
+  },
+  studyingDivider: {
+    height: 1,
+    backgroundColor: 'rgba(148,163,184,0.22)',
+    marginVertical: 2,
+  },
+  metricCard: {
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.28)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 2,
+  },
+  metricLabel: {
     fontFamily: 'exo',
-    fontSize: 14,
-    color: '#1F2937',
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  metricValue: {
+    fontFamily: 'exoSemibold',
+    fontSize: 30,
+    lineHeight: 34,
+    color: '#111827',
   },
   programsRow: {
     gap: 6,
@@ -2487,17 +2824,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
   programChipActive: {
-    borderColor: 'rgba(37,99,235,0.35)',
-    backgroundColor: '#EFF6FF',
+    borderColor: 'rgba(148,163,184,0.22)',
+    backgroundColor: '#EEF2FF',
   },
   programChipPassive: {
-    borderColor: 'rgba(148,163,184,0.35)',
+    borderColor: 'rgba(148,163,184,0.2)',
     backgroundColor: '#F8FAFC',
   },
   programChipText: {
@@ -2525,8 +2862,8 @@ const styles = StyleSheet.create({
   },
   programHint: {
     fontFamily: 'exo',
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 11,
+    color: '#94A3B8',
   },
   clubCatalogWrap: {
     gap: 8,
@@ -2541,7 +2878,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFF',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    gap: 8,
+  },
+  clubCatalogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  clubCatalogHeaderMain: {
+    flex: 1,
+    gap: 2,
+  },
+  clubCatalogHeaderPrice: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#1D4ED8',
+  },
+  clubCatalogChevron: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#475569',
+  },
+  clubCatalogBody: {
     gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148,163,184,0.24)',
+    paddingTop: 8,
   },
   clubCatalogTitle: {
     fontFamily: 'exoSemibold',
@@ -2562,6 +2925,22 @@ const styles = StyleSheet.create({
   clubCatalogPrice: {
     fontFamily: 'exoSemibold',
     fontSize: 12,
+    color: '#1D4ED8',
+  },
+  clubCatalogMoreBtn: {
+    marginTop: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.32)',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clubCatalogMoreBtnText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
     color: '#1D4ED8',
   },
   descriptionCard: {
@@ -2903,7 +3282,7 @@ const styles = StyleSheet.create({
   mediaSectionTitle: {
     fontFamily: 'exoSemibold',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 10,
   },
   mediaPhoto: {
@@ -3023,31 +3402,84 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
+  modalKeyboardWrap: {
+    justifyContent: 'center',
+  },
   teacherModalCard: {
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     paddingTop: 20,
-    paddingHorizontal: 20,
+    paddingHorizontal: 26,
     paddingBottom: 14,
     maxHeight: '88%',
     overflow: 'hidden',
+  },
+  teacherModalHeader: {
+    position: 'relative',
+    justifyContent: 'center',
+    minHeight: 72,
+    paddingRight: 44,
+  },
+  teacherHeaderProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingRight: 4,
+  },
+  teacherHeaderPhoto: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    backgroundColor: '#E5E7EB',
+  },
+  teacherHeaderPhotoFallback: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  teacherHeaderPhotoFallbackText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 24,
+    color: '#4F46E5',
+  },
+  teacherModalTitle: {
+    fontFamily: 'exoSemibold',
+    fontSize: 18,
+    color: '#0F172A',
+    lineHeight: 23,
+    flex: 1,
+  },
+  teacherModalClose: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    padding: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148,163,184,0.2)',
   },
   teacherModalScroll: {
     marginTop: 10,
   },
   teacherModalContent: {
-    paddingBottom: 10,
+    paddingBottom: 14,
     gap: 10,
-  },
-  teacherModalPhoto: {
-    width: '62%',
-    aspectRatio: 3 / 4,
-    alignSelf: 'center',
-    borderRadius: 16,
-    backgroundColor: '#E5E7EB',
   },
   teacherMetaList: {
-    gap: 10,
+    gap: 12,
+    width: '94%',
+    alignSelf: 'center',
+  },
+  teacherBioRow: {
+    marginTop: 4,
+  },
+  teacherBioValue: {
+    fontFamily: 'exo',
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#111827',
   },
   programModalCard: {
     borderRadius: 28,
@@ -3071,8 +3503,7 @@ const styles = StyleSheet.create({
   programModalSectionLabel: {
     fontFamily: 'exoSemibold',
     fontSize: 12,
-    textTransform: 'uppercase',
-    color: '#2563EB',
+    color: '#6B7280',
   },
   programModalText: {
     fontFamily: 'exo',

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminLocale } from '@/lib/adminLocale';
+import { formatKzPhone } from '@/lib/phone';
 import { requestJson } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -115,7 +116,7 @@ export default function RequestsPage() {
                       : '—'}
                   </p>
                   <p>
-                    <strong>{t('requestsPhone')}</strong> {request.parentPhone || '—'}
+                    <strong>{t('requestsPhone')}</strong> {formatKzPhone(request.parentPhone) || '—'}
                   </p>
                   {request.parentEmail ? (
                     <p>

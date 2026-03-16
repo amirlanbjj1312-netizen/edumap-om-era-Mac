@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  Alert,
   Text,
   View,
   Pressable,
@@ -11,6 +12,8 @@ import {
   Modal,
   PanResponder,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -35,9 +38,12 @@ import * as Location from 'expo-location';
 import { images } from '../assets';
 import { useSchools } from '../context/SchoolsContext';
 import { useLocale } from '../context/LocaleContext';
+import { useRole } from '../context/RoleContext';
+import { useAuth } from '../context/AuthContext';
 import Rating from '../components/home/rating';
 import { splitToList } from '../utils/coordinates';
 import { parseSchoolQuery } from '../services/aiSchoolParser';
+import { consumeFeatureUsage, getActivePlan } from '../services/subscriptionAccess';
 
 const CITY_OPTIONS = [
   {
@@ -672,12 +678,44 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
     ? `${Math.round(monthlyFee).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')} ₸`
     : '';
   const isPromoted = Boolean(item?.promotion?.isPromotedActive);
+  const isCompareMode = Boolean(item.__compareMode);
+  const isSelectedForCompare = Boolean(item.__selectedForCompare);
 
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center bg-white rounded-3xl px-4 py-4 mb-4 shadow-sm shadow-black/10"
+      style={
+        isCompareMode && isSelectedForCompare
+          ? {
+              borderWidth: 2,
+              borderColor: '#2563EB',
+              backgroundColor: '#EFF6FF',
+            }
+          : null
+      }
     >
+      {isCompareMode ? (
+        <View
+          style={{
+            position: 'absolute',
+            right: 12,
+            top: 12,
+            width: 22,
+            height: 22,
+            borderRadius: 999,
+            borderWidth: 1.5,
+            borderColor: isSelectedForCompare ? '#2563EB' : 'rgba(17,24,39,0.3)',
+            backgroundColor: isSelectedForCompare ? '#2563EB' : '#FFFFFF',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isSelectedForCompare ? (
+            <Text style={{ color: '#FFFFFF', fontSize: 12 }}>✓</Text>
+          ) : null}
+        </View>
+      ) : null}
       <View className="w-16 h-16 rounded-2xl bg-bgPurple/10 mr-4 items-center justify-center overflow-hidden">
         {hasLogo ? (
           <ImageComponent
@@ -710,7 +748,7 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
           {item.name}
         </Text>
         {cityLabel ? (
-          <Text className="text-bgPurple font-exoSemibold text-xs uppercase tracking-wide mb-1.5">
+          <Text className="text-bgPurple font-exoSemibold text-xs mb-1.5">
             {cityLabel}
           </Text>
         ) : null}
@@ -772,20 +810,23 @@ export default function SchoolsScreen() {
   const [botSource, setBotSource] = useState(null);
   const [botError, setBotError] = useState('');
   const [botLoading, setBotLoading] = useState(false);
+  const [isChatFabVisible, setChatFabVisible] = useState(true);
+  const [isCompareMode, setCompareMode] = useState(false);
+  const [selectedCompareIds, setSelectedCompareIds] = useState([]);
+  const [compareLimit, setCompareLimit] = useState(3);
   const navigation = useNavigation();
   const { t, locale } = useLocale();
+  const { isGuest } = useRole();
+  const { account } = useAuth();
   const { schoolCards, loading } = useSchools();
   const isRu = locale === 'ru';
   const headerPadding = isRu ? 12 : 16;
   const searchPaddingX = isRu ? 12 : 16;
-  const actionButtonPadding = isRu ? 12 : 16;
-  const actionButtonGap = isRu ? 6 : 10;
-  const actionTextStyle = { fontSize: isRu ? 12 : 14 };
-  const aiButtonPadding = {
+  const topActionButtonStyle = {
     paddingHorizontal: isRu ? 18 : 16,
     paddingVertical: isRu ? 12 : 10,
   };
-  const aiTextStyle = isRu ? { fontSize: 15 } : null;
+  const topActionTextStyle = isRu ? { fontSize: 15 } : null;
 
   const getLabel = (map, value) => {
     const key = map[value];
@@ -808,12 +849,53 @@ export default function SchoolsScreen() {
           'Кембриджская школа с рейтингом 4+',
         ]
       : BOT_EXAMPLES;
+  const guestLockTitle =
+    locale === 'kk'
+      ? 'Тіркеліңіз'
+      : locale === 'en'
+      ? 'Sign up required'
+      : 'Зарегистрируйтесь';
+  const guestLockBody =
+    locale === 'kk'
+      ? 'Бұл функция тіркелген қолданушыларға қолжетімді.'
+      : locale === 'en'
+      ? 'This feature is available for registered users only.'
+      : 'Эта функция доступна только зарегистрированным пользователям.';
+  const guestLockAction =
+    locale === 'kk' ? 'Тіркелу' : locale === 'en' ? 'Sign up' : 'Регистрация';
+  const guestFiltersHint =
+    locale === 'kk'
+      ? 'Барлық фильтрлер тіркелген қолданушыларға қолжетімді.'
+      : locale === 'en'
+      ? 'All filters are available for registered users.'
+      : 'Все фильтры доступны зарегистрированным пользователям.';
+  const guestDisabledSorts = ['price_asc', 'price_desc', 'reviews_desc', 'distance_asc'];
 
   const activeAreas = useMemo(
     () =>
       selectedCities.flatMap((city) => selectedCityAreas[city] ?? []),
     [selectedCities, selectedCityAreas]
   );
+
+  useEffect(() => {
+    let mounted = true;
+    const loadCompareLimit = async () => {
+      const plan = await getActivePlan(account?.id || account?.email || 'guest');
+      if (!mounted) return;
+      const byPlan = {
+        trial: 2,
+        standard: 3,
+        pro: 5,
+      };
+      const nextLimit = byPlan[plan?.planId] || 3;
+      setCompareLimit(nextLimit);
+      setSelectedCompareIds((prev) => prev.slice(0, nextLimit));
+    };
+    loadCompareLimit();
+    return () => {
+      mounted = false;
+    };
+  }, [account?.email, account?.id]);
   const isFilterActive =
     selectedCities.length > 0 ||
     activeAreas.length > 0 ||
@@ -872,6 +954,49 @@ export default function SchoolsScreen() {
     setBotQuery('');
   };
 
+  const showGuestLock = () => {
+    Alert.alert(guestLockTitle, guestLockBody, [
+      { text: t('profile.cancel') || 'Отмена', style: 'cancel' },
+      {
+        text: guestLockAction,
+        onPress: () => navigation.navigate('SignUp'),
+      },
+    ]);
+  };
+
+  useEffect(() => {
+    if (!isGuest) return;
+    setCompareMode(false);
+    setSelectedCompareIds([]);
+    setUseNearby(false);
+    setRadiusKm(5);
+    setUserLocation(null);
+    setLocationError(null);
+    setPriceRange([PRICE_MIN, PRICE_MAX]);
+    setSelectedCurricula([]);
+    setSelectedSpecialists([]);
+    setSelectedServices([]);
+    setSelectedMeals([]);
+    setSelectedLicenses([]);
+    setSelectedExam(null);
+    setSelectedSubjects([]);
+    setMinClassSize(0);
+    setMinClubs(0);
+    setBotModalVisible(false);
+    setBotQuery('');
+    setBotQueryApplied('');
+    setBotSource(null);
+    setBotError('');
+    setBotLoading(false);
+  }, [isGuest]);
+
+  useEffect(() => {
+    if (!isGuest) return;
+    if (guestDisabledSorts.includes(sortOption)) {
+      setSortOption('relevance');
+    }
+  }, [isGuest, sortOption]);
+
   const handleCityToggle = (city) => {
     setSelectedCities((prev) => {
       if (prev.includes(city)) {
@@ -929,6 +1054,23 @@ export default function SchoolsScreen() {
   const applyBotFilters = async () => {
     const trimmed = botQuery.trim();
     if (!trimmed) return;
+    const usage = await consumeFeatureUsage({
+      userKey: account?.id || account?.email || 'guest',
+      feature: 'ai_match',
+    });
+    if (!usage.ok) {
+      const windowRu = usage.window === 'day' ? 'в день' : 'за период';
+      const windowEn = usage.window === 'day' ? 'per day' : 'per period';
+      const windowKk = usage.window === 'day' ? 'күніне' : 'кезеңге';
+      if (locale === 'en') {
+        setBotError(`AI match limit reached (${usage.limit} ${windowEn}).`);
+      } else if (locale === 'kk') {
+        setBotError(`AI іріктеу лимиті аяқталды (${usage.limit} ${windowKk}).`);
+      } else {
+        setBotError(`Лимит AI-подбора исчерпан (${usage.limit} ${windowRu}).`);
+      }
+      return;
+    }
     setBotLoading(true);
     setBotError('');
     let parsed = null;
@@ -1350,11 +1492,51 @@ export default function SchoolsScreen() {
     () => filteredSchools.filter((school) => !school?.promotion?.isPromotedActive),
     [filteredSchools]
   );
+  const selectedCompareSchools = useMemo(() => {
+    if (!selectedCompareIds.length) return [];
+    const byId = new Map(
+      filteredSchools.map((school) => [
+        String(school.school_id || school.id || ''),
+        school,
+      ])
+    );
+    return selectedCompareIds
+      .map((id) => byId.get(String(id)))
+      .filter(Boolean)
+      .slice(0, isGuest ? 0 : compareLimit);
+  }, [filteredSchools, selectedCompareIds, isGuest, compareLimit]);
+
+  const toggleCompareMode = () => {
+    if (isGuest) {
+      showGuestLock();
+      return;
+    }
+    setCompareMode((prev) => !prev);
+    setSelectedCompareIds([]);
+  };
+
+  const toggleSchoolCompare = (school) => {
+    if (isGuest) {
+      showGuestLock();
+      return;
+    }
+    const id = String(school.school_id || school.id || '');
+    if (!id) return;
+    setSelectedCompareIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id);
+      }
+      if (prev.length >= compareLimit) {
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
 
   const header = (
     <View className="px-6 pt-6">
       <Text
-        className="text-white font-exoSemibold text-3xl mb-4"
+        className="text-darkGrayText font-exoSemibold text-3xl mb-4"
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.85}
@@ -1385,89 +1567,154 @@ export default function SchoolsScreen() {
               if (botQueryApplied) setBotQueryApplied('');
             }}
           />
-        </View>
-        <View className="flex-row items-center justify-between mt-4">
           <Pressable
-            className="flex-row items-center rounded-2xl border border-white/60 bg-white/20"
+            onPress={toggleCompareMode}
             style={{
-              paddingHorizontal: actionButtonPadding,
-              paddingVertical: 10,
-              marginRight: actionButtonGap,
+              marginLeft: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: isCompareMode ? '#1D4ED8' : 'rgba(17,24,39,0.2)',
+              backgroundColor: isCompareMode ? '#DBEAFE' : '#FFFFFF',
+              opacity: isGuest ? 0.45 : 1,
             }}
-            onPress={() => setSortModalVisible(true)}
           >
-            <BarsArrowDownIcon color="#FFFFFF" size={18} />
             <Text
-              className="text-white font-exoSemibold ml-2"
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={actionTextStyle}
+              className="font-exoSemibold"
+              style={{ color: '#111827', fontSize: 12 }}
             >
-              {t(
-                SORT_BUTTON_LABEL_KEYS[sortOption] ||
-                  SORT_BUTTON_LABEL_KEYS.relevance
-              )}
+              {isCompareMode ? 'Отмена' : 'Сравнить'}
             </Text>
           </Pressable>
+        </View>
+        {isCompareMode ? (
+          <View
+            className="mt-3 rounded-2xl bg-white px-4 py-3"
+            style={{ borderWidth: 1, borderColor: 'rgba(37,99,235,0.2)' }}
+          >
+            <View className="flex-row items-center justify-between">
+              <Text className="text-darkGrayText font-exoSemibold text-sm">
+                {`Выбрано ${selectedCompareIds.length}/${compareLimit}`}
+              </Text>
+              <Pressable
+                onPress={async () => {
+                  if (selectedCompareSchools.length < 2) return;
+                  const usage = await consumeFeatureUsage({
+                    userKey: account?.id || account?.email || 'guest',
+                    feature: 'compare_table',
+                  });
+                  if (!usage.ok) {
+                    const windowRu = usage.window === 'day' ? 'в день' : 'за период';
+                    const windowEn = usage.window === 'day' ? 'per day' : 'per period';
+                    const windowKk = usage.window === 'day' ? 'күніне' : 'кезеңге';
+                    if (locale === 'en') {
+                      Alert.alert('Comparison', `Comparison limit reached (${usage.limit} ${windowEn}).`);
+                    } else if (locale === 'kk') {
+                      Alert.alert('Салыстыру', `Салыстыру лимиті аяқталды (${usage.limit} ${windowKk}).`);
+                    } else {
+                      Alert.alert('Сравнение', `Лимит сравнения исчерпан (${usage.limit} ${windowRu}).`);
+                    }
+                    return;
+                  }
+                  navigation.navigate('SchoolCompare', {
+                    schools: selectedCompareSchools,
+                    compareLimit,
+                  });
+                }}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 12,
+                  backgroundColor:
+                    selectedCompareSchools.length >= 2
+                      ? '#2563EB'
+                      : 'rgba(37,99,235,0.35)',
+                }}
+                disabled={selectedCompareSchools.length < 2}
+              >
+                <Text className="font-exoSemibold" style={{ color: '#FFFFFF', fontSize: 12 }}>
+                  Сравнить выбранные
+                </Text>
+              </Pressable>
+            </View>
+            <Text className="text-darkGrayText/70 font-exo text-xs mt-2">
+              Нажмите на карточки школ, чтобы выбрать их для сравнения.
+            </Text>
+          </View>
+        ) : null}
+        <View className="mt-4">
+          <View className="flex-row items-center">
+            <Pressable
+              className="flex-1 flex-row items-center justify-center rounded-2xl border border-darkGrayText/20 bg-white mr-2"
+              style={topActionButtonStyle}
+              onPress={() => setSortModalVisible(true)}
+            >
+              <BarsArrowDownIcon color="#111827" size={18} />
+              <Text
+                className="text-darkGrayText font-exoSemibold ml-2"
+                style={topActionTextStyle}
+              >
+                {t(
+                  SORT_BUTTON_LABEL_KEYS[sortOption] ||
+                    SORT_BUTTON_LABEL_KEYS.relevance
+                )}
+              </Text>
+            </Pressable>
+            <Pressable
+              className="flex-1 flex-row items-center justify-center rounded-2xl border border-darkGrayText/20 bg-white ml-2"
+              style={topActionButtonStyle}
+              onPress={() => navigation.navigate('SchoolMap')}
+            >
+              <MapIcon color="#111827" size={18} />
+              <Text
+                className="text-darkGrayText font-exoSemibold ml-2"
+                style={topActionTextStyle}
+              >
+                {t('schools.map.button')}
+              </Text>
+            </Pressable>
+          </View>
           <Pressable
-            className="flex-row items-center rounded-2xl border border-white/60"
+            className="flex-row items-center justify-center rounded-2xl border mt-3"
             style={{
-              paddingHorizontal: actionButtonPadding,
-              paddingVertical: 10,
-              backgroundColor: isFilterActive ? '#FACC15' : 'rgba(255,255,255,0.125)',
-              marginRight: actionButtonGap,
+              ...topActionButtonStyle,
+              borderColor: '#D97706',
+              backgroundColor: '#F59E0B',
             }}
             onPress={() => setFilterModalVisible(true)}
           >
-            <AdjustmentsHorizontalIcon color="#FFFFFF" size={18} />
+            <AdjustmentsHorizontalIcon color="#111827" size={18} />
             <Text
-              className="text-white font-exoSemibold ml-2"
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={actionTextStyle}
+              className="text-darkGrayText font-exoSemibold ml-2"
+              style={topActionTextStyle}
             >
               {t('schools.filter.button')}
             </Text>
           </Pressable>
           <Pressable
-            className="flex-row items-center rounded-2xl border border-white/60 bg-white/20"
-            style={{ paddingHorizontal: actionButtonPadding, paddingVertical: 10 }}
-            onPress={() => navigation.navigate('SchoolMap')}
+            className="flex-row items-center justify-center rounded-2xl border mt-3"
+            style={{
+              ...topActionButtonStyle,
+              borderColor: '#D97706',
+              backgroundColor: '#F59E0B',
+              opacity: isGuest ? 0.45 : 1,
+            }}
+            onPress={() => {
+              if (isGuest) {
+                showGuestLock();
+                return;
+              }
+              setBotModalVisible(true);
+              if (botError) setBotError('');
+            }}
           >
-            <MapIcon color="#FFFFFF" size={18} />
-            <Text
-              className="text-white font-exoSemibold ml-2"
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={actionTextStyle}
-            >
-              {t('schools.map.button')}
+            <SparklesIcon color="#111827" size={18} />
+            <Text className="text-darkGrayText font-exoSemibold ml-2" style={topActionTextStyle}>
+              {t('schools.ai.match')}
             </Text>
           </Pressable>
         </View>
-        <Pressable
-          className="flex-row items-center justify-center rounded-2xl border border-white/60 bg-white/20 mt-3"
-          style={aiButtonPadding}
-          onPress={() => {
-            setBotModalVisible(true);
-            if (botError) setBotError('');
-          }}
-        >
-          <SparklesIcon color="#FFFFFF" size={18} />
-          <Text className="text-white font-exoSemibold ml-2" style={aiTextStyle}>
-            {t('schools.ai.match')}
-          </Text>
-        </Pressable>
-        <Pressable
-          className="flex-row items-center justify-center rounded-2xl border border-white/60 bg-white/20 mt-3"
-          style={aiButtonPadding}
-          onPress={() => navigation.navigate('SchoolChat')}
-        >
-          <ChatBubbleLeftRightIcon color="#FFFFFF" size={18} />
-          <Text className="text-white font-exoSemibold ml-2" style={aiTextStyle}>
-            {t('schools.ai.chat')}
-          </Text>
-        </Pressable>
         {aiSummary ? (
           <View className="mt-3 rounded-2xl bg-white/90 px-4 py-3">
             <Text className="text-darkGrayText font-exoSemibold text-sm">
@@ -1490,20 +1737,25 @@ export default function SchoolsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
-      <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
+      <KeyboardAvoidingView
         style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={8}
       >
-      {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#2563EB" />
-        </View>
-      ) : (
-      <FlatList
+        <LinearGradient
+          colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{ flex: 1 }}
+        >
+        {loading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#2563EB" />
+          </View>
+        ) : (
+        <FlatList
         data={regularSchools}
         keyExtractor={(item) =>
           item.id != null ? String(item.id) : `${item.name}-${item.address}`
@@ -1514,23 +1766,31 @@ export default function SchoolsScreen() {
             {promotedSchools.length ? (
               <View className="mb-3">
                 <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-white font-exoSemibold text-base">
+                  <Text className="text-darkGrayText font-exoSemibold text-base">
                     {t('schools.promoted.sectionTitle')}
                   </Text>
-                  <Text className="text-white/90 font-exoSemibold text-xs uppercase">
+                  <Text className="text-darkGrayText/70 font-exoSemibold text-xs">
                     {t('schools.promoted.adLabel')}
                   </Text>
                 </View>
                 {promotedSchools.map((item) => (
                   <SchoolCard
                     key={`promoted-${item.id || item.school_id || item.name}`}
-                    item={item}
+                    item={{
+                      ...item,
+                      __compareMode: isCompareMode,
+                      __selectedForCompare: selectedCompareIds.includes(
+                        String(item.school_id || item.id || '')
+                      ),
+                    }}
                     t={t}
                     locale={locale}
                     onPress={() =>
-                      navigation.navigate('SchoolDetail', {
-                        schoolId: item.school_id || item.id,
-                      })
+                      isCompareMode
+                        ? toggleSchoolCompare(item)
+                        : navigation.navigate('SchoolDetail', {
+                            schoolId: item.school_id || item.id,
+                          })
                     }
                   />
                 ))}
@@ -1541,13 +1801,21 @@ export default function SchoolsScreen() {
         contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 24 }}
         renderItem={({ item }) => (
           <SchoolCard
-            item={item}
+            item={{
+              ...item,
+              __compareMode: isCompareMode,
+              __selectedForCompare: selectedCompareIds.includes(
+                String(item.school_id || item.id || '')
+              ),
+            }}
             t={t}
             locale={locale}
             onPress={() =>
-              navigation.navigate('SchoolDetail', {
-                schoolId: item.school_id || item.id,
-              })
+              isCompareMode
+                ? toggleSchoolCompare(item)
+                : navigation.navigate('SchoolDetail', {
+                    schoolId: item.school_id || item.id,
+                  })
             }
           />
         )}
@@ -1559,8 +1827,106 @@ export default function SchoolsScreen() {
           </View>
         }
       />
+        )}
+        </LinearGradient>
+      </KeyboardAvoidingView>
+      {isChatFabVisible ? (
+        <View className="absolute right-6 items-center" style={{ bottom: 96, zIndex: 50 }}>
+          <Pressable
+            onPress={() => setChatFabVisible(false)}
+            style={{
+              position: 'absolute',
+              top: -8,
+              right: -8,
+              width: 22,
+              height: 22,
+              borderRadius: 999,
+              backgroundColor: '#111827',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.85)',
+            }}
+          >
+            <XMarkIcon color="#FFFFFF" size={13} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (isGuest) {
+                showGuestLock();
+                return;
+              }
+              navigation.navigate('SchoolChat');
+            }}
+            className="items-center justify-center"
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 999,
+              backgroundColor: '#2563EB',
+              shadowColor: '#0F172A',
+              shadowOpacity: 0.25,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 7,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.8)',
+              opacity: isGuest ? 0.45 : 1,
+            }}
+          >
+            <ChatBubbleLeftRightIcon color="#FFFFFF" size={24} />
+          </Pressable>
+          <View
+            style={{
+              marginTop: 6,
+              paddingHorizontal: 10,
+              height: 24,
+              borderRadius: 999,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1,
+              borderColor: 'rgba(17,24,39,0.12)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text className="font-exoSemibold" style={{ color: '#111827', fontSize: 12 }}>
+              {t('schools.ai.chat')}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => {
+            if (isGuest) {
+              showGuestLock();
+              return;
+            }
+            setChatFabVisible(true);
+          }}
+          className="absolute right-6 flex-row items-center"
+          style={{
+            bottom: 96,
+            zIndex: 50,
+            height: 38,
+            paddingHorizontal: 12,
+            borderRadius: 999,
+            backgroundColor: '#FFFFFF',
+            borderWidth: 1,
+            borderColor: 'rgba(17,24,39,0.14)',
+            shadowColor: '#0F172A',
+            shadowOpacity: 0.16,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 5,
+            opacity: isGuest ? 0.45 : 1,
+          }}
+        >
+          <ChatBubbleLeftRightIcon color="#2563EB" size={16} />
+          <Text className="font-exoSemibold ml-2" style={{ color: '#111827', fontSize: 12 }}>
+            {t('schools.ai.chat')}
+          </Text>
+        </Pressable>
       )}
-      </LinearGradient>
       <Modal
         visible={sortModalVisible}
         transparent
@@ -1588,14 +1954,21 @@ export default function SchoolsScreen() {
               { key: 'distance_asc', label: t(SORT_MODAL_LABEL_KEYS.distance_asc) },
               { key: 'name_asc', label: t(SORT_MODAL_LABEL_KEYS.name_asc) },
               { key: 'updated_desc', label: t(SORT_MODAL_LABEL_KEYS.updated_desc) },
-            ].map((option) => (
+            ].map((option) => {
+              const disabledForGuest = isGuest && guestDisabledSorts.includes(option.key);
+              return (
               <Pressable
                 key={option.key}
                 className="py-3 border-b border-bgPurple/10"
                 onPress={() => {
+                  if (disabledForGuest) {
+                    showGuestLock();
+                    return;
+                  }
                   setSortOption(option.key);
                   setSortModalVisible(false);
                 }}
+                style={{ opacity: disabledForGuest ? 0.38 : 1 }}
               >
                 <Text
                   className={`font-exo text-base ${
@@ -1607,7 +1980,8 @@ export default function SchoolsScreen() {
                   {option.label}
                 </Text>
               </Pressable>
-            ))}
+              );
+            })}
           </View>
         </View>
       </Modal>
@@ -1618,7 +1992,7 @@ export default function SchoolsScreen() {
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <LinearGradient
-          colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+          colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
           locations={[0, 0.5, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -1654,7 +2028,7 @@ export default function SchoolsScreen() {
               <Text className="text-darkGrayText/70 font-exo text-sm">
               {t('schools.filters.cityHint')}
             </Text>
-              <View className="mt-6">
+            <View className="mt-6">
               {CITY_OPTIONS.map((option) => {
                 const isActive = selectedCities.includes(option.name);
                 return (
@@ -1721,8 +2095,43 @@ export default function SchoolsScreen() {
                 );
               })}
             </View>
+            <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
+              {t('schools.filters.ratingTitle')}
+            </Text>
+            <Text className="text-darkGrayText/70 font-exo text-sm mt-1">
+              {t('schools.filters.ratingDesc')}
+            </Text>
+            <View className="flex-row flex-wrap gap-2 mt-3">
+              {RATING_OPTIONS.map((value) => {
+                const isActive = selectedMinRating === value;
+                return (
+                  <Pressable
+                    key={value}
+                    className="px-4 py-2 rounded-full border"
+                    style={{
+                      borderColor: isActive ? '#5667FD' : 'rgba(54,67,86,0.25)',
+                      backgroundColor: isActive ? 'rgba(86,103,253,0.12)' : '#FFFFFF',
+                    }}
+                    onPress={() => handleRatingSelect(value)}
+                  >
+                    <Text
+                      className="font-exo text-xs"
+                      style={{
+                        color: isActive ? '#364356' : 'rgba(54,67,86,0.8)',
+                      }}
+                    >
+                      {value.toFixed(1)}+
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-            <View className="mt-2">
+            <View className="mt-2" style={{ position: 'relative' }}>
+              <View
+                style={{ opacity: isGuest ? 0.35 : 1 }}
+                pointerEvents={isGuest ? 'none' : 'auto'}
+              >
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.nearbyTitle')}
               </Text>
@@ -1785,6 +2194,43 @@ export default function SchoolsScreen() {
                   </View>
                 </View>
               ) : null}
+              </View>
+              {isGuest ? (
+                <Pressable
+                  onPress={showGuestLock}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(17,24,39,0.72)',
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: '#FFFFFF',
+                        fontFamily: 'exoSemibold',
+                        fontSize: 12,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {guestFiltersHint}
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
 
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
@@ -1820,6 +2266,11 @@ export default function SchoolsScreen() {
             </View>
             {isPrivateSelected ? (
               <>
+                <View style={{ position: 'relative' }}>
+                  <View
+                    style={{ opacity: isGuest ? 0.35 : 1 }}
+                    pointerEvents={isGuest ? 'none' : 'auto'}
+                  >
                 <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
                   {t('schools.filters.monthlyFeeTitle')}
                 </Text>
@@ -1930,6 +2381,44 @@ export default function SchoolsScreen() {
                     })()}
                   </View>
                 </View>
+                  </View>
+                  {isGuest ? (
+                    <Pressable
+                      onPress={showGuestLock}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 12,
+                      }}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(17,24,39,0.72)',
+                          borderRadius: 12,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#FFFFFF',
+                            fontFamily: 'exoSemibold',
+                            fontSize: 12,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {guestFiltersHint}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ) : null}
+                </View>
               </>
             ) : null}
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
@@ -1963,6 +2452,11 @@ export default function SchoolsScreen() {
                 );
               })}
             </View>
+            <View style={{ position: 'relative' }}>
+              <View
+                style={{ opacity: isGuest ? 0.35 : 1 }}
+                pointerEvents={isGuest ? 'none' : 'auto'}
+              >
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.accreditationTitle')}
             </Text>
@@ -2217,38 +2711,49 @@ export default function SchoolsScreen() {
                 );
               })}
             </View>
-            <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
-              {t('schools.filters.ratingTitle')}
-            </Text>
-            <Text className="text-darkGrayText/70 font-exo text-sm mt-1">
-              {t('schools.filters.ratingDesc')}
-            </Text>
-            <View className="flex-row flex-wrap gap-2 mt-3">
-              {RATING_OPTIONS.map((value) => {
-                const isActive = selectedMinRating === value;
-                return (
-                  <Pressable
-                    key={value}
-                    className="px-4 py-2 rounded-full border"
+              </View>
+              {isGuest ? (
+                <Pressable
+                  onPress={showGuestLock}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  <View
                     style={{
-                      borderColor: isActive ? '#5667FD' : 'rgba(54,67,86,0.25)',
-                      backgroundColor: isActive ? 'rgba(86,103,253,0.12)' : '#FFFFFF',
+                      backgroundColor: 'rgba(17,24,39,0.72)',
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
                     }}
-                    onPress={() => handleRatingSelect(value)}
                   >
                     <Text
-                      className="font-exo text-xs"
                       style={{
-                        color: isActive ? '#364356' : 'rgba(54,67,86,0.8)',
+                        color: '#FFFFFF',
+                        fontFamily: 'exoSemibold',
+                        fontSize: 12,
+                        textAlign: 'center',
                       }}
                     >
-                      {value.toFixed(1)}+
+                      {guestFiltersHint}
                     </Text>
-                  </Pressable>
-                );
-              })}
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
-            <View className="mt-6">
+            <View className="mt-6" style={{ position: 'relative' }}>
+              <View
+                style={{ opacity: isGuest ? 0.35 : 1 }}
+                pointerEvents={isGuest ? 'none' : 'auto'}
+              >
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.classSizeTitle')}
               </Text>
@@ -2274,6 +2779,43 @@ export default function SchoolsScreen() {
                   </Pressable>
                 </View>
               </View>
+              </View>
+              {isGuest ? (
+                <Pressable
+                  onPress={showGuestLock}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(17,24,39,0.72)',
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: '#FFFFFF',
+                        fontFamily: 'exoSemibold',
+                        fontSize: 12,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {guestFiltersHint}
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
 
             <View className="mt-4">
@@ -2307,7 +2849,7 @@ export default function SchoolsScreen() {
               className="mt-4 rounded-2xl bg-bgPurple px-4 py-4 items-center"
               onPress={() => setFilterModalVisible(false)}
             >
-              <Text className="text-white font-exoSemibold text-base">
+              <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.showResults')}
               </Text>
             </Pressable>
@@ -2322,17 +2864,23 @@ export default function SchoolsScreen() {
         onRequestClose={() => setBotModalVisible(false)}
       >
         <LinearGradient
-          colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+          colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
           locations={[0, 0.5, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{ flex: 1, justifyContent: 'flex-end' }}
         >
-          <View className="bg-white rounded-t-[32px]" style={{ maxHeight: '88%' }}>
-            <ScrollView
-              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 }}
-              showsVerticalScrollIndicator={false}
-            >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={12}
+            style={{ justifyContent: 'flex-end' }}
+          >
+            <View className="bg-white rounded-t-[32px]" style={{ maxHeight: '88%' }}>
+              <ScrollView
+                contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
               <View className="flex-row items-center justify-between mb-4">
                 <Pressable
                   className="w-10 h-10 rounded-full bg-darkGrayText/10 items-center justify-center"
@@ -2400,12 +2948,13 @@ export default function SchoolsScreen() {
                 onPress={applyBotFilters}
                 disabled={!botQuery.trim() || botLoading}
               >
-                <Text className="text-white font-exoSemibold text-base">
+                <Text className="text-darkGrayText font-exoSemibold text-base">
                   {botLoading ? t('schools.bot.matching') : t('schools.bot.apply')}
                 </Text>
               </Pressable>
-            </ScrollView>
-          </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
         </LinearGradient>
       </Modal>
     </SafeAreaView>

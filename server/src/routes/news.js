@@ -2,6 +2,7 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { buildConfig } = require('../utils/config');
 const { readNews, upsertNewsItem, deleteNewsItem } = require('../services/newsStore');
+const { ValidationError, validateNewsPayload } = require('../validation');
 
 const buildNewsRouter = (configArg) => {
   const router = express.Router();
@@ -69,12 +70,16 @@ const buildNewsRouter = (configArg) => {
     try {
       const actor = await requireModerator(req, res);
       if (!actor) return;
+      const validated = validateNewsPayload(req.body || {});
       const item = await upsertNewsItem({
-        ...req.body,
-        author: req.body?.author || actor.email || actor.id || 'Moderator',
+        ...validated,
+        author: validated?.author || actor.email || actor.id || 'Moderator',
       });
       res.json({ data: item });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       if (String(error?.message || '').includes('title is required')) {
         return res.status(400).json({ error: 'title is required' });
       }
@@ -86,13 +91,19 @@ const buildNewsRouter = (configArg) => {
     try {
       const actor = await requireModerator(req, res);
       if (!actor) return;
-      const item = await upsertNewsItem({
-        ...req.body,
+      const validated = validateNewsPayload({
+        ...(req.body || {}),
         id: String(req.params?.id || req.body?.id || '').trim(),
-        author: req.body?.author || actor.email || actor.id || 'Moderator',
+      });
+      const item = await upsertNewsItem({
+        ...validated,
+        author: validated?.author || actor.email || actor.id || 'Moderator',
       });
       res.json({ data: item });
     } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       if (String(error?.message || '').includes('title is required')) {
         return res.status(400).json({ error: 'title is required' });
       }

@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { loadConsultationRequests } from '../services/consultationRequests';
 import { useLocale } from '../context/LocaleContext';
 
-const GRADIENT_COLORS = ['#786AFF', '#4FCCFF'];
+const GRADIENT_COLORS = ['#E9EEF6', '#E9EEF6'];
 
 export default function AdminStatisticsScreen() {
   const { t } = useLocale();

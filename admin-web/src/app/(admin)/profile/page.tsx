@@ -5,6 +5,7 @@ import { loadSchools, upsertSchool } from '@/lib/api';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
+import { formatKzPhone } from '@/lib/phone';
 import { supabase } from '@/lib/supabaseClient';
 
 type ProfileForm = {
@@ -28,25 +29,6 @@ const normalizeText = (value: unknown) => (typeof value === 'string' ? value.tri
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-const getNotifications = (profile: any) => {
-  if (!Array.isArray(profile?.system?.notifications)) return [];
-  return [...profile.system.notifications].sort(
-    (a, b) =>
-      new Date(b?.created_at || 0).getTime() -
-      new Date(a?.created_at || 0).getTime()
-  );
-};
-
-const findOwnSchool = (items: any[], email: string) => {
-  const schoolId = buildFallbackSchoolId(email);
-  return (
-    items.find((item: any) => {
-      const itemEmail = normalizeEmail(item?.basic_info?.email);
-      return item?.school_id === schoolId || (itemEmail && itemEmail === email);
-    }) || null
-  );
-};
-
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
   const fromMeta = (...keys: string[]) => {
@@ -64,7 +46,7 @@ const toProfileForm = (user: any): ProfileForm => {
     name: normalizeText(fromMeta('name', 'full_name')),
     email: normalizeText(user?.email || meta.email),
     organization: normalizeText(fromMeta('organization', 'schoolName', 'school_name')),
-    contactPhone: normalizeText(fromMeta('contactPhone', 'contact_phone', 'phone')),
+    contactPhone: formatKzPhone(fromMeta('contactPhone', 'contact_phone', 'phone')),
     website: normalizeText(fromMeta('website', 'site', 'url')),
     bin: normalizeText(fromMeta('bin')),
     iin: normalizeText(fromMeta('iin')),
@@ -108,7 +90,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<StatusState>('idle');
   const [message, setMessage] = useState('');
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftFirstName, setDraftFirstName] = useState('');
+  const [draftLastName, setDraftLastName] = useState('');
+  const [draftName, setDraftName] = useState('');
+  const [draftOrganization, setDraftOrganization] = useState('');
+  const [draftPhone, setDraftPhone] = useState('');
+  const [draftWebsite, setDraftWebsite] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -117,16 +105,12 @@ export default function ProfilePage() {
       if (!active) return;
       const nextForm = toProfileForm(data.session?.user);
       setForm(nextForm);
-      try {
-        const email = normalizeEmail(nextForm.email);
-        if (email) {
-          const result = await loadSchools();
-          const ownSchool = findOwnSchool(result.data, email);
-          setNotifications(getNotifications(ownSchool));
-        }
-      } catch {
-        setNotifications([]);
-      }
+      setDraftFirstName(nextForm.firstName);
+      setDraftLastName(nextForm.lastName);
+      setDraftName(nextForm.name);
+      setDraftOrganization(nextForm.organization);
+      setDraftPhone(nextForm.contactPhone);
+      setDraftWebsite(nextForm.website);
       setLoading(false);
     };
     load();
@@ -141,22 +125,25 @@ export default function ProfilePage() {
     return parts.join(' ').trim() || form.name;
   }, [form]);
 
-  const updateField = (field: keyof ProfileForm, value: string) => {
-    setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
-  };
-
   const saveProfile = async () => {
     if (!form) return;
     setStatus('saving');
     setMessage('');
+    const firstName = draftFirstName.trim();
+    const lastName = draftLastName.trim();
+    const name = draftName.trim() || [firstName, lastName].filter(Boolean).join(' ').trim();
+    const organization = draftOrganization.trim();
+    const contactPhone = formatKzPhone(draftPhone);
+    const website = draftWebsite.trim();
+
     const metadata = {
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      name: (form.name || computedFullName).trim(),
+      firstName,
+      lastName,
+      name: name || computedFullName,
       email: form.email.trim(),
-      organization: form.organization.trim(),
-      contactPhone: form.contactPhone.trim(),
-      website: form.website.trim(),
+      organization,
+      contactPhone,
+      website,
       bin: form.bin.trim(),
       iin: form.iin.trim(),
       licenseNumber: form.licenseNumber.trim(),
@@ -185,7 +172,7 @@ export default function ProfilePage() {
         : createEmptySchoolProfile({ school_id: schoolId });
       const targetSchoolId = existing?.school_id || schoolId;
 
-      const org = form.organization.trim();
+      const org = organization;
       if (org) {
         nextProfile.basic_info.display_name.ru = org;
         nextProfile.basic_info.display_name.en = org;
@@ -194,14 +181,11 @@ export default function ProfilePage() {
         nextProfile.basic_info.name.en = org;
         nextProfile.basic_info.name.kk = org;
       }
-      if (form.contactPhone.trim()) {
-        nextProfile.basic_info.phone = form.contactPhone.trim();
+      if (contactPhone.trim()) {
+        nextProfile.basic_info.phone = contactPhone;
       }
-      if (form.email.trim()) {
-        nextProfile.basic_info.email = form.email.trim();
-      }
-      if (form.website.trim()) {
-        nextProfile.basic_info.website = form.website.trim();
+      if (website.trim()) {
+        nextProfile.basic_info.website = website;
       }
       if (form.licenseNumber.trim()) {
         nextProfile.basic_info.license_details.number = form.licenseNumber.trim();
@@ -219,6 +203,20 @@ export default function ProfilePage() {
       // Keep profile save successful even if school profile sync fails.
     }
 
+    setForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            firstName,
+            lastName,
+            name,
+            organization,
+            contactPhone,
+            website,
+          }
+        : prev
+    );
+    setIsEditing(false);
     setStatus('saved');
     setMessage(t('saved'));
     setTimeout(() => setStatus('idle'), 1500);
@@ -257,34 +255,6 @@ export default function ProfilePage() {
     }
   };
 
-  const markNotificationRead = async (notificationId: string) => {
-    if (!form?.email) return;
-    try {
-      const email = normalizeEmail(form.email);
-      const result = await loadSchools();
-      const existing = findOwnSchool(result.data, email);
-      if (!existing) return;
-
-      const nextNotifications = getNotifications(existing).map((item: any) =>
-        item.id === notificationId && !item.read_at
-          ? { ...item, read_at: new Date().toISOString() }
-          : item
-      );
-
-      await upsertSchool({
-        ...existing,
-        system: {
-          ...(existing?.system || {}),
-          notifications: nextNotifications,
-          updated_at: new Date().toISOString(),
-        },
-      });
-      setNotifications(nextNotifications);
-    } catch {
-      // no-op
-    }
-  };
-
   if (loading) {
     return <div className="card">{t('loadingProfile')}</div>;
   }
@@ -293,157 +263,247 @@ export default function ProfilePage() {
     return <div className="card">{t('profileUnavailable')}</div>;
   }
 
+  const ui =
+    locale === 'en'
+      ? {
+          greeting: 'Hello',
+          cabinet: 'School account',
+          editProfile: 'Edit profile',
+          cancel: 'Cancel',
+          languageTitle: 'Language',
+          languageHint: 'Language is applied to the whole account.',
+          contactSupport: 'Contact support',
+          notifications: 'Notifications',
+          faq: 'FAQ',
+        }
+      : locale === 'kk'
+        ? {
+            greeting: 'Сәлеметсіз бе',
+            cabinet: 'Мектеп кабинеті',
+            editProfile: 'Профильді өңдеу',
+            cancel: 'Бас тарту',
+            languageTitle: 'Тіл',
+            languageHint: 'Тіл бүкіл кабинетке қолданылады.',
+            contactSupport: 'Қолдауға жазу',
+            notifications: 'Хабарламалар',
+            faq: 'Жиі қойылатын сұрақтар',
+          }
+        : {
+            greeting: 'Здравствуйте',
+            cabinet: 'Кабинет школы',
+            editProfile: 'Редактировать профиль',
+            cancel: 'Отмена',
+            languageTitle: 'Язык',
+            languageHint: 'Изменение языка применяется ко всему кабинету.',
+            contactSupport: 'Связаться с поддержкой',
+            notifications: 'Уведомления',
+            faq: 'Часто задаваемые вопросы',
+          };
+  const fullName = [form.firstName, form.lastName].filter(Boolean).join(' ').trim() || form.name || 'School';
+  const initial = (form.firstName || form.lastName || form.organization || form.email || 'S')
+    .trim()
+    .charAt(0)
+    .toUpperCase() || 'S';
+
   return (
     <div className="card">
-      <div className="locale-toggle" style={{ marginBottom: 8 }}>
-        {(['ru', 'en', 'kk'] as const).map((lang) => (
-          <button
-            key={lang}
-            type="button"
-            className={`locale-chip${locale === lang ? ' active' : ''}`}
-            onClick={() => setLocale(lang)}
-          >
-            {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
-          </button>
-        ))}
+      <div
+        style={{
+          borderRadius: 16,
+          padding: '22px 20px',
+          background: 'linear-gradient(135deg, #1f4db7 0%, #4f5fff 100%)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 76,
+            height: 76,
+            borderRadius: '50%',
+            border: '3px solid #ffc107',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 34,
+            fontWeight: 800,
+            background: 'rgba(255,255,255,0.08)',
+            flexShrink: 0,
+          }}
+        >
+          {initial}
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            {ui.greeting}, {fullName}!
+          </p>
+          <p style={{ margin: '4px 0 0', opacity: 0.9 }}>{ui.cabinet}</p>
+        </div>
       </div>
-      <h2 style={{ marginTop: 0 }}>{t('profileTitle')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
-        {t('profileHint')}
-      </p>
 
-      <div className="profile-notifications">
-        <p className="profile-notifications-title">{t('profileNotificationsTitle')}</p>
-        <p className="muted">{t('profileNotificationsHint')}</p>
-        {notifications.length ? (
-          <div className="profile-notifications-list">
-            {notifications.map((item) => {
-              const unread = !item?.read_at;
-              return (
-                <div
-                  key={item?.id || `${item?.created_at}-${item?.text}`}
-                  className={`profile-notification-item${unread ? ' unread' : ''}`}
-                >
-                  <p>{item?.text || '—'}</p>
-                  <p className="muted">
-                    {t('profileNotificationsFrom')} {item?.from || 'moderator'} ·{' '}
-                    {item?.created_at
-                      ? new Date(item.created_at).toLocaleString()
-                      : '—'}
-                  </p>
-                  {unread ? (
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => markNotificationRead(item.id)}
-                    >
-                      {t('profileNotificationsMarkRead')}
-                    </button>
-                  ) : null}
-                  {unread ? (
-                    <span className="schools-status warn">{t('profileNotificationsUnread')}</span>
-                  ) : null}
-                </div>
-              );
-            })}
+      <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+        <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+            <p style={{ margin: 0, fontWeight: 700 }}>{ui.editProfile}</p>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                if (isEditing) {
+                  setDraftFirstName(form.firstName);
+                  setDraftLastName(form.lastName);
+                  setDraftName(form.name);
+                  setDraftOrganization(form.organization);
+                  setDraftPhone(form.contactPhone);
+                  setDraftWebsite(form.website);
+                }
+                setIsEditing((prev) => !prev);
+                setMessage('');
+              }}
+              disabled={status === 'saving' || status === 'deleting'}
+            >
+              {isEditing ? ui.cancel : ui.editProfile}
+            </button>
           </div>
-        ) : (
-          <p className="muted">{t('profileNotificationsEmpty')}</p>
-        )}
+          {isEditing ? (
+            <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+              <div className="form-row">
+                <EditableField
+                  label={t('firstName')}
+                  value={draftFirstName}
+                  onChange={setDraftFirstName}
+                />
+                <EditableField
+                  label={t('lastName')}
+                  value={draftLastName}
+                  onChange={setDraftLastName}
+                />
+              </div>
+              <EditableField
+                label={t('fullName')}
+                value={draftName}
+                onChange={setDraftName}
+              />
+              <div className="form-row">
+                <EditableField
+                  label={t('organization')}
+                  value={draftOrganization}
+                  onChange={setDraftOrganization}
+                />
+                <EditableField
+                  label={t('contactPhone')}
+                  value={draftPhone}
+                  type="tel"
+                  placeholder="+7 (___) ___-__-__"
+                  onChange={(value) => setDraftPhone(formatKzPhone(value))}
+                />
+              </div>
+              <div className="form-row">
+                <EditableField
+                  label={t('website')}
+                  value={draftWebsite}
+                  onChange={setDraftWebsite}
+                />
+                <EditableField
+                  label={t('email')}
+                  value={form.email}
+                  readOnly
+                  onChange={() => {}}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="button"
+                  disabled={status === 'saving' || status === 'deleting'}
+                  onClick={saveProfile}
+                >
+                  {status === 'saving' ? t('saving') : t('save')}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={status === 'saving' || status === 'deleting'}
+                  onClick={() => {
+                    setDraftFirstName(form.firstName);
+                    setDraftLastName(form.lastName);
+                    setDraftName(form.name);
+                    setDraftOrganization(form.organization);
+                    setDraftPhone(form.contactPhone);
+                    setDraftWebsite(form.website);
+                    setIsEditing(false);
+                    setMessage('');
+                  }}
+                >
+                  {ui.cancel}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ margin: 0, fontWeight: 700 }}>{fullName}</p>
+              <p className="muted" style={{ margin: '4px 0 0' }}>{form.email || '—'}</p>
+              <p className="muted" style={{ margin: '4px 0 0' }}>{form.organization || '—'}</p>
+            </div>
+          )}
+          {message ? (
+            <p
+              style={{
+                margin: '8px 0 0',
+                color: status === 'error' ? '#b91c1c' : '#15803d',
+              }}
+            >
+              {message}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="form-row">
-        <EditableField
-          label={t('firstName')}
-          value={form.firstName}
-          onChange={(value) => updateField('firstName', value)}
-        />
-        <EditableField
-          label={t('lastName')}
-          value={form.lastName}
-          onChange={(value) => updateField('lastName', value)}
-        />
+      <div style={{ marginTop: 10, border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
+        <p style={{ margin: 0, fontWeight: 700 }}>{ui.languageTitle}</p>
+        <p className="muted" style={{ margin: '4px 0 8px' }}>{ui.languageHint}</p>
+        <div className="locale-toggle" style={{ justifyContent: 'flex-start', marginBottom: 0 }}>
+          {(['ru', 'en', 'kk'] as const).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              className={`locale-chip${locale === lang ? ' active' : ''}`}
+              onClick={() => setLocale(lang)}
+            >
+              {lang === 'kk' ? 'KZ' : lang.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="form-row">
-        <EditableField
-          label={t('fullName')}
-          value={form.name}
-          onChange={(value) => updateField('name', value)}
-        />
-        <EditableField
-          label={t('email')}
-          value={form.email}
-          readOnly
-          onChange={() => {}}
-        />
-      </div>
-
-      <div className="form-row">
-        <EditableField
-          label={t('organization')}
-          value={form.organization}
-          onChange={(value) => updateField('organization', value)}
-        />
-        <EditableField
-          label={t('contactPhone')}
-          value={form.contactPhone}
-          type="tel"
-          placeholder="+7 (___) ___-__-__"
-          onChange={(value) => updateField('contactPhone', value)}
-        />
-      </div>
-
-      <div className="form-row">
-        <EditableField
-          label={t('website')}
-          value={form.website}
-          onChange={(value) => updateField('website', value)}
-        />
-        <EditableField
-          label={t('bin')}
-          value={form.bin}
-          onChange={(value) => updateField('bin', value)}
-        />
-      </div>
-
-      <div className="form-row">
-        <EditableField
-          label={t('iin')}
-          value={form.iin}
-          onChange={(value) => updateField('iin', value)}
-        />
-        <EditableField
-          label={t('licenseNumber')}
-          value={form.licenseNumber}
-          onChange={(value) => updateField('licenseNumber', value)}
-        />
-      </div>
-
-      <div className="form-row">
-        <EditableField
-          label={t('licenseIssuedAt')}
-          value={form.licenseIssuedAt}
-          type="date"
-          onChange={(value) => updateField('licenseIssuedAt', value)}
-        />
-        <EditableField
-          label={t('licenseExpiresAt')}
-          value={form.licenseExpiresAt}
-          type="date"
-          onChange={(value) => updateField('licenseExpiresAt', value)}
-        />
-      </div>
-
-      <div className="actions">
+      <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
-          className="primary"
-          disabled={status === 'saving' || status === 'deleting'}
-          onClick={saveProfile}
+          className="button secondary"
+          onClick={() => window.location.assign('/requests')}
         >
-          {status === 'saving' ? t('saving') : t('save')}
+          {ui.contactSupport}
         </button>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => window.location.assign('/news')}
+        >
+          {ui.notifications}
+        </button>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => window.location.assign('/statistics')}
+        >
+          {ui.faq}
+        </button>
+      </div>
+
+      <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
           className="button secondary"
@@ -452,9 +512,6 @@ export default function ProfilePage() {
         >
           {status === 'deleting' ? t('deleting') : t('deleteSchoolProfile')}
         </button>
-        <span className={`status ${status === 'error' ? 'error' : status === 'saved' ? 'saved' : ''}`}>
-          {message}
-        </span>
       </div>
     </div>
   );

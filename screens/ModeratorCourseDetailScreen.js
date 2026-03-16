@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  ScrollView,
   Text,
   View,
   Pressable,
@@ -10,6 +9,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { ArrowLeftIcon } from 'react-native-heroicons/outline';
 import { useTests } from '../context/TestsContext';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function ModeratorCourseDetailScreen() {
   const route = useRoute();
@@ -92,10 +92,14 @@ export default function ModeratorCourseDetailScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1 px-6"
         contentContainerStyle={{ paddingBottom: 32, paddingTop: 8 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        enableOnAndroid
+        extraScrollHeight={24}
       >
         <View className="bg-white rounded-2xl border border-bgPurple/15 p-4 mb-4">
           <Text className="text-darkGrayText font-exoSemibold text-base mb-2">
@@ -386,7 +390,7 @@ export default function ModeratorCourseDetailScreen() {
             ) : null}
           </View>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

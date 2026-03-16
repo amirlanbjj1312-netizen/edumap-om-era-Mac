@@ -12,6 +12,32 @@ const REQUIRED_FIELDS = [
   'childName',
   'childGrade',
 ];
+const FIELD_LIMITS = {
+  schoolId: 120,
+  schoolName: 180,
+  parentName: 120,
+  parentPhone: 24,
+  parentEmail: 120,
+  childName: 120,
+  childGrade: 24,
+  consultationType: 64,
+  consultationTypeLabel: 120,
+  comment: 2000,
+  whatsappPhone: 24,
+};
+const ALLOWED_CONSULTATION_TYPES = new Set([
+  'schoolDetail.consultation.firstMeeting',
+  'schoolDetail.consultation.transfer',
+  'schoolDetail.consultation.learningQuestion',
+  'schoolDetail.consultation.other',
+  // Backward compatibility with old plain labels
+  'First meeting',
+  'Transfer',
+  'Learning question',
+  'Other',
+]);
+const GRADE_PATTERN = /^(pre-k|[1-9]|1[0-2])$/i;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const POST_RATE_LIMITS = {
   byIp: { windowMs: 15 * 60 * 1000, max: 10 },
   byPhone: { windowMs: 60 * 60 * 1000, max: 3 },
@@ -19,12 +45,45 @@ const POST_RATE_LIMITS = {
 const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
 const postBuckets = new Map();
 
+const exceedsLimit = (value, limit) => String(value || '').trim().length > limit;
 const validatePayload = (body = {}) => {
   for (const field of REQUIRED_FIELDS) {
     if (!body[field] || !String(body[field]).trim()) {
       return `Field "${field}" is required.`;
     }
   }
+
+  for (const [field, limit] of Object.entries(FIELD_LIMITS)) {
+    if (body[field] != null && exceedsLimit(body[field], limit)) {
+      return `Field "${field}" is too long (max ${limit} chars).`;
+    }
+  }
+
+  const normalizedParentPhone = normalizePhone(body.parentPhone);
+  if (normalizedParentPhone.length < 10 || normalizedParentPhone.length > 15) {
+    return 'Field "parentPhone" must contain 10-15 digits.';
+  }
+
+  const normalizedWhatsApp = normalizePhone(body.whatsappPhone);
+  if (String(body.whatsappPhone || '').trim() && (normalizedWhatsApp.length < 10 || normalizedWhatsApp.length > 15)) {
+    return 'Field "whatsappPhone" must contain 10-15 digits.';
+  }
+
+  const parentEmail = String(body.parentEmail || '').trim();
+  if (parentEmail && !EMAIL_PATTERN.test(parentEmail)) {
+    return 'Field "parentEmail" is invalid.';
+  }
+
+  const grade = String(body.childGrade || '').trim();
+  if (!GRADE_PATTERN.test(grade)) {
+    return 'Field "childGrade" must be one of: Pre-K, 1..12.';
+  }
+
+  const consultationType = String(body.consultationType || '').trim() || 'First meeting';
+  if (!ALLOWED_CONSULTATION_TYPES.has(consultationType)) {
+    return 'Field "consultationType" has unsupported value.';
+  }
+
   return null;
 };
 const normalizePhone = (value) => String(value || '').replace(/\D/g, '');
@@ -195,13 +254,14 @@ const buildConsultationsRouter = (config) => {
 
       const record = await store.add({
         schoolId: String(req.body.schoolId).trim(),
-        schoolName: req.body.schoolName.trim(),
-        parentName: req.body.parentName.trim(),
-        parentPhone: req.body.parentPhone.trim(),
-        parentEmail: req.body.parentEmail?.trim() || '',
-        childName: req.body.childName.trim(),
-        childGrade: req.body.childGrade.trim(),
-        consultationType: req.body.consultationType || 'First meeting',
+        schoolName: String(req.body.schoolName).trim(),
+        parentName: String(req.body.parentName).trim(),
+        parentPhone: String(req.body.parentPhone).trim(),
+        parentEmail: String(req.body.parentEmail || '').trim(),
+        childName: String(req.body.childName).trim(),
+        childGrade: String(req.body.childGrade).trim(),
+        consultationType:
+          String(req.body.consultationType || '').trim() || 'First meeting',
         comment: req.body.comment?.trim() || '',
         whatsappPhone: req.body.whatsappPhone?.replace(/\s+/g, '') || '',
       });

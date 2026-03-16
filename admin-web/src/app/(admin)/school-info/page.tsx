@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
@@ -10,6 +10,18 @@ import {
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
+import { formatKzPhone } from '@/lib/phone';
+import { useImageCropper } from '@/lib/useImageCropper';
+import {
+  buildLegacyClubsCatalogFromUnified,
+  buildUnifiedClubsFromServices,
+} from '@/lib/clubsSchedule';
+import {
+  buildFeeRulesFromFinance,
+  buildGradeFeeMapFromRules,
+  SCHOOL_FEE_CURRENCIES,
+  SCHOOL_GRADE_OPTIONS,
+} from '@/lib/schoolFinance';
 
 type SchoolProfile = ReturnType<typeof createEmptySchoolProfile>;
 
@@ -24,9 +36,100 @@ const parseArrayValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const WEEKDAY_OPTIONS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
+type WeekdayKey = (typeof WEEKDAY_OPTIONS)[number];
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_item, idx) =>
+  String(idx).padStart(2, '0')
+);
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_item, idx) =>
+  String(idx).padStart(2, '0')
+);
+
+const splitTime = (value: string) => {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return { hour: '', minute: '' };
+  return { hour: match[1], minute: match[2] };
+};
+
+const composeTime = (hour: string, minute: string) => {
+  const h = String(hour || '').trim();
+  const m = String(minute || '').trim();
+  if (!h || !m) return '';
+  return `${h}:${m}`;
+};
+
+const parseSchedulePreset = (value: string) => {
+  const raw = String(value || '').trim();
+  const days = WEEKDAY_OPTIONS.filter((item) =>
+    new RegExp(
+      item === 'Monday'
+        ? 'понедельник|monday|дүйсенбі'
+        : item === 'Tuesday'
+          ? 'вторник|tuesday|сейсенбі'
+          : item === 'Wednesday'
+            ? 'среда|wednesday|сәрсенбі'
+            : item === 'Thursday'
+              ? 'четверг|thursday|бейсенбі'
+              : item === 'Friday'
+                ? 'пятница|friday|жұма'
+                : item === 'Saturday'
+                  ? 'суббота|saturday|сенбі'
+                  : 'воскресенье|sunday|жексенбі',
+      'i'
+    ).test(raw)
+  );
+  const times = Array.from(raw.matchAll(/([01]?\d|2[0-3])[:.][0-5]\d/g)).map(
+    (item) => item[0].replace('.', ':')
+  );
+  const [start = '', end = ''] = times;
+  return { days, start, end };
+};
+
+const buildSchedulePreset = (
+  days: WeekdayKey[],
+  start: string,
+  end: string,
+  locale: 'ru' | 'en' | 'kk'
+) => {
+  const dayLabel = days.map((item) => translateOption(item, locale)).join(', ');
+  const time = start && end ? `${start}-${end}` : start ? `${start}` : end ? `${end}` : '';
+  if (dayLabel && time) return `${dayLabel} ${time}`;
+  if (dayLabel) return dayLabel;
+  if (time) return time;
+  return '';
+};
+
+const parseGradeRange = (value: string) => {
+  const raw = String(value || '');
+  const match = raw.match(/(\d{1,2})\s*-\s*(\d{1,2})/);
+  if (!match) return { from: '', to: '' };
+  return { from: match[1], to: match[2] };
+};
+
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
+
+const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  from_grade: '',
+  to_grade: '',
+  amount: '',
+  currency: 'KZT',
+  comment: '',
+  ...overrides,
+});
 
 const LocaleContext = createContext<'ru' | 'en' | 'kk'>('ru');
 
@@ -48,12 +151,16 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   },
   'Отображаемое имя': { en: 'Display name', kk: 'Көрсетілетін атау' },
   'Тип школы': { en: 'School type', kk: 'Мектеп түрі' },
+  'Подтип школы': { en: 'School subtype', kk: 'Мектеп ішкі түрі' },
   Город: { en: 'City', kk: 'Қала' },
   Район: { en: 'District', kk: 'Аудан' },
   Адрес: { en: 'Address', kk: 'Мекенжай' },
   Описание: { en: 'Description', kk: 'Сипаттама' },
   Широта: { en: 'Latitude', kk: 'Ендік' },
   Долгота: { en: 'Longitude', kk: 'Бойлық' },
+  Директор: { en: 'Principal', kk: 'Директор' },
+  'Зам. директора': { en: 'Deputy principal', kk: 'Директор орынбасары' },
+  'Кураторы классов': { en: 'Class curators', kk: 'Сынып кураторлары' },
   Телефон: { en: 'Phone', kk: 'Телефон' },
   WhatsApp: { en: 'WhatsApp', kk: 'WhatsApp' },
   Email: { en: 'Email', kk: 'Email' },
@@ -65,10 +172,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Языки обучения': { en: 'Teaching languages', kk: 'Оқыту тілдері' },
   'Языки (доп.)': { en: 'Other languages', kk: 'Қосымша тілдер' },
   Программы: { en: 'Programs', kk: 'Бағдарламалар' },
-  'Учебные планы (национальные)': { en: 'Curricula (national)', kk: 'Оқу жоспарлары (ұлттық)' },
-  'Учебные планы (международные)': { en: 'Curricula (international)', kk: 'Оқу жоспарлары (халықаралық)' },
-  'Учебные планы (дополнительные)': { en: 'Curricula (additional)', kk: 'Оқу жоспарлары (қосымша)' },
-  'Учебные планы (другое)': { en: 'Curricula (other)', kk: 'Оқу жоспарлары (басқа)' },
+  'Учебные программы (национальные)': { en: 'Curricula (national)', kk: 'Оқу жоспарлары (ұлттық)' },
+  'Учебные программы (международные)': { en: 'Curricula (international)', kk: 'Оқу жоспарлары (халықаралық)' },
+  'Учебные программы (дополнительные)': { en: 'Curricula (additional)', kk: 'Оқу жоспарлары (қосымша)' },
+  'Учебные программы (другое)': { en: 'Curricula (other)', kk: 'Оқу жоспарлары (басқа)' },
   'Углубленные предметы': { en: 'Advanced subjects', kk: 'Тереңдетілген пәндер' },
   'Углубленные (доп.)': { en: 'Advanced (other)', kk: 'Тереңдетілген (басқа)' },
   Классы: { en: 'Grades', kk: 'Сыныптар' },
@@ -78,12 +185,47 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Предметы: { en: 'Subjects', kk: 'Пәндер' },
   'Предметы (доп.)': { en: 'Subjects (other)', kk: 'Пәндер (басқа)' },
   Этапы: { en: 'Stages', kk: 'Кезеңдер' },
+  'Свободные места по классам': { en: 'Available seats by grade', kk: 'Сыныптар бойынша бос орындар' },
+  'Период набора': { en: 'Enrollment period', kk: 'Қабылдау кезеңі' },
+  'Сроки подачи документов': { en: 'Document submission deadlines', kk: 'Құжат тапсыру мерзімі' },
+  'Детализация этапов набора': { en: 'Admission stages details', kk: 'Қабылдау кезеңдерінің сипаттамасы' },
+  'Конкурс на место': { en: 'Competition per seat', kk: 'Бір орынға конкурс' },
+  'Средний балл экзаменов': { en: 'Average exam score', kk: 'Емтиханның орташа балы' },
+  'Поступление выпускников в вузы (%)': { en: 'University admission rate (%)', kk: 'Түлектердің ЖОО-ға түсуі (%)' },
+  'Куда поступают выпускники': { en: 'Top universities', kk: 'Түлектер қай ЖОО-ға түседі' },
+  'Олимпиадные достижения': { en: 'Olympiad achievements', kk: 'Олимпиада жетістіктері' },
+  'Размер класса (начальная школа)': { en: 'Class size (primary)', kk: 'Сынып көлемі (бастауыш)' },
+  'Размер класса (средняя школа)': { en: 'Class size (middle)', kk: 'Сынып көлемі (орта буын)' },
+  'Размер класса (старшая школа)': { en: 'Class size (high)', kk: 'Сынып көлемі (жоғары сынып)' },
+  'Сменность обучения': { en: 'School shifts', kk: 'Оқу ауысымы' },
+  'Формат домашней работы': { en: 'Homework format', kk: 'Үй жұмысының форматы' },
+  'Формат оценивания': { en: 'Assessment format', kk: 'Бағалау форматы' },
+  'Цифровые платформы': { en: 'Digital platforms', kk: 'Цифрлық платформалар' },
   Питание: { en: 'Meals', kk: 'Тамақтану' },
   'Разов в день': { en: 'Times per day', kk: 'Күніне қанша рет' },
   'Бесплатно до класса': { en: 'Free until grade', kk: 'Тегін қай сыныпқа дейін' },
   'Примечание по питанию': { en: 'Meals notes', kk: 'Тамақтану туралы ескертпе' },
   'Иностранные преподаватели': { en: 'Foreign teachers', kk: 'Шетелдік мұғалімдер' },
-  Комментарий: { en: 'Comment', kk: 'Түсініктеме' },
+  'Что включено в стоимость': { en: 'Included in tuition', kk: 'Құнына не кіреді' },
+  'Что оплачивается отдельно': { en: 'Paid separately', kk: 'Не бөлек төленеді' },
+  'Регистрационный взнос': { en: 'Registration fee', kk: 'Тіркеу жарнасы' },
+  'Валюта регистрационного взноса': { en: 'Registration fee currency', kk: 'Тіркеу жарнасының валютасы' },
+  'Маршруты автобуса': { en: 'Bus routes', kk: 'Автобус маршруттары' },
+  'Стоимость транспорта по районам': { en: 'Transport cost by district', kk: 'Аудандар бойынша көлік құны' },
+  'Время подачи автобуса': { en: 'Bus pickup time', kk: 'Автобустың келу уақыты' },
+  'Время развоза автобуса': { en: 'Bus drop-off time', kk: 'Автобустың тарату уақыты' },
+  'Медперсонал': { en: 'Medical staff', kk: 'Медицина қызметкерлері' },
+  'График медкабинета': { en: 'Medical office schedule', kk: 'Медкабинет кестесі' },
+  'Поддержка психолога': { en: 'Psychologist support', kk: 'Психолог қолдауы' },
+  'Поддержка логопеда': { en: 'Speech therapist support', kk: 'Логопед қолдауы' },
+  'Поддержка дефектолога': { en: 'Defectologist support', kk: 'Дефектолог қолдауы' },
+  'Работа с аллергиями/особыми диетами': { en: 'Allergies and diet support', kk: 'Аллергия/арнайы диета қолдауы' },
+  'Протоколы безопасности': { en: 'Security protocols', kk: 'Қауіпсіздік хаттамалары' },
+  'Политика доступа на территорию': { en: 'Campus access policy', kk: 'Аумаққа кіру саясаты' },
+  'Формат обратной связи с родителями': { en: 'Parent feedback format', kk: 'Ата-анамен кері байланыс форматы' },
+  'Частота встреч с родителями': { en: 'Parent meeting frequency', kk: 'Ата-анамен кездесу жиілігі' },
+  'Родительский комитет': { en: 'Parent committee', kk: 'Ата-ана комитеті' },
+  'SLA ответа школе (часы)': { en: 'Response SLA (hours)', kk: 'Жауап SLA (сағат)' },
   'Наш преподавательский состав': { en: 'Our teaching staff', kk: 'Біздің педагогикалық құрам' },
   'Фото преподавателя URL': { en: 'Teacher photo URL', kk: 'Мұғалім фотосы URL' },
   'Фото преподавателя (файл)': { en: 'Teacher photo (file)', kk: 'Мұғалім фотосы (файл)' },
@@ -95,6 +237,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Должность: { en: 'Position', kk: 'Лауазымы' },
   'Стаж (лет)': { en: 'Experience (years)', kk: 'Тәжірибе (жыл)' },
   'Категория преподавателя': { en: 'Teacher category', kk: 'Мұғалім санаты' },
+  'Образование / академическая степень': {
+    en: 'Education / academic degree',
+    kk: 'Білімі / академиялық дәрежесі',
+  },
   'Языки преподавания': { en: 'Teaching languages', kk: 'Оқыту тілдері' },
   'Подготовка к экзаменам': { en: 'Exam preparation', kk: 'Емтиханға дайындық' },
   'Добавить преподавателя': { en: 'Add teacher', kk: 'Мұғалім қосу' },
@@ -105,7 +251,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   },
   'Каталог кружков и секций': { en: 'Clubs catalog', kk: 'Үйірмелер каталогы' },
   'Добавить кружок': { en: 'Add club', kk: 'Үйірме қосу' },
+  'Добавить следующий кружок': { en: 'Add next club', kk: 'Келесі үйірмені қосу' },
   'Удалить кружок': { en: 'Remove club', kk: 'Үйірмені жою' },
+  Развернуть: { en: 'Expand', kk: 'Кеңейту' },
+  Свернуть: { en: 'Collapse', kk: 'Жинау' },
   'Добавьте хотя бы один кружок.': {
     en: 'Add at least one club.',
     kk: 'Кемінде бір үйірме қосыңыз.',
@@ -113,7 +262,23 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Название кружка': { en: 'Club name', kk: 'Үйірме атауы' },
   'Описание кружка': { en: 'Club description', kk: 'Үйірме сипаттамасы' },
   'Расписание': { en: 'Schedule', kk: 'Кесте' },
+  'Дни недели': { en: 'Weekdays', kk: 'Апта күндері' },
+  'День недели': { en: 'Weekday', kk: 'Апта күні' },
+  'Время начала': { en: 'Start time', kk: 'Басталу уақыты' },
+  'Минуты (начало)': { en: 'Minutes (start)', kk: 'Минут (басы)' },
+  'Время окончания': { en: 'End time', kk: 'Аяқталу уақыты' },
+  'Минуты (окончание)': { en: 'Minutes (end)', kk: 'Минут (соңы)' },
   'Кто ведет (ФИО)': { en: 'Teacher name', kk: 'Жетекші (АЖТ)' },
+  'Инфо про тренера': { en: 'Trainer info', kk: 'Жаттықтырушы туралы' },
+  'Фото тренера (файл)': { en: 'Trainer photo (file)', kk: 'Жаттықтырушы фотосы (файл)' },
+  'Фото секции (файлы)': { en: 'Section photos (files)', kk: 'Секция фотолары (файл)' },
+  'Добавить еще фото секции': { en: 'Add more section photos', kk: 'Секция фотоларын тағы қосу' },
+  'Удалить фото': { en: 'Remove photo', kk: 'Фотоны жою' },
+  'Фото тренера загружено': { en: 'Trainer photo uploaded', kk: 'Жаттықтырушы фотосы жүктелді' },
+  'Фото тренера не загружено': { en: 'Trainer photo not uploaded', kk: 'Жаттықтырушы фотосы жүктелмеген' },
+  'Загружено фото секции': { en: 'Section photos uploaded', kk: 'Жүктелген секция фотолары' },
+  'Фото преподавателя загружено': { en: 'Teacher photo uploaded', kk: 'Мұғалім фотосы жүктелді' },
+  'Фото преподавателя не загружено': { en: 'Teacher photo not uploaded', kk: 'Мұғалім фотосы жүктелмеген' },
   'Для классов': { en: 'Grades', kk: 'Сыныптар үшін' },
   'Стоимость в месяц': { en: 'Monthly fee', kk: 'Айлық төлем' },
   ИЛИ: { en: 'OR', kk: 'НЕМЕСЕ' },
@@ -128,6 +293,17 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Самоокупаемость: { en: 'Self-funded', kk: 'Өзін-өзі қаржыландыру' },
   'Бесплатные места': { en: 'Free places', kk: 'Тегін орындар' },
   'Стоимость / мес': { en: 'Monthly fee', kk: 'Айлық төлем' },
+  'Опции оплаты': { en: 'Payment options', kk: 'Төлем опциялары' },
+  Скидки: { en: 'Discounts', kk: 'Жеңілдіктер' },
+  Гранты: { en: 'Grants', kk: 'Гранттар' },
+  'Добавить цену': { en: 'Add fee', kk: 'Төлем қосу' },
+  'Удалить цену': { en: 'Remove fee', kk: 'Төлемді жою' },
+  'С класса': { en: 'From grade', kk: 'Сыныптан бастап' },
+  'По класс': { en: 'To grade', kk: 'Сыныпқа дейін' },
+  Цена: { en: 'Price', kk: 'Бағасы' },
+  Валюта: { en: 'Currency', kk: 'Валюта' },
+  Комментарий: { en: 'Comment', kk: 'Түсініктеме' },
+  'Добавьте хотя бы одну цену.': { en: 'Add at least one fee.', kk: 'Кемінде бір төлем қосыңыз.' },
   'Система оплаты': { en: 'Payment system', kk: 'Төлем жүйесі' },
   'Скидки / гранты': { en: 'Grants / discounts', kk: 'Гранттар / жеңілдіктер' },
   'Логотип URL': { en: 'Logo URL', kk: 'Логотип URL' },
@@ -144,12 +320,23 @@ const LABELS: Record<string, { en: string; kk: string }> = {
     en: 'Accreditation (files)',
     kk: 'Аккредитация (файлдар)',
   },
+  'Добавить файл': { en: 'Add file', kk: 'Файл қосу' },
+  'Добавить фото': { en: 'Add photos', kk: 'Фото қосу' },
+  'Добавить видео': { en: 'Add videos', kk: 'Видео қосу' },
+  'Добавить аккредитацию': { en: 'Add accreditation', kk: 'Аккредитация қосу' },
+  'или перетащите файлы сюда': { en: 'or drag files here', kk: 'немесе файлдарды осында сүйреп әкеліңіз' },
+  'Логотип загружен': { en: 'Logo uploaded', kk: 'Логотип жүктелді' },
+  'Логотип не загружен': { en: 'Logo not uploaded', kk: 'Логотип жүктелмеген' },
+  'Загружено фото': { en: 'Photos uploaded', kk: 'Жүктелген фото' },
+  'Загружено видео': { en: 'Videos uploaded', kk: 'Жүктелген видео' },
+  'Загружено аккредитаций': { en: 'Accreditations uploaded', kk: 'Жүктелген аккредитациялар' },
   Instagram: { en: 'Instagram', kk: 'Instagram' },
   TikTok: { en: 'TikTok', kk: 'TikTok' },
   YouTube: { en: 'YouTube', kk: 'YouTube' },
   Facebook: { en: 'Facebook', kk: 'Facebook' },
   VK: { en: 'VK', kk: 'VK' },
   Telegram: { en: 'Telegram', kk: 'Telegram' },
+  LinkedIn: { en: 'LinkedIn', kk: 'LinkedIn' },
   'Ближайшее метро': { en: 'Nearest метро', kk: 'Жақын метро' },
   'Ближайшая остановка': { en: 'Nearest stop', kk: 'Жақын аялдама' },
   'Дистанция до метро (км)': { en: 'Distance to метро (km)', kk: 'Метроға дейінгі қашықтық (км)' },
@@ -208,6 +395,18 @@ const OPTION_LABELS: Record<
 > = {
   State: { ru: 'Государственная', en: 'State', kk: 'Мемлекеттік' },
   Private: { ru: 'Частная', en: 'Private', kk: 'Жеке' },
+  'General School': { ru: 'Обычная средняя школа', en: 'General school', kk: 'Жалпы орта мектеп' },
+  'Autonomous School': { ru: 'Автономная школа', en: 'Autonomous school', kk: 'Автономды мектеп' },
+  Gymnasium: { ru: 'Гимназия', en: 'Gymnasium', kk: 'Гимназия' },
+  Lyceum: { ru: 'Лицей', en: 'Lyceum', kk: 'Лицей' },
+  'Specialized School': { ru: 'Специализированная школа', en: 'Specialized school', kk: 'Мамандандырылған мектеп' },
+  'International School': { ru: 'Международная школа', en: 'International school', kk: 'Халықаралық мектеп' },
+  'Private General School': { ru: 'Частная общеобразовательная школа', en: 'Private general school', kk: 'Жеке жалпы білім беретін мектеп' },
+  'Innovative School': { ru: 'Инновационная школа', en: 'Innovative school', kk: 'Инновациялық мектеп' },
+  'Advanced Subjects School': { ru: 'Школа с углублённым изучением предметов', en: 'Advanced subjects school', kk: 'Пәндерді тереңдетіп оқытатын мектеп' },
+  'Author School': { ru: 'Авторская школа', en: 'Author school', kk: 'Авторлық мектеп' },
+  'Online School': { ru: 'Онлайн-школа / дистанционная школа', en: 'Online / distance school', kk: 'Онлайн / қашықтан оқыту мектебі' },
+  'Boarding School': { ru: 'Школа-интернат', en: 'Boarding school', kk: 'Мектеп-интернат' },
   International: { ru: 'Международная', en: 'International', kk: 'Халықаралық' },
   Autonomous: { ru: 'Автономная', en: 'Autonomous', kk: 'Автономды' },
   Almaty: { ru: 'Алматы', en: 'Almaty', kk: 'Алматы' },
@@ -218,7 +417,7 @@ const OPTION_LABELS: Record<
   Medeu: { ru: 'Медеу', en: 'Medeu', kk: 'Медеу' },
   Nauryzbay: { ru: 'Наурызбай', en: 'Nauryzbay', kk: 'Наурызбай' },
   Astana: { ru: 'Астана', en: 'Astana', kk: 'Астана' },
-  'Almaty District': { ru: 'Алматы ауданы', en: 'Almaty District', kk: 'Алматы ауданы' },
+  'Almaty District': { ru: 'Алматы', en: 'Almaty District', kk: 'Алматы' },
   Baikonyr: { ru: 'Байконур', en: 'Baikonyr', kk: 'Байқоңыр' },
   Yesil: { ru: 'Есиль', en: 'Yesil', kk: 'Есіл' },
   Saryarka: { ru: 'Сарыарка', en: 'Saryarka', kk: 'Сарыарқа' },
@@ -232,9 +431,46 @@ const OPTION_LABELS: Record<
   'Per month': { ru: 'В месяц', en: 'Per month', kk: 'Айына' },
   'Per semester': { ru: 'В семестр', en: 'Per semester', kk: 'Семестрге' },
   'Per year': { ru: 'В год', en: 'Per year', kk: 'Жылына' },
+  'In installments': { ru: 'Несколькими траншами', en: 'In installments', kk: 'Бірнеше траншпен' },
+  'Single shift': { ru: 'Одна смена', en: 'Single shift', kk: 'Бір ауысым' },
+  'Double shift': { ru: 'Две смены', en: 'Double shift', kk: 'Екі ауысым' },
+  'Mixed shift': { ru: 'Смешанная сменность', en: 'Mixed shift', kk: 'Аралас ауысым' },
+  'No competition': { ru: 'Без конкурса', en: 'No competition', kk: 'Конкурссіз' },
+  'January-March': { ru: 'Январь-Март', en: 'January-March', kk: 'Қаңтар-Наурыз' },
+  'April-June': { ru: 'Апрель-Июнь', en: 'April-June', kk: 'Сәуір-Маусым' },
+  'July-August': { ru: 'Июль-Август', en: 'July-August', kk: 'Шілде-Тамыз' },
+  'September-October': { ru: 'Сентябрь-Октябрь', en: 'September-October', kk: 'Қыркүйек-Қазан' },
+  'Year-round': { ru: 'Круглый год', en: 'Year-round', kk: 'Жыл бойы' },
+  '<50%': { ru: 'До 50%', en: '<50%', kk: '50%-ға дейін' },
+  '50-70%': { ru: '50-70%', en: '50-70%', kk: '50-70%' },
+  '70-85%': { ru: '70-85%', en: '70-85%', kk: '70-85%' },
+  '85-95%': { ru: '85-95%', en: '85-95%', kk: '85-95%' },
+  '95-100%': { ru: '95-100%', en: '95-100%', kk: '95-100%' },
+  'On request': { ru: 'По запросу', en: 'On request', kk: 'Сұраныс бойынша' },
+  'Part-time': { ru: 'Частично', en: 'Part-time', kk: 'Жартылай' },
+  'Full-time': { ru: 'Постоянно', en: 'Full-time', kk: 'Тұрақты' },
+  Yes: { ru: 'Да', en: 'Yes', kk: 'Иә' },
+  'Messenger chat': { ru: 'Чат в мессенджере', en: 'Messenger chat', kk: 'Мессенджер чаты' },
+  Calls: { ru: 'Звонки', en: 'Calls', kk: 'Қоңыраулар' },
+  'Offline meetings': { ru: 'Офлайн встречи', en: 'Offline meetings', kk: 'Офлайн кездесулер' },
+  Mixed: { ru: 'Смешанный формат', en: 'Mixed', kk: 'Аралас формат' },
+  Weekly: { ru: 'Еженедельно', en: 'Weekly', kk: 'Апта сайын' },
+  Biweekly: { ru: 'Раз в 2 недели', en: 'Biweekly', kk: 'Екі аптада бір рет' },
+  Monthly: { ru: 'Ежемесячно', en: 'Monthly', kk: 'Ай сайын' },
+  Quarterly: { ru: 'Раз в квартал', en: 'Quarterly', kk: 'Тоқсанына бір рет' },
+  Kundelik: { ru: 'Kundelik', en: 'Kundelik', kk: 'Kundelik' },
+  Moodle: { ru: 'Moodle', en: 'Moodle', kk: 'Moodle' },
+  Zoom: { ru: 'Zoom', en: 'Zoom', kk: 'Zoom' },
+  Canvas: { ru: 'Canvas', en: 'Canvas', kk: 'Canvas' },
+  BilimClass: { ru: 'BilimClass', en: 'BilimClass', kk: 'BilimClass' },
   Free: { ru: 'Бесплатно', en: 'Free', kk: 'Тегін' },
   Paid: { ru: 'Платно', en: 'Paid', kk: 'Ақылы' },
   Included: { ru: 'Включено', en: 'Included', kk: 'Қамтылған' },
+  'Not included in tuition': {
+    ru: 'Не включено в стоимость',
+    en: 'Not included in tuition',
+    kk: 'Құнына кірмейді',
+  },
   'No meals': { ru: 'Без питания', en: 'No meals', kk: 'Тамақсыз' },
   Metro: { ru: 'Метро', en: 'Metro', kk: 'Метро' },
   Bus: { ru: 'Автобус', en: 'Bus', kk: 'Автобус' },
@@ -244,11 +480,23 @@ const OPTION_LABELS: Record<
   Chinese: { ru: 'Китайский', en: 'Chinese', kk: 'Қытай тілі' },
   French: { ru: 'Французский', en: 'French', kk: 'Француз тілі' },
   German: { ru: 'Немецкий', en: 'German', kk: 'Неміс тілі' },
-  Педагог: { ru: 'Педагог', en: 'Teacher', kk: 'Педагог' },
-  'Педагог-модератор': { ru: 'Педагог-модератор', en: 'Teacher moderator', kk: 'Педагог-модератор' },
-  'Педагог-эксперт': { ru: 'Педагог-эксперт', en: 'Teacher expert', kk: 'Педагог-эксперт' },
-  'Педагог-исследователь': { ru: 'Педагог-исследователь', en: 'Teacher researcher', kk: 'Педагог-зерттеуші' },
-  'Педагог-мастер': { ru: 'Педагог-мастер', en: 'Teacher master', kk: 'Педагог-шебер' },
+  Monday: { ru: 'Понедельник', en: 'Monday', kk: 'Дүйсенбі' },
+  Tuesday: { ru: 'Вторник', en: 'Tuesday', kk: 'Сейсенбі' },
+  Wednesday: { ru: 'Среда', en: 'Wednesday', kk: 'Сәрсенбі' },
+  Thursday: { ru: 'Четверг', en: 'Thursday', kk: 'Бейсенбі' },
+  Friday: { ru: 'Пятница', en: 'Friday', kk: 'Жұма' },
+  Saturday: { ru: 'Суббота', en: 'Saturday', kk: 'Сенбі' },
+  Sunday: { ru: 'Воскресенье', en: 'Sunday', kk: 'Жексенбі' },
+  Педагог: { ru: 'Учитель', en: 'Teacher', kk: 'Мұғалім' },
+  'Педагог-модератор': { ru: 'Учитель-модератор', en: 'Teacher moderator', kk: 'Мұғалім-модератор' },
+  'Педагог-эксперт': { ru: 'Учитель-эксперт', en: 'Teacher expert', kk: 'Мұғалім-сарапшы' },
+  'Педагог-исследователь': { ru: 'Учитель-исследователь', en: 'Teacher researcher', kk: 'Мұғалім-зерттеуші' },
+  'Педагог-мастер': { ru: 'Учитель-мастер', en: 'Teacher master', kk: 'Мұғалім-шебер' },
+  Учитель: { ru: 'Учитель', en: 'Teacher', kk: 'Мұғалім' },
+  'Учитель-модератор': { ru: 'Учитель-модератор', en: 'Teacher moderator', kk: 'Мұғалім-модератор' },
+  'Учитель-эксперт': { ru: 'Учитель-эксперт', en: 'Teacher expert', kk: 'Мұғалім-сарапшы' },
+  'Учитель-исследователь': { ru: 'Учитель-исследователь', en: 'Teacher researcher', kk: 'Мұғалім-зерттеуші' },
+  'Учитель-мастер': { ru: 'Учитель-мастер', en: 'Teacher master', kk: 'Мұғалім-шебер' },
   'Высшая категория': { ru: 'Высшая категория', en: 'Highest category', kk: 'Жоғары санат' },
   'Первая категория': { ru: 'Первая категория', en: 'First category', kk: 'Бірінші санат' },
   'Вторая категория': { ru: 'Вторая категория', en: 'Second category', kk: 'Екінші санат' },
@@ -313,6 +561,46 @@ const OPTION_LABELS: Record<
   'Art & Design': { ru: 'Искусство и дизайн', en: 'Art & Design', kk: 'Өнер және дизайн' },
   Music: { ru: 'Музыка', en: 'Music', kk: 'Музыка' },
   'Media Studies': { ru: 'Медиазнание', en: 'Media Studies', kk: 'Медиа зерттеулері' },
+  Algebra: { ru: 'Алгебра', en: 'Algebra', kk: 'Алгебра' },
+  Geometry: { ru: 'Геометрия', en: 'Geometry', kk: 'Геометрия' },
+  Science: { ru: 'Естествознание', en: 'Science', kk: 'Жаратылыстану' },
+  'Natural Science': { ru: 'Природоведение', en: 'Natural Science', kk: 'Табиғаттану' },
+  Programming: { ru: 'Программирование', en: 'Programming', kk: 'Бағдарламалау' },
+  Astronomy: { ru: 'Астрономия', en: 'Astronomy', kk: 'Астрономия' },
+  'History of Kazakhstan': {
+    ru: 'История Казахстана',
+    en: 'History of Kazakhstan',
+    kk: 'Қазақстан тарихы',
+  },
+  'Social Studies': { ru: 'Обществознание', en: 'Social Studies', kk: 'Қоғамтану' },
+  Law: { ru: 'Право', en: 'Law', kk: 'Құқық' },
+  'Financial Literacy': { ru: 'Финансовая грамотность', en: 'Financial Literacy', kk: 'Қаржылық сауаттылық' },
+  'Kazakh Language': { ru: 'Казахский язык', en: 'Kazakh Language', kk: 'Қазақ тілі' },
+  'Russian Language': { ru: 'Русский язык', en: 'Russian Language', kk: 'Орыс тілі' },
+  'Chinese Language': { ru: 'Китайский язык', en: 'Chinese Language', kk: 'Қытай тілі' },
+  'French Language': { ru: 'Французский язык', en: 'French Language', kk: 'Француз тілі' },
+  'German Language': { ru: 'Немецкий язык', en: 'German Language', kk: 'Неміс тілі' },
+  Literature: { ru: 'Литература', en: 'Literature', kk: 'Әдебиет' },
+  Reading: { ru: 'Чтение', en: 'Reading', kk: 'Оқу' },
+  Writing: { ru: 'Письмо', en: 'Writing', kk: 'Жазу' },
+  'Speech and Debate': { ru: 'Риторика и дебаты', en: 'Speech and Debate', kk: 'Сөйлеу және дебат' },
+  Art: { ru: 'Искусство', en: 'Art', kk: 'Өнер' },
+  Drawing: { ru: 'Рисование', en: 'Drawing', kk: 'Сурет салу' },
+  Vocal: { ru: 'Вокал', en: 'Vocal', kk: 'Вокал' },
+  Choreography: { ru: 'Хореография', en: 'Choreography', kk: 'Хореография' },
+  Theater: { ru: 'Театр', en: 'Theater', kk: 'Театр' },
+  'Physical Education': { ru: 'Физкультура', en: 'Physical Education', kk: 'Дене шынықтыру' },
+  Swimming: { ru: 'Плавание', en: 'Swimming', kk: 'Жүзу' },
+  Football: { ru: 'Футбол', en: 'Football', kk: 'Футбол' },
+  Basketball: { ru: 'Баскетбол', en: 'Basketball', kk: 'Баскетбол' },
+  Volleyball: { ru: 'Волейбол', en: 'Volleyball', kk: 'Волейбол' },
+  Chess: { ru: 'Шахматы', en: 'Chess', kk: 'Шахмат' },
+  Logic: { ru: 'Логика', en: 'Logic', kk: 'Логика' },
+  'Pre-school Preparation': {
+    ru: 'Подготовка к школе',
+    en: 'Pre-school Preparation',
+    kk: 'Мектепке дайындық',
+  },
   Psychology: { ru: 'Психология', en: 'Psychology', kk: 'Психология' },
 };
 
@@ -330,10 +618,96 @@ const normalizeListValue = (value: unknown) => {
   return [];
 };
 
+const sanitizeHttpUrl = (value: unknown) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const parsed = new URL(withProtocol);
+    if (!/^https?:$/i.test(parsed.protocol)) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+};
+
+const sanitizeUrlList = (value: unknown) =>
+  normalizeListValue(value)
+    .map((item) => sanitizeHttpUrl(item))
+    .filter(Boolean);
+
+const normalizeFinanceFeeRules = (profile: SchoolProfile | null) => {
+  const rawRules = profile?.finance?.fee_rules;
+  if (Array.isArray(rawRules) && rawRules.length) {
+    return rawRules.map((rule) => {
+      const item =
+        rule && typeof rule === 'object' && !Array.isArray(rule)
+          ? (rule as Record<string, unknown>)
+          : {};
+      return createFeeRuleEntry({
+        id: String(item.id || ''),
+        from_grade: String(item.from_grade || ''),
+        to_grade: String(item.to_grade || ''),
+        amount: String(item.amount || ''),
+        currency: String(item.currency || 'KZT'),
+        comment: String(item.comment || ''),
+      });
+    });
+  }
+
+  return buildFeeRulesFromFinance(profile?.finance).map((rule) =>
+    createFeeRuleEntry({
+      from_grade: String(rule.from_grade),
+      to_grade: String(rule.to_grade),
+      amount: String(rule.amount),
+      currency: rule.currency,
+      comment: rule.comment,
+    })
+  );
+};
+
 const toggleListValue = (list: string[], item: string) =>
   list.includes(item) ? list.filter((entry) => entry !== item) : [...list, item];
 
-const SCHOOL_TYPES = ['State', 'Private', 'International', 'Autonomous'];
+const SCHOOL_TYPES = ['State', 'Private'];
+const SCHOOL_SUBTYPE_OPTIONS = [
+  'General School',
+  'Autonomous School',
+  'Gymnasium',
+  'Lyceum',
+  'Specialized School',
+  'International School',
+  'Private General School',
+  'Innovative School',
+  'Advanced Subjects School',
+  'Author School',
+  'Online School',
+  'Boarding School',
+];
+const SCHOOL_TYPE_ALIASES: Record<string, string> = {
+  State: 'State',
+  Private: 'Private',
+  International: 'International',
+  Autonomous: 'Autonomous',
+  Государственная: 'State',
+  Частная: 'Private',
+  Международная: 'International',
+  Автономная: 'Autonomous',
+  Мемлекеттік: 'State',
+  Жеке: 'Private',
+  Халықаралық: 'International',
+  Автономды: 'Autonomous',
+};
+
+const normalizeSchoolType = (value: unknown): string => {
+  const items = normalizeListValue(value)
+    .map((item) => SCHOOL_TYPE_ALIASES[String(item).trim()] || String(item).trim())
+    .filter(Boolean);
+  const first = items[0] || '';
+  if (!first) return '';
+  if (first === 'International' || first === 'Autonomous') return 'Private';
+  return SCHOOL_TYPES.includes(first) ? first : '';
+};
 
 const CITY_OPTIONS = [
   {
@@ -342,7 +716,7 @@ const CITY_OPTIONS = [
   },
   {
     name: 'Astana',
-    districts: ['Almaty District', 'Baikonyr', 'Yesil', 'Saryarka', 'Nura'],
+    districts: ['Almaty', 'Baikonyr', 'Yesil', 'Saryarka', 'Nura'],
   },
   {
     name: 'Karaganda',
@@ -407,24 +781,113 @@ const ADVANCED_SUBJECT_OPTIONS = [
 ];
 
 const CLASS_SIZE_OPTIONS = ['10', '12', '15', '18', '20', '22', '24', '26', '30', '35+'];
-const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year'];
-const LOCATION_STOP_TYPE_OPTIONS = ['Metro', 'Bus'];
-const MEAL_OPTIONS = ['Free', 'Paid', 'Included', 'No meals'];
+const PAYMENT_SYSTEM_OPTIONS = ['Per month', 'Per semester', 'Per year', 'In installments'];
+const SHIFT_MODE_OPTIONS = ['Single shift', 'Double shift', 'Mixed shift'];
+const ADMISSION_COMPETITION_OPTIONS = ['No competition', '1-2', '2-3', '3-5', '5+'];
+const ADMISSION_PERIOD_OPTIONS = [
+  'January-March',
+  'April-June',
+  'July-August',
+  'September-October',
+  'Year-round',
+];
+const UNIVERSITY_ADMISSION_RATE_OPTIONS = ['<50%', '50-70%', '70-85%', '85-95%', '95-100%'];
+const SUPPORT_LEVEL_OPTIONS = ['No', 'On request', 'Part-time', 'Full-time'];
+const PARENT_COMMITTEE_OPTIONS = ['No', 'Yes'];
+const RESPONSE_SLA_OPTIONS = ['4', '8', '12', '24', '48', '72'];
+const DIGITAL_PLATFORM_OPTIONS = [
+  'Kundelik',
+  'Google Classroom',
+  'Moodle',
+  'Microsoft Teams',
+  'Zoom',
+  'Canvas',
+  'BilimClass',
+];
+const MEAL_OPTIONS = [
+  'Free',
+  'Paid',
+  'Included',
+  'Not included in tuition',
+  'No meals',
+];
 const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
 const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+const PARENT_FEEDBACK_FORMAT_OPTIONS = ['Messenger chat', 'Email', 'Calls', 'Offline meetings', 'Mixed'];
+const PARENT_MEETING_FREQUENCY_OPTIONS = [
+  'Weekly',
+  'Biweekly',
+  'Monthly',
+  'Quarterly',
+  'By request',
+];
 const TEACHER_EXPERIENCE_MAX = 40;
 const TEACHER_CATEGORY_OPTIONS = [
-  'Педагог',
-  'Педагог-модератор',
-  'Педагог-эксперт',
-  'Педагог-исследователь',
-  'Педагог-мастер',
+  'Учитель',
+  'Учитель-модератор',
+  'Учитель-эксперт',
+  'Учитель-исследователь',
+  'Учитель-мастер',
   'Высшая категория',
   'Первая категория',
   'Вторая категория',
 ];
 const TEACHER_LANGUAGE_OPTIONS = ['Kazakh', 'Russian', 'English', 'German', 'French', 'Chinese'];
 const TEACHER_EXAM_OPTIONS = ['ЕНТ', 'IELTS', 'TOEFL', 'SAT', 'NIS', 'Олимпиады'];
+const TEACHER_SUBJECT_OPTIONS = [
+  'Mathematics',
+  'Algebra',
+  'Geometry',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Science',
+  'Natural Science',
+  'Computer Science',
+  'Programming',
+  'Robotics',
+  'Engineering',
+  'Artificial Intelligence',
+  'Data Science',
+  'Astronomy',
+  'Geography',
+  'World History',
+  'History of Kazakhstan',
+  'Social Studies',
+  'Law',
+  'Economics',
+  'Financial Literacy',
+  'Business',
+  'Entrepreneurship',
+  'Psychology',
+  'English Language',
+  'Kazakh Language',
+  'Russian Language',
+  'Chinese Language',
+  'French Language',
+  'German Language',
+  'Literature',
+  'Reading',
+  'Writing',
+  'Speech and Debate',
+  'Art',
+  'Art & Design',
+  'Drawing',
+  'Music',
+  'Vocal',
+  'Choreography',
+  'Theater',
+  'Design & Technology',
+  'Media Studies',
+  'Physical Education',
+  'Swimming',
+  'Football',
+  'Basketball',
+  'Volleyball',
+  'Chess',
+  'Logic',
+  'Pre-school Preparation',
+];
 
 const withCurrentOption = (options: string[], current: string) =>
   current && !options.includes(current) ? [current, ...options] : options;
@@ -476,7 +939,7 @@ const FieldRow = ({ children }: { children: React.ReactNode }) => (
   <div className="form-row">{children}</div>
 );
 
-const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => {
+const Input = ({ label, value, onChange, placeholder, type = 'text', ...inputProps }: any) => {
   const locale = useContext(LocaleContext);
   return (
     <label className="field">
@@ -485,6 +948,7 @@ const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => {
       type={type}
       value={value}
       placeholder={placeholder}
+      {...inputProps}
       onChange={(event) => onChange(event.target.value)}
     />
     </label>
@@ -502,6 +966,87 @@ const TextArea = ({ label, value, onChange, placeholder, rows = 3 }: any) => {
       rows={rows}
       onChange={(event) => onChange(event.target.value)}
     />
+    </label>
+  );
+};
+
+const applyTextFormat = (
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash'
+) => {
+  const text = String(value || '');
+  const start = Math.max(0, selectionStart || 0);
+  const end = Math.max(start, selectionEnd || 0);
+  const selected = text.slice(start, end);
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+
+  if (mode === 'bold') {
+    const wrapped = `**${selected || 'текст'}**`;
+    return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 2, nextEnd: start + wrapped.length - 2 };
+  }
+  if (mode === 'italic') {
+    const wrapped = `_${selected || 'текст'}_`;
+    return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 1, nextEnd: start + wrapped.length - 1 };
+  }
+  if (mode === 'underline') {
+    const wrapped = `__${selected || 'текст'}__`;
+    return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 2, nextEnd: start + wrapped.length - 2 };
+  }
+
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const lineEndRaw = text.indexOf('\n', end);
+  const lineEnd = lineEndRaw === -1 ? text.length : lineEndRaw;
+  const lineChunk = text.slice(lineStart, lineEnd);
+  const prefixed = lineChunk
+    .split('\n')
+    .map((line) => {
+      if (!line.trim()) return line;
+      const prefix = mode === 'bullet' ? '• ' : '- ';
+      if (line.startsWith(prefix)) return line;
+      return `${prefix}${line}`;
+    })
+    .join('\n');
+  const nextValue = `${text.slice(0, lineStart)}${prefixed}${text.slice(lineEnd)}`;
+  return { nextValue, nextStart: start, nextEnd: end + 2 };
+};
+
+const RichTextArea = ({ label, value, onChange, placeholder, rows = 4 }: any) => {
+  const locale = useContext(LocaleContext);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const apply = (mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash') => {
+    const el = textareaRef.current;
+    const start = el?.selectionStart || 0;
+    const end = el?.selectionEnd || 0;
+    const { nextValue, nextStart, nextEnd } = applyTextFormat(String(value || ''), start, end, mode);
+    onChange(nextValue);
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(nextStart, nextEnd);
+    });
+  };
+
+  return (
+    <label className="field">
+      <span>{translateLabel(label, locale)}</span>
+      <div className="rich-toolbar">
+        <button type="button" className="rich-btn" onClick={() => apply('bold')}>Ж</button>
+        <button type="button" className="rich-btn" onClick={() => apply('italic')}>К</button>
+        <button type="button" className="rich-btn" onClick={() => apply('underline')}>Ч</button>
+        <button type="button" className="rich-btn" onClick={() => apply('bullet')}>•</button>
+        <button type="button" className="rich-btn" onClick={() => apply('dash')}>—</button>
+      </div>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        placeholder={placeholder}
+        rows={rows}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 };
@@ -559,6 +1104,117 @@ const CheckboxGroup = ({ label, options, values, onChange }: any) => {
   );
 };
 
+const SubjectPicker = ({ label, options, values, onChange }: any) => {
+  const locale = useContext(LocaleContext);
+  const [query, setQuery] = useState('');
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  const filteredOptions = useMemo(() => {
+    if (!normalizedQuery) return options;
+    return options.filter((option: string) =>
+      translateOption(option, locale).toLowerCase().includes(normalizedQuery)
+    );
+  }, [locale, normalizedQuery, options]);
+  const selectedPreview = values
+    .slice(0, 3)
+    .map((item: string) => translateOption(item, locale))
+    .join(', ');
+  return (
+    <div className="field">
+      <span>{translateLabel(label, locale)}</span>
+      <details className="subject-picker">
+        <summary className="subject-picker-summary">
+          {values.length
+            ? `${values.length} • ${selectedPreview}${values.length > 3 ? '…' : ''}`
+            : translateLabel('Не выбрано', locale)}
+        </summary>
+        <div className="subject-picker-panel">
+          <input
+            className="subject-picker-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={
+              locale === 'en'
+                ? 'Search subject'
+                : locale === 'kk'
+                ? 'Пәнді іздеу'
+                : 'Поиск предмета'
+            }
+          />
+          <div className="subject-picker-grid">
+            {filteredOptions.map((option: string) => {
+              const checked = values.includes(option);
+              return (
+                <label key={option} className={`option-chip${checked ? ' active' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onChange(toggleListValue(values, option))}
+                  />
+                  <span>{translateOption(option, locale)}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+};
+
+const CategoryPicker = ({ label, options, value, onChange }: any) => {
+  const locale = useContext(LocaleContext);
+  const [query, setQuery] = useState('');
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  const filteredOptions = useMemo(() => {
+    if (!normalizedQuery) return options;
+    return options.filter((option: string) =>
+      translateOption(option, locale).toLowerCase().includes(normalizedQuery)
+    );
+  }, [locale, normalizedQuery, options]);
+  const selectedLabel = value ? translateOption(value, locale) : translateLabel('Не выбрано', locale);
+  return (
+    <div className="field">
+      <span>{translateLabel(label, locale)}</span>
+      <details className="subject-picker">
+        <summary className="subject-picker-summary">{selectedLabel}</summary>
+        <div className="subject-picker-panel">
+          <input
+            className="subject-picker-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={
+              locale === 'en'
+                ? 'Search category'
+                : locale === 'kk'
+                ? 'Санатты іздеу'
+                : 'Поиск категории'
+            }
+          />
+          <div className="subject-picker-grid subject-picker-grid-single">
+            <button
+              type="button"
+              className={`option-chip${!value ? ' active' : ''}`}
+              onClick={() => onChange('')}
+            >
+              <span>{translateLabel('Не выбрано', locale)}</span>
+            </button>
+            {filteredOptions.map((option: string) => (
+              <button
+                key={option}
+                type="button"
+                className={`option-chip${value === option ? ' active' : ''}`}
+                onClick={() => onChange(option)}
+              >
+                <span>{translateOption(option, locale)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+};
+
 export default function SchoolInfoPage() {
   const router = useRouter();
   const { locale: contentLocale, setLocale: setContentLocale } = useAdminLocale();
@@ -566,8 +1222,11 @@ export default function SchoolInfoPage() {
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<
-    'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media' | 'location'
+    'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
   >('basic');
+  const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
+  const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   const schoolId = useMemo(() => {
     if (!profile?.school_id) return '';
@@ -576,31 +1235,36 @@ export default function SchoolInfoPage() {
   const [fallbackSchoolId, setFallbackSchoolId] = useState('');
 
   const cityValue = useMemo(() => getDeep(profile, 'basic_info.city', ''), [profile]);
-  const schoolType = useMemo(() => getDeep(profile, 'basic_info.type', ''), [profile]);
-  const showFinance = useMemo(
-    () => ['Private', 'Autonomous', 'International'].includes(schoolType),
-    [schoolType]
+  const schoolTypeValue = useMemo(
+    () => normalizeSchoolType(getDeep(profile, 'basic_info.type', '')),
+    [profile]
   );
+  const paymentOptionsValue = useMemo(() => {
+    const explicit = normalizeListValue(getDeep(profile, 'finance.payment_options', ''));
+    if (explicit.length) return explicit;
+    const legacy = String(getDeep(profile, 'finance.payment_system', '') || '').trim();
+    return legacy ? [legacy] : [];
+  }, [profile]);
+  const discountsValue = useMemo(
+    () =>
+      String(
+        getDeep(profile, 'finance.discounts_info', '') ||
+          getDeep(profile, 'finance.grants_discounts', '') ||
+          ''
+      ),
+    [profile]
+  );
+  const grantsValue = useMemo(
+    () => String(getDeep(profile, 'finance.grants_info', '') || ''),
+    [profile]
+  );
+  const showFinance = useMemo(() => schoolTypeValue === 'Private', [schoolTypeValue]);
   const localePath = (path: string) => `${path}.${contentLocale}`;
   const t = (label: string) => translateLabel(label, contentLocale);
   const availableDistricts = useMemo(() => {
     const match = CITY_OPTIONS.find((option) => option.name === cityValue);
     return match?.districts ?? [];
   }, [cityValue]);
-  const locationStopType = useMemo(() => {
-    const explicitType = String(getDeep(profile, 'location.transport_stop_type', '') || '').trim();
-    if (explicitType === 'Metro' || explicitType === 'Bus') return explicitType;
-    const hasMetroData =
-      Boolean(String(getDeep(profile, localePath('location.nearest_metro_stop'), '') || '').trim()) ||
-      Boolean(String(getDeep(profile, 'location.distance_to_metro_km', '') || '').trim());
-    const hasBusData =
-      Boolean(String(getDeep(profile, localePath('location.nearest_bus_stop'), '') || '').trim()) ||
-      Boolean(String(getDeep(profile, 'location.distance_to_bus_stop_km', '') || '').trim());
-    if (hasMetroData && !hasBusData) return 'Metro';
-    if (hasBusData && !hasMetroData) return 'Bus';
-    return '';
-  }, [profile, contentLocale]);
-
   const languagesValue = useMemo(
     () => normalizeListValue(getDeep(profile, 'education.languages', '')),
     [profile]
@@ -613,14 +1277,27 @@ export default function SchoolInfoPage() {
     () => normalizeListValue(getDeep(profile, 'education.advanced_subjects', '')),
     [profile]
   );
+  const digitalPlatformsValue = useMemo(
+    () => normalizeListValue(getDeep(profile, 'education.learning_conditions.digital_platforms', '')),
+    [profile]
+  );
 
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
+  };
+  const changeTab = (
+    tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
+  ) => {
+    setActiveTab(tab);
+    requestAnimationFrame(() => {
+      panelRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   };
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
     position: '',
+    education_degree: '',
     subjects: '',
     experience_years: '',
     category: '',
@@ -635,9 +1312,48 @@ export default function SchoolInfoPage() {
     description: { ru: '', en: '', kk: '' },
     schedule: { ru: '', en: '', kk: '' },
     teacher_name: '',
+    trainer_info: '',
+    trainer_photo: '',
+    section_photos: '',
     grades: '',
     price_monthly: '',
+    price_currency: 'KZT',
   });
+  const createStudentSuccessStoryEntry = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    student_name: '',
+    admitted_to: '',
+    ent_score: '',
+    ielts_score: '',
+    sat_score: '',
+    school_average_score: '',
+    achievements: { ru: '', en: '', kk: '' },
+    admission_subjects: '',
+    application_deadline: '',
+    student_photo: '',
+  });
+  const getFinanceFeeRules = () => normalizeFinanceFeeRules(profile);
+  const setFinanceFeeRules = (rules: Array<Record<string, unknown>>, shouldSave = false) => {
+    if (!profile) return;
+    const nextProfile = setDeep(profile, 'finance.fee_rules', rules);
+    setProfile(nextProfile);
+    if (shouldSave) {
+      save(nextProfile);
+    }
+  };
+  const updateFinanceFeeRule = (
+    index: number,
+    patch: Record<string, unknown>,
+    shouldSave = false
+  ) => {
+    const rules = getFinanceFeeRules();
+    if (!rules[index]) return;
+    const nextRules = rules.map((rule, ruleIndex) =>
+      ruleIndex === index ? { ...rule, ...patch } : rule
+    );
+    setFinanceFeeRules(nextRules, shouldSave);
+  };
+  const feeRules = getFinanceFeeRules();
 
   const getTeachingStaffMembers = () => {
     const members = getDeep(profile, 'services.teaching_staff.members', []);
@@ -711,12 +1427,48 @@ export default function SchoolInfoPage() {
     );
     setTeachingStaffMembers(nextMembers, shouldSave);
   };
+  const removeTeachingStaffMemberPhoto = (index: number) => {
+    updateTeachingStaffMember(index, { photo_url: '' }, true);
+  };
   const teachingStaffMembers = useMemo(() => getTeachingStaffMembers(), [profile]);
+  useEffect(() => {
+    setExpandedTeacherIndex((prev) => {
+      if (!teachingStaffMembers.length) return null;
+      if (prev == null) return null;
+      if (prev >= teachingStaffMembers.length) return teachingStaffMembers.length - 1;
+      return prev;
+    });
+  }, [teachingStaffMembers.length]);
 
   const getClubsCatalog = () => {
-    const clubs = getDeep(profile, 'services.clubs_catalog', []);
-    if (!Array.isArray(clubs)) return [];
-    return clubs.map((item: any) => ({
+    const legacySource = getDeep(profile, 'services.clubs_catalog', []);
+    const legacyItems = Array.isArray(legacySource) ? legacySource : [];
+    if (legacyItems.length) {
+      return legacyItems.map((item: any) => ({
+        id: item?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: item?.name && typeof item.name === 'object' ? item.name : { ru: '', en: '', kk: '' },
+        description:
+          item?.description && typeof item.description === 'object'
+            ? item.description
+            : { ru: '', en: '', kk: '' },
+        schedule:
+          item?.schedule && typeof item.schedule === 'object'
+            ? item.schedule
+            : { ru: '', en: '', kk: '' },
+        teacher_name: String(item?.teacher_name || ''),
+        trainer_info: String(item?.trainer_info || ''),
+        trainer_photo: String(item?.trainer_photo || ''),
+        section_photos: String(item?.section_photos || ''),
+        grades: String(item?.grades || ''),
+        price_monthly: String(item?.price_monthly || ''),
+        price_currency: String(item?.price_currency || 'KZT'),
+      }));
+    }
+
+    const normalizedLegacy = buildLegacyClubsCatalogFromUnified(
+      buildUnifiedClubsFromServices(getDeep(profile, 'services', {}))
+    );
+    return normalizedLegacy.map((item: any) => ({
       id: item?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: item?.name && typeof item.name === 'object' ? item.name : { ru: '', en: '', kk: '' },
       description:
@@ -728,14 +1480,20 @@ export default function SchoolInfoPage() {
           ? item.schedule
           : { ru: '', en: '', kk: '' },
       teacher_name: String(item?.teacher_name || ''),
+      trainer_info: String(item?.trainer_info || ''),
+      trainer_photo: String(item?.trainer_photo || ''),
+      section_photos: String(item?.section_photos || ''),
       grades: String(item?.grades || ''),
       price_monthly: String(item?.price_monthly || ''),
+      price_currency: String(item?.price_currency || 'KZT'),
     }));
   };
 
   const setClubsCatalog = (clubs: Array<any>, shouldSave = false) => {
     if (!profile) return;
-    const nextProfile = setDeep(profile, 'services.clubs_catalog', clubs);
+    const withLegacy = setDeep(profile, 'services.clubs_catalog', clubs);
+    const unified = buildUnifiedClubsFromServices({ clubs_catalog: clubs });
+    const nextProfile = setDeep(withLegacy, 'services.clubs_unified', unified);
     setProfile(nextProfile);
     if (shouldSave) {
       save(nextProfile);
@@ -751,7 +1509,96 @@ export default function SchoolInfoPage() {
     setClubsCatalog(next, shouldSave);
   };
 
+  const removeClubTrainerPhoto = (index: number) => {
+    updateClubEntry(index, { trainer_photo: '' });
+  };
+
+  const removeClubSectionPhoto = (index: number, photoIndex: number) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const list = normalizeListValue(current.section_photos || '');
+    const next = list.filter((_item: string, itemIndex: number) => itemIndex !== photoIndex);
+    updateClubEntry(index, { section_photos: next.join(', ') });
+  };
+
+  const updateClubSchedulePreset = (
+    index: number,
+    patch: Partial<{ days: WeekdayKey[]; start: string; end: string }>
+  ) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const currentText = String(current?.schedule?.[contentLocale] || '');
+    const parsed = parseSchedulePreset(currentText);
+    const nextDays = patch.days ?? parsed.days;
+    const nextStart = patch.start ?? parsed.start;
+    const nextEnd = patch.end ?? parsed.end;
+    const nextText = buildSchedulePreset(nextDays, nextStart, nextEnd, contentLocale);
+    updateClubEntry(index, {
+      schedule: {
+        ...(current?.schedule || {}),
+        [contentLocale]: nextText,
+      },
+    });
+  };
+
+  const updateClubGradeRangePreset = (
+    index: number,
+    patch: Partial<{ from: string; to: string }>
+  ) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const parsed = parseGradeRange(String(current?.grades || ''));
+    const from = patch.from ?? parsed.from;
+    const to = patch.to ?? parsed.to;
+    const next = from && to ? `${from}-${to}` : from || to || '';
+    updateClubEntry(index, { grades: next });
+  };
+
   const clubsCatalog = useMemo(() => getClubsCatalog(), [profile]);
+  const getStudentSuccessStories = () => {
+    const raw = getDeep(profile, 'education.results.student_success_stories', []);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: any, index: number) => ({
+      id: String(item?.id || `success-story-${index}`),
+      student_name: String(item?.student_name || ''),
+      admitted_to: String(item?.admitted_to || ''),
+      ent_score: String(item?.ent_score || ''),
+      ielts_score: String(item?.ielts_score || ''),
+      sat_score: String(item?.sat_score || ''),
+      school_average_score: String(item?.school_average_score || ''),
+      achievements:
+        item?.achievements && typeof item.achievements === 'object'
+          ? item.achievements
+          : { ru: '', en: '', kk: '' },
+      admission_subjects: String(item?.admission_subjects || ''),
+      application_deadline: String(item?.application_deadline || ''),
+      student_photo: String(item?.student_photo || ''),
+    }));
+  };
+  const setStudentSuccessStories = (stories: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    const nextProfile = setDeep(profile, 'education.results.student_success_stories', stories);
+    setProfile(nextProfile);
+    if (shouldSave) {
+      save(nextProfile);
+    }
+  };
+  const updateStudentSuccessStory = (
+    index: number,
+    patch: Record<string, any>,
+    shouldSave = false
+  ) => {
+    const stories = getStudentSuccessStories();
+    if (!stories[index]) return;
+    const nextStories = stories.map((story: any, storyIndex: number) =>
+      storyIndex === index ? { ...story, ...patch } : story
+    );
+    setStudentSuccessStories(nextStories, shouldSave);
+  };
+  const studentSuccessStories = useMemo(() => getStudentSuccessStories(), [profile]);
 
   const updateLocalizedField = (pathBase: string, value: string) => {
     updateField(`${pathBase}.${contentLocale}`, value);
@@ -768,6 +1615,55 @@ export default function SchoolInfoPage() {
   };
 
   const [mediaMessage, setMediaMessage] = useState('');
+  const { openImageCropper, cropperModal } = useImageCropper();
+  const prepareImageFiles = async (
+    files: File[],
+    options: { title: string; aspect?: number }
+  ) => {
+    const processed: File[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        processed.push(file);
+        continue;
+      }
+      const nextFile = await openImageCropper(file, options);
+      if (!nextFile) return null;
+      processed.push(nextFile);
+    }
+    return processed;
+  };
+  const photoItems = useMemo(
+    () => normalizeListValue(getDeep(profile, 'media.photos', '')).filter(Boolean),
+    [profile]
+  );
+  const videoItems = useMemo(
+    () => normalizeListValue(getDeep(profile, 'media.videos', '')).filter(Boolean),
+    [profile]
+  );
+  const certificateItems = useMemo(
+    () => normalizeListValue(getDeep(profile, 'media.certificates', '')).filter(Boolean),
+    [profile]
+  );
+  const photosCount = useMemo(
+    () => photoItems.length,
+    [photoItems]
+  );
+  const videosCount = useMemo(
+    () => videoItems.length,
+    [videoItems]
+  );
+  const certificatesCount = useMemo(
+    () => certificateItems.length,
+    [certificateItems]
+  );
+  const logoUrl = useMemo(
+    () => String(getDeep(profile, 'media.logo', '') || '').trim(),
+    [profile]
+  );
+  const hasLogo = useMemo(
+    () => Boolean(String(getDeep(profile, 'media.logo', '') || '').trim()),
+    [profile]
+  );
 
   const uploadMediaFiles = async (files: File[], folder: string) => {
     if (!files.length) return [];
@@ -780,12 +1676,25 @@ export default function SchoolInfoPage() {
     const results: string[] = [];
     let lastError: any = null;
 
+    const toSafeFilePart = (name: string) => {
+      const trimmed = name.trim().toLowerCase();
+      const normalized = trimmed
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^[-_.]+|[-_.]+$/g, '');
+      return normalized || 'file';
+    };
+
     for (const file of files) {
-      const safeName = file.name.replace(/\s+/g, '-').toLowerCase();
+      const safeName = toSafeFilePart(file.name);
       const dotIndex = safeName.lastIndexOf('.');
       const baseName = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
       const ext = dotIndex > 0 ? safeName.slice(dotIndex + 1) : 'bin';
-      const path = `schools/${baseId}/${folder}/${Date.now()}-${baseName}.${ext}`;
+      const cleanExt = ext.replace(/[^a-z0-9]+/g, '') || 'bin';
+      const cleanBase = baseName.replace(/[^a-z0-9._-]+/g, '-') || 'file';
+      const path = `schools/${baseId}/${folder}/${Date.now()}-${cleanBase}.${cleanExt}`;
 
       let uploaded = false;
       for (const bucket of buckets) {
@@ -822,17 +1731,6 @@ export default function SchoolInfoPage() {
     return results;
   };
 
-  const appendMediaUrls = (
-    field: string,
-    urls: string[],
-    baseProfile?: SchoolProfile | null
-  ) => {
-    if (!urls.length) return;
-    const existing = normalizeListValue(getDeep(baseProfile ?? profile, field, ''));
-    const next = [...existing, ...urls].filter(Boolean);
-    updateField(field, next.join(', '));
-  };
-
   useEffect(() => {
     let ignore = false;
     const load = async () => {
@@ -864,6 +1762,10 @@ export default function SchoolInfoPage() {
         const base = createEmptySchoolProfile({ school_id: targetId });
         if (!ignore) {
           const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
+          nextProfile.finance = {
+            ...(nextProfile.finance || {}),
+            fee_rules: normalizeFinanceFeeRules(nextProfile),
+          };
           const isCustomSchoolContext =
             Boolean(selectedSchoolId) && selectedSchoolId !== fallbackId;
           const meta = session.user?.user_metadata || {};
@@ -948,8 +1850,13 @@ export default function SchoolInfoPage() {
               'license.licenseNumber'
             );
             const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
+            const currentSchoolEmail = String(getDeep(nextProfile, 'basic_info.email', '') || '')
+              .trim()
+              .toLowerCase();
 
-            const email = fromMeta('email') || session.user?.email || '';
+            if (currentSchoolEmail && currentSchoolEmail === sessionEmail) {
+              setDeep(nextProfile, 'basic_info.email', '');
+            }
 
             setIfEmpty('basic_info.display_name.ru', organization);
             setIfEmpty('basic_info.display_name.en', organization);
@@ -957,8 +1864,7 @@ export default function SchoolInfoPage() {
             setIfEmpty('basic_info.name.ru', organization);
             setIfEmpty('basic_info.name.en', organization);
             setIfEmpty('basic_info.name.kk', organization);
-            setIfEmpty('basic_info.phone', contactPhone);
-            setIfEmpty('basic_info.email', email);
+            setIfEmpty('basic_info.phone', formatKzPhone(contactPhone));
             setIfEmpty('basic_info.website', website);
             setIfEmpty('basic_info.license_details.number', resolvedLicenseNumber);
             setIfEmpty('basic_info.license_details.issued_at', licenseIssuedAt);
@@ -972,8 +1878,7 @@ export default function SchoolInfoPage() {
               setIfDifferent('basic_info.name.ru', organization) ||
               setIfDifferent('basic_info.name.en', organization) ||
               setIfDifferent('basic_info.name.kk', organization) ||
-              setIfDifferent('basic_info.phone', contactPhone) ||
-              setIfDifferent('basic_info.email', email) ||
+              setIfDifferent('basic_info.phone', formatKzPhone(contactPhone)) ||
               setIfDifferent('basic_info.website', website) ||
               setIfDifferent(
                 'basic_info.license_details.number',
@@ -1021,6 +1926,15 @@ export default function SchoolInfoPage() {
     setProfile(nextProfile);
     save(nextProfile);
   };
+  const removeMediaItem = (path: 'media.photos' | 'media.videos' | 'media.certificates', index: number) => {
+    if (!profile) return;
+    const current = normalizeListValue(getDeep(profile, path, ''));
+    const next = current.filter((_item, itemIndex) => itemIndex !== index);
+    applyAndSave(path, next.join(', '));
+  };
+  const removeLogo = () => {
+    applyAndSave('media.logo', '');
+  };
 
   const save = async (nextProfile?: SchoolProfile | null) => {
     const candidate = nextProfile ?? profile;
@@ -1037,9 +1951,59 @@ export default function SchoolInfoPage() {
       const education = currentProfile.education || ({} as SchoolProfile['education']);
       const curricula = education.curricula || ({} as SchoolProfile['education']['curricula']);
       const ensuredId = currentProfile.school_id || schoolId || fallbackSchoolId || 'local-school';
+      const normalizedFeeRules = buildFeeRulesFromFinance(currentProfile.finance);
+      const derivedGradeFeeMap = buildGradeFeeMapFromRules(normalizedFeeRules);
+      const derivedMonthlyFee = normalizedFeeRules.length
+        ? String(Math.min(...normalizedFeeRules.map((rule) => rule.amount)))
+        : String(currentProfile.finance?.monthly_fee || '');
+      const normalizedSchoolType = normalizeSchoolType(currentProfile.basic_info?.type);
+      const paymentOptions = normalizeListValue(currentProfile.finance?.payment_options);
+      const normalizedPaymentOptions = withCurrentOptions(PAYMENT_SYSTEM_OPTIONS, paymentOptions)
+        .filter((item) => paymentOptions.includes(item));
+      const discountsInfo = String(currentProfile.finance?.discounts_info || '').trim();
+      const grantsInfo = String(currentProfile.finance?.grants_info || '').trim();
+      const legacyGrantsDiscounts = [discountsInfo && `Скидки: ${discountsInfo}`, grantsInfo && `Гранты: ${grantsInfo}`]
+        .filter(Boolean)
+        .join('; ');
+      const normalizedClubsUnified = buildUnifiedClubsFromServices(currentProfile.services);
+      const normalizedClubsCatalog = buildLegacyClubsCatalogFromUnified(normalizedClubsUnified);
       const payload = {
         ...currentProfile,
         school_id: ensuredId,
+        basic_info: {
+          ...(currentProfile.basic_info || {}),
+          type: normalizedSchoolType,
+          phone: formatKzPhone(currentProfile.basic_info?.phone),
+          whatsapp_phone: formatKzPhone(currentProfile.basic_info?.whatsapp_phone),
+        },
+        finance: {
+          ...(currentProfile.finance || {}),
+          fee_rules: normalizedFeeRules,
+          monthly_fee_by_grade: derivedGradeFeeMap,
+          monthly_fee: derivedMonthlyFee,
+          payment_options: normalizedPaymentOptions,
+          payment_system: normalizedPaymentOptions[0] || String(currentProfile.finance?.payment_system || ''),
+          discounts_info: discountsInfo,
+          grants_info: grantsInfo,
+          grants_discounts: legacyGrantsDiscounts || String(currentProfile.finance?.grants_discounts || ''),
+        },
+        media: {
+          ...(currentProfile.media || {}),
+          logo: sanitizeHttpUrl(currentProfile.media?.logo),
+          photos: sanitizeUrlList(currentProfile.media?.photos),
+          videos: sanitizeUrlList(currentProfile.media?.videos),
+          certificates: sanitizeUrlList(currentProfile.media?.certificates),
+          social_links: {
+            ...(currentProfile.media?.social_links || {}),
+            instagram: sanitizeHttpUrl(currentProfile.media?.social_links?.instagram),
+            tiktok: sanitizeHttpUrl(currentProfile.media?.social_links?.tiktok),
+            youtube: sanitizeHttpUrl(currentProfile.media?.social_links?.youtube),
+            facebook: sanitizeHttpUrl(currentProfile.media?.social_links?.facebook),
+            vk: sanitizeHttpUrl(currentProfile.media?.social_links?.vk),
+            telegram: sanitizeHttpUrl(currentProfile.media?.social_links?.telegram),
+            linkedin: sanitizeHttpUrl(currentProfile.media?.social_links?.linkedin),
+          },
+        },
         education: {
           ...education,
           curricula: {
@@ -1048,6 +2012,11 @@ export default function SchoolInfoPage() {
             international: curricula.international || [],
             additional: curricula.additional || [],
           },
+        },
+        services: {
+          ...(currentProfile.services || {}),
+          clubs_unified: normalizedClubsUnified,
+          clubs_catalog: normalizedClubsCatalog,
         },
       };
       await upsertSchool(payload);
@@ -1087,54 +2056,47 @@ export default function SchoolInfoPage() {
           <button
             type="button"
             className={activeTab === 'basic' ? 'active' : ''}
-            onClick={() => setActiveTab('basic')}
+            onClick={() => changeTab('basic')}
           >
             {t('Основное')}
           </button>
           <button
             type="button"
             className={activeTab === 'contacts' ? 'active' : ''}
-            onClick={() => setActiveTab('contacts')}
+            onClick={() => changeTab('contacts')}
           >
             {t('Контакты')}
           </button>
           <button
             type="button"
             className={activeTab === 'education' ? 'active' : ''}
-            onClick={() => setActiveTab('education')}
+            onClick={() => changeTab('education')}
           >
             {t('Образование')}
           </button>
           <button
             type="button"
             className={activeTab === 'admission' ? 'active' : ''}
-            onClick={() => setActiveTab('admission')}
+            onClick={() => changeTab('admission')}
           >
             {t('Поступление')}
           </button>
           <button
             type="button"
             className={activeTab === 'services' ? 'active' : ''}
-            onClick={() => setActiveTab('services')}
+            onClick={() => changeTab('services')}
           >
             {t('Сервисы')}
           </button>
           <button
             type="button"
             className={activeTab === 'media' ? 'active' : ''}
-            onClick={() => setActiveTab('media')}
+            onClick={() => changeTab('media')}
           >
             {t('Медиа')}
           </button>
-          <button
-            type="button"
-            className={activeTab === 'location' ? 'active' : ''}
-            onClick={() => setActiveTab('location')}
-          >
-            {t('Локация')}
-          </button>
         </aside>
-        <div className="panel">
+        <div className="panel" ref={panelRef}>
           {activeTab === 'basic' && (
             <>
               <Section title="Основная информация">
@@ -1150,8 +2112,8 @@ export default function SchoolInfoPage() {
                 <FieldRow>
                   <Select
                     label="Тип школы"
-                    value={getDeep(profile, 'basic_info.type')}
-                    onChange={(value: string) => updateField('basic_info.type', value)}
+                    value={schoolTypeValue}
+                    onChange={(value: string) => updateField('basic_info.type', normalizeSchoolType(value))}
                     options={[
                       { value: '', label: t('Не выбрано') },
                       ...SCHOOL_TYPES.map((item) => ({
@@ -1160,6 +2122,20 @@ export default function SchoolInfoPage() {
                       })),
                     ]}
                   />
+                  <Select
+                    label="Подтип школы"
+                    value={String(getDeep(profile, 'basic_info.school_subtype') || '')}
+                    onChange={(value: string) => updateField('basic_info.school_subtype', value)}
+                    options={[
+                      { value: '', label: t('Не выбрано') },
+                      ...SCHOOL_SUBTYPE_OPTIONS.map((item) => ({
+                        value: item,
+                        label: translateOption(item, contentLocale),
+                      })),
+                    ]}
+                  />
+                </FieldRow>
+                <FieldRow>
                   <Select
                     label="Город"
                     value={getDeep(profile, 'basic_info.city')}
@@ -1205,6 +2181,32 @@ export default function SchoolInfoPage() {
                     value={getDeep(profile, localePath('basic_info.description'))}
                     onChange={(value: string) =>
                       updateField(localePath('basic_info.description'), value)
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <Input
+                    label="Директор"
+                    value={getDeep(profile, 'basic_info.team.principal')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.team.principal', value)
+                    }
+                  />
+                  <Input
+                    label="Зам. директора"
+                    value={getDeep(profile, 'basic_info.team.deputy_principal')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.team.deputy_principal', value)
+                    }
+                  />
+                </FieldRow>
+                <FieldRow>
+                  <TextArea
+                    label="Кураторы классов"
+                    rows={3}
+                    value={getDeep(profile, 'basic_info.team.class_curators')}
+                    onChange={(value: string) =>
+                      updateField('basic_info.team.class_curators', value)
                     }
                   />
                 </FieldRow>
@@ -1281,34 +2283,161 @@ export default function SchoolInfoPage() {
                   </FieldRow>
                   <FieldRow>
                     <Input
-                      label="Стоимость / мес"
-                      value={getDeep(profile, 'finance.monthly_fee')}
+                      label="Регистрационный взнос"
+                      value={getDeep(profile, 'finance.registration_fee')}
                       onChange={(value: string) =>
-                        updateField('finance.monthly_fee', value)
+                        updateField('finance.registration_fee', value)
                       }
                     />
                     <Select
-                      label="Система оплаты"
-                      value={getDeep(profile, 'finance.payment_system')}
+                      label="Валюта регистрационного взноса"
+                      value={String(getDeep(profile, 'finance.registration_fee_currency') || 'KZT')}
                       onChange={(value: string) =>
-                        updateField('finance.payment_system', value)
+                        updateField('finance.registration_fee_currency', value || 'KZT')
                       }
-                      options={[
-                        { value: '', label: t('Не выбрано') },
-                        ...PAYMENT_SYSTEM_OPTIONS.map((item) => ({
-                          value: item,
-                          label: translateOption(item, contentLocale),
-                        })),
-                      ]}
+                      options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                        value: currency,
+                        label: currency,
+                      }))}
                     />
                   </FieldRow>
-                  <Input
-                    label="Скидки / гранты"
-                    value={getDeep(profile, 'finance.grants_discounts')}
-                    onChange={(value: string) =>
-                      updateField('finance.grants_discounts', value)
-                    }
+                  <FieldRow>
+                    <TextArea
+                      label="Что включено в стоимость"
+                      rows={2}
+                      value={getDeep(profile, 'finance.included_in_tuition')}
+                      onChange={(value: string) =>
+                        updateField('finance.included_in_tuition', value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <TextArea
+                      label="Что оплачивается отдельно"
+                      rows={2}
+                      value={getDeep(profile, 'finance.extra_fees')}
+                      onChange={(value: string) =>
+                        updateField('finance.extra_fees', value)
+                      }
+                    />
+                  </FieldRow>
+                  <CheckboxGroup
+                    label="Опции оплаты"
+                    options={withCurrentOptions(PAYMENT_SYSTEM_OPTIONS, paymentOptionsValue)}
+                    values={paymentOptionsValue}
+                    onChange={(next: string[]) => updateListField('finance.payment_options', next)}
                   />
+                  <div className="teacher-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => {
+                        const nextRules = [...feeRules, createFeeRuleEntry()];
+                        setFinanceFeeRules(nextRules);
+                      }}
+                    >
+                      {t('Добавить цену')}
+                    </button>
+                  </div>
+                  {feeRules.length ? (
+                    <div className="teacher-list">
+                      {feeRules.map((rule, index) => (
+                        <div key={String(rule.id || `fee-rule-${index}`)} className="teacher-card">
+                          <div className="teacher-card-head">
+                            <h3>{`${t('Стоимость / мес')} #${index + 1}`}</h3>
+                            <button
+                              type="button"
+                              className="button secondary"
+                              onClick={() => {
+                                const nextRules = feeRules.filter(
+                                  (_item, ruleIndex) => ruleIndex !== index
+                                );
+                                setFinanceFeeRules(nextRules);
+                              }}
+                            >
+                              {t('Удалить цену')}
+                            </button>
+                          </div>
+                          <FieldRow>
+                            <Select
+                              label="С класса"
+                              value={String(rule.from_grade || '')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { from_grade: value })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...SCHOOL_GRADE_OPTIONS.map((grade) => ({
+                                  value: String(grade),
+                                  label: `${grade}`,
+                                })),
+                              ]}
+                            />
+                            <Select
+                              label="По класс"
+                              value={String(rule.to_grade || '')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { to_grade: value })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...SCHOOL_GRADE_OPTIONS.map((grade) => ({
+                                  value: String(grade),
+                                  label: `${grade}`,
+                                })),
+                              ]}
+                            />
+                          </FieldRow>
+                          <FieldRow>
+                            <Input
+                              label="Цена"
+                              value={String(rule.amount || '')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { amount: value })
+                              }
+                            />
+                            <Select
+                              label="Валюта"
+                              value={String(rule.currency || 'KZT')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { currency: value || 'KZT' })
+                              }
+                              options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                                value: currency,
+                                label: currency,
+                              }))}
+                            />
+                          </FieldRow>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="muted">{t('Добавьте хотя бы одну цену.')}</p>
+                  )}
+                  <TextArea
+                    label="Комментарий"
+                    value={getDeep(profile, 'finance.comment')}
+                    onChange={(value: string) =>
+                      updateField('finance.comment', value)
+                    }
+                    rows={3}
+                  />
+                  <FieldRow>
+                    <Input
+                      label="Скидки"
+                      value={discountsValue}
+                      onChange={(value: string) =>
+                        updateField('finance.discounts_info', value)
+                      }
+                    />
+                    <Input
+                      label="Гранты"
+                      value={grantsValue}
+                      onChange={(value: string) =>
+                        updateField('finance.grants_info', value)
+                      }
+                    />
+                  </FieldRow>
                 </Section>
               )}
             </>
@@ -1322,7 +2451,7 @@ export default function SchoolInfoPage() {
                   value={getDeep(profile, 'basic_info.phone')}
                   type="tel"
                   placeholder="+7 (___) ___-__-__"
-                  onChange={(value: string) => updateField('basic_info.phone', value)}
+                  onChange={(value: string) => updateField('basic_info.phone', formatKzPhone(value))}
                 />
                 <Input
                   label="WhatsApp"
@@ -1330,7 +2459,7 @@ export default function SchoolInfoPage() {
                   type="tel"
                   placeholder="+7 (___) ___-__-__"
                   onChange={(value: string) =>
-                    updateField('basic_info.whatsapp_phone', value)
+                    updateField('basic_info.whatsapp_phone', formatKzPhone(value))
                   }
                 />
               </FieldRow>
@@ -1367,7 +2496,7 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <CheckboxGroup
-          label="Учебные планы (национальные)"
+          label="Учебные программы (национальные)"
           options={CURRICULA_GROUPS.national}
           values={normalizeListValue(getDeep(profile, 'education.curricula.national', []))}
           onChange={(next: string[]) =>
@@ -1375,7 +2504,7 @@ export default function SchoolInfoPage() {
           }
         />
         <CheckboxGroup
-          label="Учебные планы (международные)"
+          label="Учебные программы (международные)"
           options={CURRICULA_GROUPS.international}
           values={normalizeListValue(getDeep(profile, 'education.curricula.international', []))}
           onChange={(next: string[]) =>
@@ -1383,7 +2512,7 @@ export default function SchoolInfoPage() {
           }
         />
         <CheckboxGroup
-          label="Учебные планы (дополнительные)"
+          label="Учебные программы (дополнительные)"
           options={CURRICULA_GROUPS.additional}
           values={normalizeListValue(getDeep(profile, 'education.curricula.additional', []))}
           onChange={(next: string[]) =>
@@ -1392,7 +2521,7 @@ export default function SchoolInfoPage() {
         />
         <FieldRow>
           <Input
-            label="Учебные планы (другое)"
+            label="Учебные программы (другое)"
             value={getDeep(profile, localePath('education.curricula.other'))}
             onChange={(value: string) =>
               updateField(localePath('education.curricula.other'), value)
@@ -1431,6 +2560,303 @@ export default function SchoolInfoPage() {
                     ]}
                   />
                 </FieldRow>
+        <FieldRow>
+          <Select
+            label="Размер класса (начальная школа)"
+            value={getDeep(profile, 'education.learning_conditions.class_size_primary')}
+            onChange={(value: string) =>
+              updateField('education.learning_conditions.class_size_primary', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                CLASS_SIZE_OPTIONS,
+                String(getDeep(profile, 'education.learning_conditions.class_size_primary') || '')
+              ).map((item) => ({ value: item, label: item })),
+            ]}
+          />
+          <Select
+            label="Размер класса (средняя школа)"
+            value={getDeep(profile, 'education.learning_conditions.class_size_middle')}
+            onChange={(value: string) =>
+              updateField('education.learning_conditions.class_size_middle', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                CLASS_SIZE_OPTIONS,
+                String(getDeep(profile, 'education.learning_conditions.class_size_middle') || '')
+              ).map((item) => ({ value: item, label: item })),
+            ]}
+          />
+          <Select
+            label="Размер класса (старшая школа)"
+            value={getDeep(profile, 'education.learning_conditions.class_size_high')}
+            onChange={(value: string) =>
+              updateField('education.learning_conditions.class_size_high', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                CLASS_SIZE_OPTIONS,
+                String(getDeep(profile, 'education.learning_conditions.class_size_high') || '')
+              ).map((item) => ({ value: item, label: item })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <Select
+            label="Сменность обучения"
+            value={getDeep(profile, 'education.learning_conditions.shift_mode')}
+            onChange={(value: string) =>
+              updateField('education.learning_conditions.shift_mode', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                SHIFT_MODE_OPTIONS,
+                String(getDeep(profile, 'education.learning_conditions.shift_mode') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <CheckboxGroup
+          label="Цифровые платформы"
+          options={withCurrentOptions(DIGITAL_PLATFORM_OPTIONS, digitalPlatformsValue)}
+          values={digitalPlatformsValue}
+          onChange={(next: string[]) =>
+            updateListField('education.learning_conditions.digital_platforms', next)
+          }
+        />
+        <FieldRow>
+          <TextArea
+            label="Формат домашней работы"
+            rows={3}
+            value={getDeep(profile, localePath('education.learning_conditions.homework_format'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.learning_conditions.homework_format'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Формат оценивания"
+            rows={3}
+            value={getDeep(profile, localePath('education.learning_conditions.assessment_format'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.learning_conditions.assessment_format'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <Input
+            label="Средний балл экзаменов"
+            value={getDeep(profile, 'education.results.average_exam_score')}
+            onChange={(value: string) =>
+              updateField('education.results.average_exam_score', value)
+            }
+          />
+          <Select
+            label="Поступление выпускников в вузы (%)"
+            value={getDeep(profile, 'education.results.university_admission_rate')}
+            onChange={(value: string) =>
+              updateField('education.results.university_admission_rate', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                UNIVERSITY_ADMISSION_RATE_OPTIONS,
+                String(getDeep(profile, 'education.results.university_admission_rate') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Куда поступают выпускники"
+            rows={3}
+            value={getDeep(profile, localePath('education.results.top_universities'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.results.top_universities'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Олимпиадные достижения"
+            rows={3}
+            value={getDeep(profile, localePath('education.results.olympiad_achievements'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.results.olympiad_achievements'), value)
+            }
+          />
+        </FieldRow>
+        <div className="teacher-actions">
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              const nextStories = [...studentSuccessStories, createStudentSuccessStoryEntry()];
+              setStudentSuccessStories(nextStories);
+            }}
+          >
+            {t('Добавить кейс выпускника')}
+          </button>
+        </div>
+        {studentSuccessStories.length ? (
+          <div className="teacher-list">
+            {studentSuccessStories.map((story: any, index: number) => {
+              const subjectsValues = normalizeListValue(story?.admission_subjects || '');
+              return (
+                <div key={String(story.id || `student-story-${index}`)} className="teacher-card">
+                  <div className="teacher-card-head">
+                    <h3>{`${t('Кейс выпускника')} #${index + 1}`}</h3>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => {
+                        const nextStories = studentSuccessStories.filter(
+                          (_item, storyIndex) => storyIndex !== index
+                        );
+                        setStudentSuccessStories(nextStories);
+                      }}
+                    >
+                      {t('Удалить кейс')}
+                    </button>
+                  </div>
+                  <FieldRow>
+                    <Input
+                      label="Имя ученика"
+                      value={String(story?.student_name || '')}
+                      onChange={(value: string) => updateStudentSuccessStory(index, { student_name: value })}
+                    />
+                    <Input
+                      label="Куда поступил"
+                      value={String(story?.admitted_to || '')}
+                      onChange={(value: string) => updateStudentSuccessStory(index, { admitted_to: value })}
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="ЕНТ"
+                      value={String(story?.ent_score || '')}
+                      onChange={(value: string) => updateStudentSuccessStory(index, { ent_score: value })}
+                    />
+                    <Input
+                      label="IELTS"
+                      value={String(story?.ielts_score || '')}
+                      onChange={(value: string) => updateStudentSuccessStory(index, { ielts_score: value })}
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Input
+                      label="SAT"
+                      value={String(story?.sat_score || '')}
+                      onChange={(value: string) => updateStudentSuccessStory(index, { sat_score: value })}
+                    />
+                    <Input
+                      label="Средний балл в школе"
+                      value={String(story?.school_average_score || '')}
+                      onChange={(value: string) =>
+                        updateStudentSuccessStory(index, { school_average_score: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <SubjectPicker
+                      label="Предметы для вступительного"
+                      options={withCurrentOptions(TEACHER_SUBJECT_OPTIONS, subjectsValues)}
+                      values={subjectsValues}
+                      onChange={(next: string[]) =>
+                        updateStudentSuccessStory(index, { admission_subjects: next.join(', ') })
+                      }
+                    />
+                    <Input
+                      label="Срок подачи документов"
+                      type="date"
+                      value={String(story?.application_deadline || '')}
+                      onChange={(value: string) =>
+                        updateStudentSuccessStory(index, { application_deadline: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <label className="field">
+                      <span>{t('Фото ученика (файл)')}</span>
+                      <div className="media-inline">
+                        {String(story?.student_photo || '').trim() ? (
+                          <div className="media-inline-thumb">
+                            <img src={String(story.student_photo)} alt="" />
+                            <button
+                              type="button"
+                              className="media-inline-remove"
+                              onClick={() => updateStudentSuccessStory(index, { student_photo: '' })}
+                              aria-label={t('Удалить фото')}
+                            >
+                              ×
+                            </button>
+                            <span className="media-inline-badge">{t('Фото ученика загружено')}</span>
+                          </div>
+                        ) : null}
+                        <label className="media-inline-add">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (event) => {
+                              try {
+                                const files = Array.from(event.target.files || []);
+                                const prepared = await prepareImageFiles(files.slice(0, 1), {
+                                  title: t('Фото ученика (файл)'),
+                                  aspect: 1,
+                                });
+                                if (!prepared || !prepared.length) {
+                                  event.target.value = '';
+                                  return;
+                                }
+                                const uploaded = await uploadMediaFiles(prepared, 'student-success');
+                                const photoUrl = uploaded[0] || '';
+                                if (photoUrl) {
+                                  updateStudentSuccessStory(index, { student_photo: photoUrl });
+                                }
+                                setMediaMessage('');
+                              } catch (error: any) {
+                                setMediaMessage(error?.message || t('Не удалось загрузить файл.'));
+                              } finally {
+                                event.target.value = '';
+                              }
+                            }}
+                          />
+                          <span className="media-inline-add-text">{t('Загрузить фото')}</span>
+                        </label>
+                      </div>
+                    </label>
+                    <TextArea
+                      label="Достижения"
+                      rows={3}
+                      value={String(story?.achievements?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateStudentSuccessStory(index, {
+                          achievements: {
+                            ...(story?.achievements || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
+                    />
+                  </FieldRow>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="muted">{t('Пока нет кейсов выпускников.')}</p>
+        )}
             </Section>
           )}
 
@@ -1464,10 +2890,14 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <Input
+          <SubjectPicker
             label="Предметы"
-            value={getDeep(profile, 'education.entrance_exam.subjects')}
-            onChange={(value: string) => updateField('education.entrance_exam.subjects', value)}
+            options={withCurrentOptions(
+              TEACHER_SUBJECT_OPTIONS,
+              normalizeListValue(getDeep(profile, 'education.entrance_exam.subjects', ''))
+            )}
+            values={normalizeListValue(getDeep(profile, 'education.entrance_exam.subjects', ''))}
+            onChange={(next: string[]) => updateListField('education.entrance_exam.subjects', next)}
           />
           <Input
             label="Предметы (доп.)"
@@ -1486,6 +2916,69 @@ export default function SchoolInfoPage() {
             }
           />
         </FieldRow>
+        <FieldRow>
+          <Input
+            label="Свободные места по классам"
+            value={getDeep(profile, 'education.admission_details.seats_by_grade')}
+            onChange={(value: string) =>
+              updateField('education.admission_details.seats_by_grade', value)
+            }
+          />
+          <Select
+            label="Период набора"
+            value={getDeep(profile, 'education.admission_details.enrollment_period')}
+            onChange={(value: string) =>
+              updateField('education.admission_details.enrollment_period', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                ADMISSION_PERIOD_OPTIONS,
+                String(getDeep(profile, 'education.admission_details.enrollment_period') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <Input
+            label="Сроки подачи документов"
+            type="date"
+            value={getDeep(profile, 'education.admission_details.document_deadlines')}
+            onChange={(value: string) =>
+              updateField('education.admission_details.document_deadlines', value)
+            }
+          />
+          <Select
+            label="Конкурс на место"
+            value={getDeep(profile, 'education.admission_details.competition_per_seat')}
+            onChange={(value: string) =>
+              updateField('education.admission_details.competition_per_seat', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                ADMISSION_COMPETITION_OPTIONS,
+                String(getDeep(profile, 'education.admission_details.competition_per_seat') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Детализация этапов набора"
+            rows={3}
+            value={getDeep(profile, localePath('education.admission_details.admission_stages_detail'))}
+            onChange={(value: string) =>
+              updateField(localePath('education.admission_details.admission_stages_detail'), value)
+            }
+          />
+        </FieldRow>
             </Section>
           )}
 
@@ -1495,7 +2988,13 @@ export default function SchoolInfoPage() {
           <Select
             label="Питание"
             value={getDeep(profile, 'services.meals_status')}
-            onChange={(value: string) => updateField('services.meals_status', value)}
+            onChange={(value: string) => {
+              updateField('services.meals_status', value);
+              if (value !== 'Not included in tuition') {
+                updateField('services.meals_price', '');
+                updateField('services.meals_currency', 'KZT');
+              }
+            }}
             options={[
               { value: '', label: t('Не выбрано') },
               ...MEAL_OPTIONS.map((item) => ({
@@ -1523,11 +3022,240 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
+        {getDeep(profile, 'services.meals_status') === 'Not included in tuition' ? (
+          <FieldRow>
+            <Input
+              label="Стоимость питания"
+              value={getDeep(profile, 'services.meals_price')}
+              onChange={(value: string) => updateField('services.meals_price', value)}
+            />
+            <Select
+              label="Валюта питания"
+              value={String(getDeep(profile, 'services.meals_currency') || 'KZT')}
+              onChange={(value: string) =>
+                updateField('services.meals_currency', value || 'KZT')
+              }
+              options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                value: currency,
+                label: currency,
+              }))}
+            />
+          </FieldRow>
+        ) : null}
         <FieldRow>
           <Toggle
             label="Иностранные преподаватели"
             checked={Boolean(getDeep(profile, 'services.foreign_teachers'))}
             onChange={(value: boolean) => updateField('services.foreign_teachers', value)}
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Маршруты автобуса"
+            rows={2}
+            value={getDeep(profile, localePath('services.transport_details.routes'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.transport_details.routes'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Стоимость транспорта по районам"
+            rows={2}
+            value={getDeep(profile, localePath('services.transport_details.cost_by_district'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.transport_details.cost_by_district'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <Input
+            label="Время подачи автобуса"
+            type="time"
+            value={getDeep(profile, localePath('services.transport_details.pickup_schedule'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.transport_details.pickup_schedule'), value)
+            }
+          />
+          <Input
+            label="Время развоза автобуса"
+            type="time"
+            value={getDeep(profile, localePath('services.transport_details.dropoff_schedule'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.transport_details.dropoff_schedule'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Медперсонал"
+            rows={2}
+            value={getDeep(profile, localePath('services.health_support.medical_staff'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.health_support.medical_staff'), value)
+            }
+          />
+          <TextArea
+            label="График медкабинета"
+            rows={2}
+            value={getDeep(profile, localePath('services.health_support.medical_hours'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.health_support.medical_hours'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <Select
+            label="Поддержка психолога"
+            value={getDeep(profile, 'services.health_support.psychologist_support')}
+            onChange={(value: string) =>
+              updateField('services.health_support.psychologist_support', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                SUPPORT_LEVEL_OPTIONS,
+                String(getDeep(profile, 'services.health_support.psychologist_support') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+          <Select
+            label="Поддержка логопеда"
+            value={getDeep(profile, 'services.health_support.logopedist_support')}
+            onChange={(value: string) =>
+              updateField('services.health_support.logopedist_support', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                SUPPORT_LEVEL_OPTIONS,
+                String(getDeep(profile, 'services.health_support.logopedist_support') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+          <Select
+            label="Поддержка дефектолога"
+            value={getDeep(profile, 'services.health_support.defectologist_support')}
+            onChange={(value: string) =>
+              updateField('services.health_support.defectologist_support', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                SUPPORT_LEVEL_OPTIONS,
+                String(getDeep(profile, 'services.health_support.defectologist_support') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Работа с аллергиями/особыми диетами"
+            rows={2}
+            value={getDeep(profile, localePath('services.health_support.allergy_support'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.health_support.allergy_support'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <TextArea
+            label="Протоколы безопасности"
+            rows={2}
+            value={getDeep(profile, localePath('services.safety.security_protocols'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.safety.security_protocols'), value)
+            }
+          />
+          <TextArea
+            label="Политика доступа на территорию"
+            rows={2}
+            value={getDeep(profile, localePath('services.safety.access_policy'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.safety.access_policy'), value)
+            }
+          />
+        </FieldRow>
+        <FieldRow>
+          <Select
+            label="Формат обратной связи с родителями"
+            value={getDeep(profile, localePath('services.parent_engagement.feedback_format'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.parent_engagement.feedback_format'), value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                PARENT_FEEDBACK_FORMAT_OPTIONS,
+                String(getDeep(profile, localePath('services.parent_engagement.feedback_format')) || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+          <Select
+            label="Частота встреч с родителями"
+            value={getDeep(profile, localePath('services.parent_engagement.meeting_frequency'))}
+            onChange={(value: string) =>
+              updateField(localePath('services.parent_engagement.meeting_frequency'), value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                PARENT_MEETING_FREQUENCY_OPTIONS,
+                String(getDeep(profile, localePath('services.parent_engagement.meeting_frequency')) || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+        </FieldRow>
+        <FieldRow>
+          <Select
+            label="Родительский комитет"
+            value={getDeep(profile, 'services.parent_engagement.parent_committee')}
+            onChange={(value: string) =>
+              updateField('services.parent_engagement.parent_committee', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                PARENT_COMMITTEE_OPTIONS,
+                String(getDeep(profile, 'services.parent_engagement.parent_committee') || '')
+              ).map((item) => ({
+                value: item,
+                label: translateOption(item, contentLocale),
+              })),
+            ]}
+          />
+          <Select
+            label="SLA ответа школе (часы)"
+            value={getDeep(profile, 'services.parent_engagement.response_sla_hours')}
+            onChange={(value: string) =>
+              updateField('services.parent_engagement.response_sla_hours', value)
+            }
+            options={[
+              { value: '', label: t('Не выбрано') },
+              ...withCurrentOption(
+                RESPONSE_SLA_OPTIONS,
+                String(getDeep(profile, 'services.parent_engagement.response_sla_hours') || '')
+              ).map((item) => ({
+                value: item,
+                label: item,
+              })),
+            ]}
           />
         </FieldRow>
         <Section title="Наш преподавательский состав">
@@ -1538,6 +3266,7 @@ export default function SchoolInfoPage() {
               onClick={() => {
                 const nextMembers = [...teachingStaffMembers, createTeacherMember()];
                 setTeachingStaffMembers(nextMembers);
+                setExpandedTeacherIndex(nextMembers.length - 1);
               }}
             >
               {t('Добавить преподавателя')}
@@ -1547,21 +3276,63 @@ export default function SchoolInfoPage() {
             <div className="teacher-list">
               {teachingStaffMembers.map((member: any, index: number) => (
                 <div key={member?.id || `teacher-${index}`} className="teacher-card">
-                  <div className="teacher-card-head">
-                    <h3>{`${t('Наш преподавательский состав')} #${index + 1}`}</h3>
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => {
-                        const nextMembers = teachingStaffMembers.filter(
-                          (_item: any, itemIndex: number) => itemIndex !== index
-                        );
-                        setTeachingStaffMembers(nextMembers);
-                      }}
-                    >
-                      {t('Удалить преподавателя')}
-                    </button>
-                  </div>
+                  {(() => {
+                    const isExpanded = expandedTeacherIndex === index;
+                    const summaryParts = [
+                      String(member?.full_name || '').trim(),
+                      String(member?.position || '').trim(),
+                      String(member?.education_degree || '').trim(),
+                      String(member?.subjects || '').trim(),
+                      Number(member?.experience_years || 0) > 0
+                        ? `${t('Стаж (лет)')}: ${
+                            Number(member?.experience_years || 0) >= TEACHER_EXPERIENCE_MAX
+                              ? `${TEACHER_EXPERIENCE_MAX}+`
+                              : Number(member?.experience_years || 0)
+                          }`
+                        : '',
+                    ].filter(Boolean);
+                    return (
+                      <>
+                        <div className="teacher-card-head">
+                          <h3>{`${t('Наш преподавательский состав')} #${index + 1}`}</h3>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="button secondary"
+                              onClick={() =>
+                                setExpandedTeacherIndex((prev) => (prev === index ? null : index))
+                              }
+                            >
+                              {isExpanded ? t('Свернуть') : t('Развернуть')}
+                            </button>
+                            <button
+                              type="button"
+                              className="button secondary"
+                              onClick={() => {
+                                const nextMembers = teachingStaffMembers.filter(
+                                  (_item: any, itemIndex: number) => itemIndex !== index
+                                );
+                                setTeachingStaffMembers(nextMembers);
+                                setExpandedTeacherIndex((prev) => {
+                                  if (!nextMembers.length) return null;
+                                  if (prev === null) return null;
+                                  if (prev === index) return Math.min(index, nextMembers.length - 1);
+                                  if (prev > index) return prev - 1;
+                                  return prev;
+                                });
+                              }}
+                            >
+                              {t('Удалить преподавателя')}
+                            </button>
+                          </div>
+                        </div>
+                        {!isExpanded ? (
+                          <p className="muted" style={{ marginTop: 8 }}>
+                            {summaryParts.join(' • ') || t('Не выбрано')}
+                          </p>
+                        ) : null}
+                        {isExpanded ? (
+                          <>
                   <FieldRow>
                     <Input
                       label="ФИО преподавателя"
@@ -1580,10 +3351,25 @@ export default function SchoolInfoPage() {
                   </FieldRow>
                   <FieldRow>
                     <Input
-                      label="Предметы"
-                      value={member?.subjects || ''}
+                      label="Образование / академическая степень"
+                      value={member?.education_degree || ''}
                       onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { subjects: value })
+                        updateTeachingStaffMember(index, { education_degree: value })
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <SubjectPicker
+                      label="Предметы"
+                      options={withCurrentOptions(
+                        TEACHER_SUBJECT_OPTIONS,
+                        normalizeListValue(member?.subjects)
+                      )}
+                      values={normalizeListValue(member?.subjects)}
+                      onChange={(next: string[]) =>
+                        updateTeachingStaffMember(index, {
+                          subjects: next.join(', '),
+                        })
                       }
                     />
                     <label className="field">
@@ -1608,22 +3394,16 @@ export default function SchoolInfoPage() {
                     </label>
                   </FieldRow>
                   <FieldRow>
-                    <Select
+                    <CategoryPicker
                       label="Категория преподавателя"
                       value={member?.category || ''}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, { category: value })
                       }
-                      options={[
-                        { value: '', label: t('Не выбрано') },
-                        ...withCurrentOption(
-                          TEACHER_CATEGORY_OPTIONS,
-                          member?.category || ''
-                        ).map((item) => ({
-                          value: item,
-                          label: translateOption(item, contentLocale),
-                        })),
-                      ]}
+                      options={withCurrentOption(
+                        TEACHER_CATEGORY_OPTIONS,
+                        member?.category || ''
+                      )}
                     />
                     <CheckboxGroup
                       label="Языки преподавания"
@@ -1659,24 +3439,23 @@ export default function SchoolInfoPage() {
                     />
                   </FieldRow>
                   <FieldRow>
-                    <Input
-                      label="Фото преподавателя URL"
-                      value={member?.photo_url || ''}
-                      onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { photo_url: value })
-                      }
-                    />
                     <label className="field">
                       <span>{t('Фото преподавателя (файл)')}</span>
                       <input
                         type="file"
                         accept="image/*"
                         onChange={async (event) => {
-                          const file = event.target.files?.[0];
+                          const input = event.currentTarget;
+                          const file = input.files?.[0];
                           if (!file) return;
                           try {
                             setMediaMessage('');
-                            const urls = await uploadMediaFiles([file], 'teachers');
+                            const preparedFiles = await prepareImageFiles([file], {
+                              title: t('Фото преподавателя (файл)'),
+                              aspect: 1,
+                            });
+                            if (!preparedFiles?.length) return;
+                            const urls = await uploadMediaFiles(preparedFiles, 'teachers');
                             if (urls[0]) {
                               updateTeachingStaffMember(index, { photo_url: urls[0] }, true);
                             }
@@ -1686,18 +3465,35 @@ export default function SchoolInfoPage() {
                                 'Не удалось загрузить фото преподавателя. Проверьте bucket в Supabase.'
                             );
                           } finally {
-                            event.currentTarget.value = '';
+                            input.value = '';
                           }
                         }}
                       />
                     </label>
                   </FieldRow>
-                  <p className="upload-choice-note">
-                    <span className="or-badge">{t('ИЛИ')}</span>{' '}
-                    {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-                  </p>
+                  {member?.photo_url ? (
+                    <div className="media-inline-grid" style={{ marginTop: -4, marginBottom: 8 }}>
+                      <div className="media-inline-item">
+                        <button
+                          type="button"
+                          className="media-inline-remove"
+                          onClick={() => removeTeachingStaffMemberPhoto(index)}
+                          aria-label={t('Удалить фото')}
+                        >
+                          ×
+                        </button>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={member.photo_url} alt="teacher" className="media-inline-preview" />
+                        <span className="media-inline-badge">{t('Фото преподавателя загружено')}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="muted" style={{ marginTop: -6, marginBottom: 4 }}>
+                      {t('Фото преподавателя не загружено')}
+                    </p>
+                  )}
                   <FieldRow>
-                    <TextArea
+                    <RichTextArea
                       label="Описание / опыт преподавателя"
                       value={getDeep(member, `bio.${contentLocale}`, '')}
                       onChange={(value: string) =>
@@ -1708,8 +3504,14 @@ export default function SchoolInfoPage() {
                           },
                         })
                       }
+                      rows={4}
                     />
                   </FieldRow>
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -1718,111 +3520,397 @@ export default function SchoolInfoPage() {
           )}
         </Section>
         <Section title="Каталог кружков и секций">
-          <div className="teacher-actions">
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => {
-                const nextClubs = [...clubsCatalog, createClubEntry()];
-                setClubsCatalog(nextClubs);
-              }}
-            >
-              {t('Добавить кружок')}
-            </button>
-          </div>
           {clubsCatalog.length ? (
             <div className="teacher-list">
-              {clubsCatalog.map((club: any, index: number) => (
-                <div key={club?.id || `club-${index}`} className="teacher-card">
-                  <div className="teacher-card-head">
-                    <h3>{`${t('Каталог кружков и секций')} #${index + 1}`}</h3>
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => {
-                        const nextClubs = clubsCatalog.filter(
-                          (_item: any, itemIndex: number) => itemIndex !== index
-                        );
-                        setClubsCatalog(nextClubs);
-                      }}
-                    >
-                      {t('Удалить кружок')}
-                    </button>
+              {clubsCatalog.map((club: any, index: number) => {
+                const parsedSchedule = parseSchedulePreset(
+                  String(club?.schedule?.[contentLocale] || '')
+                );
+                const startTime = splitTime(parsedSchedule.start);
+                const endTime = splitTime(parsedSchedule.end);
+                const parsedGrades = parseGradeRange(String(club?.grades || ''));
+                const sectionPhotos = normalizeListValue(club?.section_photos || '');
+                const isExpanded = expandedClubIndex === index;
+                const summaryParts = [
+                  String(club?.name?.[contentLocale] || '').trim(),
+                  String(club?.teacher_name || '').trim(),
+                  String(club?.schedule?.[contentLocale] || '').trim(),
+                  String(club?.grades || '').trim(),
+                  String(club?.price_monthly || '').trim()
+                    ? `${club.price_monthly} ${String(club?.price_currency || 'KZT')}`
+                    : '',
+                ].filter(Boolean);
+                return (
+                  <div key={club?.id || `club-${index}`} className="teacher-card">
+                    <div className="teacher-card-head">
+                      <h3>{`${t('Каталог кружков и секций')} #${index + 1}`}</h3>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() =>
+                            setExpandedClubIndex((prev) => (prev === index ? null : index))
+                          }
+                        >
+                          {isExpanded ? t('Свернуть') : t('Развернуть')}
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => {
+                            const nextClubs = clubsCatalog.filter(
+                              (_item: any, itemIndex: number) => itemIndex !== index
+                            );
+                            setClubsCatalog(nextClubs);
+                            setExpandedClubIndex((prev) => {
+                              if (!nextClubs.length) return null;
+                              if (prev === null) return null;
+                              if (prev === index) return Math.min(index, nextClubs.length - 1);
+                              if (prev > index) return prev - 1;
+                              return prev;
+                            });
+                          }}
+                        >
+                          {t('Удалить кружок')}
+                        </button>
+                      </div>
+                    </div>
+                    {!isExpanded ? (
+                      <p className="muted" style={{ marginTop: 8 }}>
+                        {summaryParts.join(' • ') || t('Не выбрано')}
+                      </p>
+                    ) : null}
+                    {isExpanded ? (
+                      <>
+                    <FieldRow>
+                      <Input
+                        label="Название кружка"
+                        value={String(club?.name?.[contentLocale] || '')}
+                        placeholder="Например: Шахматы"
+                        onChange={(value: string) =>
+                          updateClubEntry(index, {
+                            name: {
+                              ...(club?.name || {}),
+                              [contentLocale]: value,
+                            },
+                          })
+                        }
+                      />
+                      <Input
+                        label="Кто ведет (ФИО)"
+                        value={club?.teacher_name || ''}
+                        placeholder="Например: Ким Валерий"
+                        onChange={(value: string) =>
+                          updateClubEntry(index, { teacher_name: value })
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <RichTextArea
+                        label="Инфо про тренера"
+                        rows={3}
+                        value={club?.trainer_info || ''}
+                        placeholder="Например: КМС • 8 лет стажа - международный сертификат"
+                        onChange={(value: string) =>
+                          updateClubEntry(index, { trainer_info: value })
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <label className="field">
+                        <span>{t('Фото тренера (файл)')}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (event) => {
+                            const input = event.currentTarget;
+                            const file = input.files?.[0];
+                            if (!file) return;
+                            try {
+                              setMediaMessage('');
+                              const preparedFiles = await prepareImageFiles([file], {
+                                title: t('Фото тренера (файл)'),
+                                aspect: 1,
+                              });
+                              if (!preparedFiles?.length) return;
+                              const urls = await uploadMediaFiles(preparedFiles, 'clubs-trainers');
+                              if (urls[0]) {
+                                updateClubEntry(index, { trainer_photo: urls[0] });
+                              }
+                            } catch (error: any) {
+                              setMediaMessage(
+                                error?.message ||
+                                  'Не удалось загрузить фото тренера. Проверьте bucket в Supabase.'
+                              );
+                            } finally {
+                              input.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                    </FieldRow>
+                    {club?.trainer_photo ? (
+                      <div className="media-inline-grid" style={{ marginTop: -4, marginBottom: 8 }}>
+                        <div className="media-inline-item">
+                          <button
+                            type="button"
+                            className="media-inline-remove"
+                            onClick={() => removeClubTrainerPhoto(index)}
+                            aria-label={t('Удалить фото')}
+                          >
+                            ×
+                          </button>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={club.trainer_photo} alt="trainer" className="media-inline-preview" />
+                          <span className="media-inline-badge">{t('Фото тренера загружено')}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="muted" style={{ marginTop: -6, marginBottom: 4 }}>
+                        {t('Фото тренера не загружено')}
+                      </p>
+                    )}
+                    <FieldRow>
+                      <RichTextArea
+                        label="Описание кружка"
+                        rows={4}
+                        value={String(club?.description?.[contentLocale] || '')}
+                        placeholder="Можно писать с пробелами между словами"
+                        onChange={(value: string) =>
+                          updateClubEntry(index, {
+                            description: {
+                              ...(club?.description || {}),
+                              [contentLocale]: value,
+                            },
+                          })
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <label className="field">
+                        <span>{t('Фото секции (файлы)')}</span>
+                        <input
+                          id={`club-section-photos-${index}`}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          style={sectionPhotos.length ? { display: 'none' } : undefined}
+                          onChange={async (event) => {
+                            const input = event.currentTarget;
+                            const files = Array.from(input.files || []);
+                            if (!files.length) return;
+                            try {
+                              setMediaMessage('');
+                              const preparedFiles = await prepareImageFiles(files, {
+                                title: t('Фото секции (файлы)'),
+                                aspect: 4 / 3,
+                              });
+                              if (!preparedFiles?.length) return;
+                              const urls = await uploadMediaFiles(preparedFiles, 'clubs-sections');
+                              if (urls.length) {
+                                const merged = [...sectionPhotos, ...urls];
+                                updateClubEntry(index, { section_photos: merged.join(', ') });
+                              }
+                            } catch (error: any) {
+                              setMediaMessage(
+                                error?.message ||
+                                  'Не удалось загрузить фото секции. Проверьте bucket в Supabase.'
+                              );
+                            } finally {
+                              input.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                    </FieldRow>
+                    {sectionPhotos.length ? (
+                      <>
+                        <div className="media-inline-grid" style={{ marginTop: -4, marginBottom: 8 }}>
+                          {sectionPhotos.map((url: string, photoIndex: number) => (
+                            <div key={`${url}-${photoIndex}`} className="media-inline-item">
+                              <button
+                                type="button"
+                                className="media-inline-remove"
+                                onClick={() => removeClubSectionPhoto(index, photoIndex)}
+                                aria-label={t('Удалить фото')}
+                              >
+                                ×
+                              </button>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`section-${photoIndex + 1}`} className="media-inline-preview" />
+                            </div>
+                          ))}
+                        </div>
+                        <p className="muted" style={{ marginTop: -2, marginBottom: 8 }}>
+                          {`${t('Загружено фото секции')}: ${sectionPhotos.length}`}
+                        </p>
+                        <div className="teacher-actions" style={{ marginTop: 0 }}>
+                          <label htmlFor={`club-section-photos-${index}`} className="button secondary">
+                            {t('Добавить еще фото секции')}
+                          </label>
+                        </div>
+                      </>
+                    ) : null}
+                    <FieldRow>
+                      <CheckboxGroup
+                        label="Дни недели"
+                        options={WEEKDAY_OPTIONS as unknown as string[]}
+                        values={parsedSchedule.days}
+                        onChange={(next: string[]) =>
+                          updateClubSchedulePreset(index, {
+                            days: next as WeekdayKey[],
+                          })
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Select
+                        label="Время начала"
+                        value={startTime.hour}
+                        onChange={(value: string) =>
+                          updateClubSchedulePreset(index, {
+                            start: composeTime(value, startTime.minute || '00'),
+                          })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
+                        ]}
+                      />
+                      <Select
+                        label="Минуты (начало)"
+                        value={startTime.minute}
+                        onChange={(value: string) =>
+                          updateClubSchedulePreset(index, {
+                            start: composeTime(startTime.hour || '00', value),
+                          })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
+                        ]}
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Select
+                        label="Время окончания"
+                        value={endTime.hour}
+                        onChange={(value: string) =>
+                          updateClubSchedulePreset(index, {
+                            end: composeTime(value, endTime.minute || '00'),
+                          })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
+                        ]}
+                      />
+                      <Select
+                        label="Минуты (окончание)"
+                        value={endTime.minute}
+                        onChange={(value: string) =>
+                          updateClubSchedulePreset(index, {
+                            end: composeTime(endTime.hour || '00', value),
+                          })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
+                        ]}
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Select
+                        label="С класса"
+                        value={parsedGrades.from}
+                        onChange={(value: string) =>
+                          updateClubGradeRangePreset(index, { from: value })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...SCHOOL_GRADE_OPTIONS.map((grade) => ({
+                            value: String(grade),
+                            label: String(grade),
+                          })),
+                        ]}
+                      />
+                      <Select
+                        label="По класс"
+                        value={parsedGrades.to}
+                        onChange={(value: string) =>
+                          updateClubGradeRangePreset(index, { to: value })
+                        }
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...SCHOOL_GRADE_OPTIONS.map((grade) => ({
+                            value: String(grade),
+                            label: String(grade),
+                          })),
+                        ]}
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Input
+                        label="Стоимость в месяц"
+                        type="number"
+                        value={club?.price_monthly || ''}
+                        placeholder="0"
+                        onChange={(value: string) =>
+                          updateClubEntry(index, { price_monthly: value })
+                        }
+                      />
+                      <Select
+                        label="Валюта"
+                        value={String(club?.price_currency || 'KZT')}
+                        onChange={(value: string) =>
+                          updateClubEntry(index, { price_currency: value || 'KZT' })
+                        }
+                        options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                          value: currency,
+                          label: currency,
+                        }))}
+                      />
+                    </FieldRow>
+                      </>
+                    ) : null}
+                    <div className="teacher-actions" style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => {
+                          const nextClubs = [
+                            ...clubsCatalog.slice(0, index + 1),
+                            createClubEntry(),
+                            ...clubsCatalog.slice(index + 1),
+                          ];
+                          setClubsCatalog(nextClubs);
+                          setExpandedClubIndex(index + 1);
+                        }}
+                      >
+                        {t('Добавить следующий кружок')}
+                      </button>
+                    </div>
                   </div>
-                  <FieldRow>
-                    <Input
-                      label="Название кружка"
-                      value={String(club?.name?.[contentLocale] || '')}
-                      onChange={(value: string) =>
-                        updateClubEntry(index, {
-                          name: {
-                            ...(club?.name || {}),
-                            [contentLocale]: value,
-                          },
-                        })
-                      }
-                    />
-                    <Input
-                      label="Кто ведет (ФИО)"
-                      value={club?.teacher_name || ''}
-                      onChange={(value: string) =>
-                        updateClubEntry(index, { teacher_name: value })
-                      }
-                    />
-                  </FieldRow>
-                  <FieldRow>
-                    <TextArea
-                      label="Описание кружка"
-                      value={String(club?.description?.[contentLocale] || '')}
-                      onChange={(value: string) =>
-                        updateClubEntry(index, {
-                          description: {
-                            ...(club?.description || {}),
-                            [contentLocale]: value,
-                          },
-                        })
-                      }
-                    />
-                  </FieldRow>
-                  <FieldRow>
-                    <TextArea
-                      label="Расписание"
-                      value={String(club?.schedule?.[contentLocale] || '')}
-                      onChange={(value: string) =>
-                        updateClubEntry(index, {
-                          schedule: {
-                            ...(club?.schedule || {}),
-                            [contentLocale]: value,
-                          },
-                        })
-                      }
-                      rows={2}
-                    />
-                  </FieldRow>
-                  <FieldRow>
-                    <Input
-                      label="Для классов"
-                      value={club?.grades || ''}
-                      placeholder="Например: 1-4, 5-7"
-                      onChange={(value: string) =>
-                        updateClubEntry(index, { grades: value })
-                      }
-                    />
-                    <Input
-                      label="Стоимость в месяц"
-                      type="number"
-                      value={club?.price_monthly || ''}
-                      placeholder="0"
-                      onChange={(value: string) =>
-                        updateClubEntry(index, { price_monthly: value })
-                      }
-                    />
-                  </FieldRow>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <p className="muted">{t('Добавьте хотя бы один кружок.')}</p>
+            <>
+              <p className="muted">{t('Добавьте хотя бы один кружок.')}</p>
+              <div className="teacher-actions">
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    const nextClubs = [createClubEntry()];
+                    setClubsCatalog(nextClubs);
+                    setExpandedClubIndex(0);
+                  }}
+                >
+                  {t('Добавить кружок')}
+                </button>
+              </div>
+            </>
           )}
         </Section>
         <FieldRow>
@@ -1848,178 +3936,235 @@ export default function SchoolInfoPage() {
 
           {activeTab === 'media' && (
             <Section title="Медиа">
-        <FieldRow>
-          <Input
-            label="Логотип URL"
-            value={getDeep(profile, 'media.logo')}
-            onChange={(value: string) => updateField('media.logo', value)}
-          />
-        </FieldRow>
-        <p className="upload-choice-note">
-          <span className="or-badge">{t('ИЛИ')}</span>{' '}
-          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-        </p>
-        <FieldRow>
-          <label className="field">
-            <span>{t('Логотип (файл)')}</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                try {
-                  setMediaMessage('');
-                  const urls = await uploadMediaFiles([file], 'logo');
-                  if (urls[0]) {
-                    applyAndSave('media.logo', urls[0]);
-                  }
-                } catch (error: any) {
-                  setMediaMessage(
-                    error?.message ||
-                      'Не удалось загрузить логотип. Проверьте bucket в Supabase.'
-                  );
-                } finally {
-                  event.currentTarget.value = '';
-                }
-              }}
-            />
-          </label>
-        </FieldRow>
-        <div className="media-divider" />
-        <FieldRow>
-          <Input
-            label="Фото (URL, через запятую)"
-            value={getDeep(profile, 'media.photos')}
-            onChange={(value: string) => updateField('media.photos', value)}
-          />
-        </FieldRow>
-        <p className="upload-choice-note">
-          <span className="or-badge">{t('ИЛИ')}</span>{' '}
-          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-        </p>
-        <FieldRow>
-          <label className="field">
-            <span>{t('Фото (файлы)')}</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={async (event) => {
-                const files = Array.from(event.target.files || []);
-                if (!files.length) return;
-                try {
-                  setMediaMessage('');
-                  const urls = await uploadMediaFiles(files, 'photos');
-                  if (profile) {
-                    const existing = normalizeListValue(
-                      getDeep(profile, 'media.photos', '')
+              <div className="media-device-group">
+                <p className="media-device-label">{t('Логотип (файл)')}</p>
+                {logoUrl ? (
+                  <div className="media-inline-grid" style={{ marginBottom: 12 }}>
+                    <div className="media-inline-item">
+                      <button
+                        type="button"
+                        className="media-inline-remove"
+                        onClick={removeLogo}
+                        aria-label="Удалить"
+                      >
+                        ×
+                      </button>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logoUrl} alt="logo" className="media-inline-preview" />
+                    </div>
+                  </div>
+                ) : null}
+                <label className="media-device-upload">
+                  <input
+                    className="media-device-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={async (event) => {
+                      const input = event.currentTarget;
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      try {
+                        setMediaMessage('');
+                        const preparedFiles = await prepareImageFiles([file], {
+                          title: t('Логотип (файл)'),
+                          aspect: 1,
+                        });
+                        if (!preparedFiles?.length) return;
+                        const urls = await uploadMediaFiles(preparedFiles, 'logo');
+                        if (urls[0]) {
+                          applyAndSave('media.logo', urls[0]);
+                        }
+                      } catch (error: any) {
+                        setMediaMessage(
+                          error?.message ||
+                            'Не удалось загрузить логотип. Проверьте bucket в Supabase.'
+                        );
+                      } finally {
+                        input.value = '';
+                      }
+                    }}
+                  />
+                  <span className="media-device-upload-title">{t('Добавить файл')}</span>
+                  <span className="media-device-upload-subtitle">{t('или перетащите файлы сюда')}</span>
+                </label>
+                <p className="muted">{hasLogo ? t('Логотип загружен') : t('Логотип не загружен')}</p>
+              </div>
+
+              <div className="media-divider" />
+
+              <div className="media-device-group">
+                <p className="media-device-label">{t('Фото (файлы)')}</p>
+                <div className="media-inline-grid">
+                  {photoItems.map((url, index) => (
+                    <div key={`${url}-${index}`} className="media-inline-item">
+                      <button
+                        type="button"
+                        className="media-inline-remove"
+                        onClick={() => removeMediaItem('media.photos', index)}
+                        aria-label="Удалить"
+                      >
+                        ×
+                      </button>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`photo-${index + 1}`} className="media-inline-preview" />
+                      {index === 0 ? <span className="media-inline-badge">Главное фото</span> : null}
+                    </div>
+                  ))}
+                  <label className="media-inline-add">
+                    <input
+                      className="media-device-input"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={async (event) => {
+                        const input = event.currentTarget;
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        try {
+                          setMediaMessage('');
+                          const preparedFiles = await prepareImageFiles(files, {
+                            title: t('Фото (файлы)'),
+                            aspect: 4 / 3,
+                          });
+                          if (!preparedFiles?.length) return;
+                          const urls = await uploadMediaFiles(preparedFiles, 'photos');
+                          if (profile) {
+                            const existing = normalizeListValue(getDeep(profile, 'media.photos', ''));
+                            const next = [...existing, ...urls].filter(Boolean);
+                            applyAndSave('media.photos', next.join(', '));
+                          }
+                        } catch (error: any) {
+                          setMediaMessage(
+                            error?.message ||
+                              'Не удалось загрузить фото. Проверьте bucket в Supabase.'
+                          );
+                        } finally {
+                          input.value = '';
+                        }
+                      }}
+                    />
+                    <span className="media-inline-plus">+</span>
+                    <span className="media-inline-add-text">{t('Добавить фото')}</span>
+                  </label>
+                </div>
+                <p className="muted">{`${t('Загружено фото')}: ${photosCount}`}</p>
+              </div>
+
+              <div className="media-divider" />
+
+              <div className="media-device-group">
+                <p className="media-device-label">{t('Видео (файлы)')}</p>
+                <div className="media-inline-grid">
+                  {videoItems.map((url, index) => (
+                    <div key={`${url}-${index}`} className="media-inline-item">
+                      <button
+                        type="button"
+                        className="media-inline-remove"
+                        onClick={() => removeMediaItem('media.videos', index)}
+                        aria-label="Удалить"
+                      >
+                        ×
+                      </button>
+                      <video className="media-inline-preview" src={url} muted playsInline preload="metadata" />
+                    </div>
+                  ))}
+                  <label className="media-inline-add">
+                    <input
+                      className="media-device-input"
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      onChange={async (event) => {
+                        const input = event.currentTarget;
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        try {
+                          setMediaMessage('');
+                          const urls = await uploadMediaFiles(files, 'videos');
+                          if (profile) {
+                            const existing = normalizeListValue(getDeep(profile, 'media.videos', ''));
+                            const next = [...existing, ...urls].filter(Boolean);
+                            applyAndSave('media.videos', next.join(', '));
+                          }
+                        } catch (error: any) {
+                          setMediaMessage(
+                            error?.message ||
+                              'Не удалось загрузить видео. Проверьте bucket в Supabase.'
+                          );
+                        } finally {
+                          input.value = '';
+                        }
+                      }}
+                    />
+                    <span className="media-inline-plus">+</span>
+                    <span className="media-inline-add-text">{t('Добавить видео')}</span>
+                  </label>
+                </div>
+                <p className="muted">{`${t('Загружено видео')}: ${videosCount}`}</p>
+              </div>
+
+              <div className="media-divider" />
+
+              <div className="media-device-group">
+                <p className="media-device-label">{t('Аккредитация (файлы)')}</p>
+                <div className="media-inline-grid">
+                  {certificateItems.map((url, index) => {
+                    const fileName = decodeURIComponent(String(url).split('/').pop() || `file-${index + 1}`);
+                    return (
+                      <div key={`${url}-${index}`} className="media-inline-item media-inline-doc">
+                        <button
+                          type="button"
+                          className="media-inline-remove"
+                          onClick={() => removeMediaItem('media.certificates', index)}
+                          aria-label="Удалить"
+                        >
+                          ×
+                        </button>
+                        <a href={url} target="_blank" rel="noreferrer" className="media-inline-doc-link">
+                          <span className="media-inline-doc-icon">📄</span>
+                          <span className="media-inline-doc-name">{fileName}</span>
+                        </a>
+                      </div>
                     );
-                    const next = [...existing, ...urls].filter(Boolean);
-                    applyAndSave('media.photos', next.join(', '));
-                  }
-                } catch (error: any) {
-                  setMediaMessage(
-                    error?.message ||
-                      'Не удалось загрузить фото. Проверьте bucket в Supabase.'
-                  );
-                } finally {
-                  event.currentTarget.value = '';
-                }
-              }}
-            />
-          </label>
-        </FieldRow>
-        <div className="media-divider" />
-        <FieldRow>
-          <Input
-            label="Видео (URL, через запятую)"
-            value={getDeep(profile, 'media.videos')}
-            onChange={(value: string) => updateField('media.videos', value)}
-          />
-        </FieldRow>
-        <p className="upload-choice-note">
-          <span className="or-badge">{t('ИЛИ')}</span>{' '}
-          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-        </p>
-        <FieldRow>
-          <label className="field">
-            <span>{t('Видео (файлы)')}</span>
-            <input
-              type="file"
-              accept="video/*"
-              multiple
-              onChange={async (event) => {
-                const files = Array.from(event.target.files || []);
-                if (!files.length) return;
-                try {
-                  setMediaMessage('');
-                  const urls = await uploadMediaFiles(files, 'videos');
-                  if (profile) {
-                    const existing = normalizeListValue(
-                      getDeep(profile, 'media.videos', '')
-                    );
-                    const next = [...existing, ...urls].filter(Boolean);
-                    applyAndSave('media.videos', next.join(', '));
-                  }
-                } catch (error: any) {
-                  setMediaMessage(
-                    error?.message ||
-                      'Не удалось загрузить видео. Проверьте bucket в Supabase.'
-                  );
-                } finally {
-                  event.currentTarget.value = '';
-                }
-              }}
-            />
-          </label>
-        </FieldRow>
-        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
-        <div className="media-divider" />
-        <FieldRow>
-          <Input
-            label="Аккредитация (URL, через запятую)"
-            value={getDeep(profile, 'media.certificates')}
-            onChange={(value: string) => updateField('media.certificates', value)}
-          />
-        </FieldRow>
-        <p className="upload-choice-note">
-          <span className="or-badge">{t('ИЛИ')}</span>{' '}
-          {t('Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.')}
-        </p>
-        <FieldRow>
-          <label className="field">
-            <span>{t('Аккредитация (файлы)')}</span>
-            <input
-              type="file"
-              accept="image/*,.pdf,.doc,.docx"
-              multiple
-              onChange={async (event) => {
-                const files = Array.from(event.target.files || []);
-                if (!files.length) return;
-                try {
-                  setMediaMessage('');
-                  const urls = await uploadMediaFiles(files, 'certificates');
-                  if (profile) {
-                    const existing = normalizeListValue(
-                      getDeep(profile, 'media.certificates', '')
-                    );
-                    const next = [...existing, ...urls].filter(Boolean);
-                    applyAndSave('media.certificates', next.join(', '));
-                  }
-                } catch (error: any) {
-                  setMediaMessage(
-                    error?.message ||
-                      'Не удалось загрузить аккредитацию. Проверьте bucket в Supabase.'
-                  );
-                } finally {
-                  event.currentTarget.value = '';
-                }
-              }}
-            />
-          </label>
-        </FieldRow>
-        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
+                  })}
+                  <label className="media-inline-add">
+                    <input
+                      className="media-device-input"
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      multiple
+                      onChange={async (event) => {
+                        const input = event.currentTarget;
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        try {
+                          setMediaMessage('');
+                          const urls = await uploadMediaFiles(files, 'certificates');
+                          if (profile) {
+                            const existing = normalizeListValue(
+                              getDeep(profile, 'media.certificates', '')
+                            );
+                            const next = [...existing, ...urls].filter(Boolean);
+                            applyAndSave('media.certificates', next.join(', '));
+                          }
+                        } catch (error: any) {
+                          setMediaMessage(
+                            error?.message ||
+                              'Не удалось загрузить аккредитацию. Проверьте bucket в Supabase.'
+                          );
+                        } finally {
+                          input.value = '';
+                        }
+                      }}
+                    />
+                    <span className="media-inline-plus">+</span>
+                    <span className="media-inline-add-text">{t('Добавить аккредитацию')}</span>
+                  </label>
+                </div>
+                <p className="muted">{`${t('Загружено аккредитаций')}: ${certificatesCount}`}</p>
+              </div>
+
+              {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <div className="media-divider" />
         <FieldRow>
           <Input
@@ -2055,87 +4200,16 @@ export default function SchoolInfoPage() {
             onChange={(value: string) => updateField('media.social_links.telegram', value)}
           />
         </FieldRow>
+        <FieldRow>
+          <Input
+            label="LinkedIn"
+            value={getDeep(profile, 'media.social_links.linkedin')}
+            onChange={(value: string) => updateField('media.social_links.linkedin', value)}
+          />
+        </FieldRow>
             </Section>
           )}
 
-          {activeTab === 'location' && (
-            <Section title="Локация">
-              <FieldRow>
-                <Select
-                  label="Тип остановки"
-                  value={locationStopType}
-                  onChange={(value: string) => updateField('location.transport_stop_type', value)}
-                  options={[
-                    { value: '', label: t('Не выбрано') },
-                    ...LOCATION_STOP_TYPE_OPTIONS.map((item) => ({
-                      value: item,
-                      label: translateOption(item, contentLocale),
-                    })),
-                  ]}
-                />
-              </FieldRow>
-
-              {locationStopType === 'Metro' ? (
-                <>
-                  <FieldRow>
-                    <Input
-                      label="Ближайшее метро"
-                      value={getDeep(profile, localePath('location.nearest_metro_stop'))}
-                      onChange={(value: string) =>
-                        updateField(localePath('location.nearest_metro_stop'), value)
-                      }
-                    />
-                  </FieldRow>
-                  <FieldRow>
-                    <Input
-                      label="Дистанция до метро (км)"
-                      value={getDeep(profile, 'location.distance_to_metro_km')}
-                      onChange={(value: string) =>
-                        updateField('location.distance_to_metro_km', value)
-                      }
-                    />
-                    <TextArea
-                      label="Зона обслуживания"
-                      value={getDeep(profile, localePath('location.service_area'))}
-                      onChange={(value: string) =>
-                        updateField(localePath('location.service_area'), value)
-                      }
-                    />
-                  </FieldRow>
-                </>
-              ) : null}
-
-              {locationStopType === 'Bus' ? (
-                <>
-                  <FieldRow>
-                    <Input
-                      label="Ближайшая остановка"
-                      value={getDeep(profile, localePath('location.nearest_bus_stop'))}
-                      onChange={(value: string) =>
-                        updateField(localePath('location.nearest_bus_stop'), value)
-                      }
-                    />
-                  </FieldRow>
-                  <FieldRow>
-                    <Input
-                      label="Дистанция до остановки (км)"
-                      value={getDeep(profile, 'location.distance_to_bus_stop_km')}
-                      onChange={(value: string) =>
-                        updateField('location.distance_to_bus_stop_km', value)
-                      }
-                    />
-                    <TextArea
-                      label="Зона обслуживания"
-                      value={getDeep(profile, localePath('location.service_area'))}
-                      onChange={(value: string) =>
-                        updateField(localePath('location.service_area'), value)
-                      }
-                    />
-                  </FieldRow>
-                </>
-              ) : null}
-            </Section>
-          )}
         </div>
       </div>
 
@@ -2150,6 +4224,7 @@ export default function SchoolInfoPage() {
         {message && <span className={`status ${state}`}>{message}</span>}
         {schoolId && <span className="muted">ID: {schoolId}</span>}
       </div>
+      {cropperModal}
     </div>
     </LocaleContext.Provider>
   );

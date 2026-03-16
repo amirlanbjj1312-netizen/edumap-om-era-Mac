@@ -89,7 +89,7 @@ export default function RoleSelectScreen() {
 
   return (
     <LinearGradient
-      colors={['#7B70FF', '#55C9FF']}
+      colors={['#E9EEF6', '#E9EEF6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       className="flex-1"

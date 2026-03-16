@@ -8,10 +8,13 @@ import {
   TextInput,
   ScrollView,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeftIcon, AdjustmentsHorizontalIcon } from 'react-native-heroicons/solid';
 import { XMarkIcon } from 'react-native-heroicons/outline';
+import * as Location from 'expo-location';
 import { useSchools } from '../context/SchoolsContext';
 import { TiledMapView } from '../components/map';
 import { useSchoolFilters } from '../hooks/useSchoolFilters';
@@ -27,6 +30,10 @@ export default function SchoolMapScreen() {
   } = useSchoolFilters({ schoolCards, singleCity: true });
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedMarker, setFocusedMarker] = useState(null);
+  const [userRegion, setUserRegion] = useState(null);
+  const [locationPrompted, setLocationPrompted] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const schoolsWithCoords = useMemo(() => {
     return filteredSchools
@@ -114,6 +121,33 @@ export default function SchoolMapScreen() {
     Keyboard.dismiss();
   };
 
+  const requestUserLocation = async () => {
+    if (locationLoading || locationPrompted) return;
+    setLocationPrompted(true);
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Location permission denied.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.18,
+        longitudeDelta: 0.22,
+      });
+      setLocationError('');
+    } catch (error) {
+      setLocationError('Failed to get location.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   const handleSubmitSearch = () => {
     if (!filteredMarkers.length) {
       Keyboard.dismiss();
@@ -150,21 +184,29 @@ export default function SchoolMapScreen() {
   return (
     <>
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.fullscreenContainer}>
+      <KeyboardAvoidingView
+        style={styles.fullscreenContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={8}
+      >
         <TiledMapView
           style={styles.fullscreenMap}
           markers={filteredMarkers}
           onCalloutPress={(marker) => handleOpenDetail(marker.id)}
+          onMapPress={requestUserLocation}
           renderCallout={(marker) => (
             <View style={styles.calloutCard}>
-              <Text style={styles.calloutTitle}>{marker.name}</Text>
-              {marker.address ? (
+              <Text style={styles.calloutTitle}>
+                {typeof marker.name === 'string' ? marker.name : ''}
+              </Text>
+              {typeof marker.address === 'string' && marker.address ? (
                 <Text style={styles.calloutSubtitle}>{marker.address}</Text>
               ) : null}
               <Text style={styles.calloutLink}>Open profile -></Text>
             </View>
           )}
           focusPoint={focusedMarker}
+          focusRegion={userRegion}
         />
 
         <View style={styles.topOverlay}>
@@ -239,8 +281,16 @@ export default function SchoolMapScreen() {
           <Text style={styles.mapHintText}>
             Markers represent approximate positions based on the saved coordinates.
           </Text>
+          {!locationPrompted ? (
+            <Text style={styles.mapHintText}>
+              Tap the map to share your location and focus on your city.
+            </Text>
+          ) : null}
+          {locationError ? (
+            <Text style={styles.mapHintText}>{locationError}</Text>
+          ) : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
     <FiltersModal
       visible={filterModalVisible}

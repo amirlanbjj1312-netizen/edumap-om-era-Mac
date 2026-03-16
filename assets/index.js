@@ -6,6 +6,7 @@ import signin from './images/signin.png';
 import signup from './images/signup.png';
 import welcome from './images/welcome.png';
 import authHero from './images/authHero.png';
+import authLogo from './branding/auth-logo.png';
 import roleStudent from './images/role/student.png';
 import roleAdmin from './images/role/admin.png';
 import school1 from './images/school1.png';
@@ -30,6 +31,7 @@ export const images = {
   signup,
   welcome,
   authHero,
+  authLogo,
   roleStudent,
   roleAdmin,
   school1,

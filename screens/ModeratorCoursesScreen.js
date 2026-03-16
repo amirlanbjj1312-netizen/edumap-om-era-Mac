@@ -45,9 +45,9 @@ export default function ModeratorCoursesScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
       <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+        colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}

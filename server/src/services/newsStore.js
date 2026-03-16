@@ -32,6 +32,19 @@ const normalizeMedia = (value) => {
   }
   return [];
 };
+const normalizeBoolean = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return Boolean(fallback);
+  if (['true', '1', 'yes', 'on'].includes(raw)) return true;
+  if (['false', '0', 'no', 'off'].includes(raw)) return false;
+  return Boolean(fallback);
+};
+const normalizeViews = (value, fallback = 0) => {
+  const parsed = Number(value ?? fallback ?? 0);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.round(parsed));
+};
 
 const normalizeNewsItem = (value = {}, existing = null) => {
   const now = new Date().toISOString();
@@ -40,6 +53,16 @@ const normalizeNewsItem = (value = {}, existing = null) => {
     throw new Error('title is required');
   }
   const id = String(value.id || existing?.id || `news-${Date.now()}`).trim();
+  const viewsCount = normalizeViews(
+    value.views_count ?? value.views ?? value.popularity_score ?? value.popularityScore,
+    existing?.views_count ?? existing?.views ?? existing?.popularity_score ?? 0
+  );
+  const isPublished = normalizeBoolean(
+    value.isPublished ?? value.is_published,
+    (existing?.status || '').toLowerCase() === 'draft'
+      ? false
+      : existing?.isPublished ?? existing?.is_published ?? true
+  );
   return {
     id,
     title,
@@ -61,6 +84,15 @@ const normalizeNewsItem = (value = {}, existing = null) => {
     content: String(value.content || existing?.content || '').trim(),
     contentEn: String(value.contentEn || existing?.contentEn || '').trim(),
     contentKk: String(value.contentKk || existing?.contentKk || '').trim(),
+    isImportant: normalizeBoolean(
+      value.isImportant ?? value.is_important,
+      existing?.isImportant ?? existing?.is_important ?? false
+    ),
+    views_count: viewsCount,
+    views: viewsCount,
+    popularity_score: viewsCount,
+    isPublished,
+    status: isPublished ? 'published' : 'draft',
     updatedAt: now,
   };
 };

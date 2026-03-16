@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { useState } from 'react';
 import MapView, { Callout, Marker, UrlTile } from 'react-native-maps';
+import { FontAwesome6 } from '@expo/vector-icons';
 import {
   MAP_DEFAULT_CENTER,
   MAP_TILE_URL_TEMPLATE,
@@ -34,16 +35,6 @@ const clampToKazakhstan = ({ latitude, longitude, latitudeDelta, longitudeDelta 
     latitudeDelta: Math.max(Math.min(latitudeDelta, 1.8), 0.05),
     longitudeDelta: Math.max(Math.min(longitudeDelta, 2.2), 0.05),
   };
-};
-
-const getMarkerLabel = (marker) => {
-  if (marker.label) {
-    return marker.label;
-  }
-  if (marker.name) {
-    return marker.name.charAt(0).toUpperCase();
-  }
-  return 'S';
 };
 
 const computeInitialRegion = (markers) => {
@@ -95,7 +86,9 @@ export default function TiledMapView({
   renderMarker,
   renderCallout,
   focusPoint,
+  focusRegion,
   highlightMarkerId,
+  onMapPress,
 }) {
   const mapRef = useRef(null);
 
@@ -144,6 +137,19 @@ export default function TiledMapView({
     }
   }, [focusPoint]);
 
+  useEffect(() => {
+    if (
+      focusRegion &&
+      mapRef.current &&
+      Number.isFinite(focusRegion.latitude) &&
+      Number.isFinite(focusRegion.longitude)
+    ) {
+      const target = clampToKazakhstan(focusRegion);
+      setRegion(target);
+      mapRef.current.animateToRegion(target, 350);
+    }
+  }, [focusRegion]);
+
   return (
     <View style={[styles.container, style]}>
       <MapView
@@ -152,6 +158,7 @@ export default function TiledMapView({
         initialRegion={initialRegion}
         region={region}
         mapType="none"
+        onPress={onMapPress}
         legalLabelInsets={{ top: -100, left: -100, bottom: -100, right: -100 }}
         showsUserLocation={false}
         showsMyLocationButton={false}
@@ -188,21 +195,24 @@ export default function TiledMapView({
             {renderMarker ? (
               renderMarker(marker)
             ) : (
-              <View style={styles.markerWrapper}>
+              <View style={styles.markerPinWrap}>
                 <View
                   style={[
-                    styles.markerBubble,
-                    highlightMarkerId === marker.id && styles.markerBubbleActive,
+                    styles.markerPinCircle,
+                    highlightMarkerId === marker.id && styles.markerPinCircleActive,
                   ]}
                 >
-                  <Text style={styles.markerLabel} numberOfLines={2}>
-                    {marker.name || getMarkerLabel(marker)}
-                  </Text>
+                  <FontAwesome6
+                    name="school"
+                    size={13}
+                    color="#FFFFFF"
+                    iconStyle="solid"
+                  />
                 </View>
                 <View
                   style={[
-                    styles.markerPointer,
-                    highlightMarkerId === marker.id && styles.markerPointerActive,
+                    styles.markerPinDot,
+                    highlightMarkerId === marker.id && styles.markerPinDotActive,
                   ]}
                 />
               </View>
@@ -214,11 +224,16 @@ export default function TiledMapView({
                 ) : (
                   <View style={styles.defaultCallout}>
                     <Text style={styles.defaultCalloutTitle}>
-                      {marker.name || 'School'}
+                      {typeof marker.name === 'string' ? marker.name : 'School'}
                     </Text>
-                    {marker.address ? (
+                    {typeof marker.address === 'string' && marker.address ? (
                       <Text style={styles.defaultCalloutSubtitle}>
                         {marker.address}
+                      </Text>
+                    ) : null}
+                    {typeof marker.city === 'string' && marker.city ? (
+                      <Text style={styles.defaultCalloutMeta}>
+                        {marker.city}
                       </Text>
                     ) : null}
                   </View>
@@ -241,47 +256,46 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(37, 99, 235, 0.25)',
     backgroundColor: '#0F172A',
   },
-  markerWrapper: {
+  markerPinWrap: {
     alignItems: 'center',
   },
-  markerBubble: {
-    minWidth: 60,
-    minHeight: 44,
-    borderRadius: 24,
-    backgroundColor: '#4F46E5',
+  markerPinCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#2563EB',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.28,
+    shadowRadius: 4,
     elevation: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
-  markerBubbleActive: {
+  markerPinCircleActive: {
     backgroundColor: '#FB923C',
     shadowColor: '#7c2d12',
   },
-  markerLabel: {
+  markerPinIcon: {
     color: '#FFFFFF',
     fontFamily: 'exoSemibold',
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 16,
     textAlign: 'center',
   },
-  markerPointer: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#4F46E5',
+  markerPinDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2563EB',
     marginTop: 2,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
-  markerPointerActive: {
-    borderTopColor: '#FB923C',
+  markerPinDotActive: {
+    backgroundColor: '#FB923C',
   },
   calloutContainer: {
     padding: 8,
@@ -309,5 +323,11 @@ const styles = StyleSheet.create({
     fontFamily: 'exo',
     fontSize: 13,
     color: '#CBD5F5',
+  },
+  defaultCalloutMeta: {
+    marginTop: 6,
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#93C5FD',
   },
 });

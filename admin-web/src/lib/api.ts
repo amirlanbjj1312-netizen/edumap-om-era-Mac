@@ -94,9 +94,98 @@ export async function sendChatMessage(token: string, roomKey: string, body: stri
 }
 
 export async function loadAuthUsers(token: string) {
-  return authRequestJson<{ data: Array<{ id: string; email: string; role: string; createdAt: string }> }>(
+  return authRequestJson<{
+    data: Array<{
+      id: string;
+      email: string;
+      role: string;
+      createdAt: string;
+      firstName?: string;
+      lastName?: string;
+      bannedUntil?: string | null;
+      isActive?: boolean;
+    }>;
+  }>(
     '/auth/users',
     { token }
+  );
+}
+
+export async function loadAuthUserDetails(token: string, userId: string) {
+  return authRequestJson<{
+    data: {
+      user: {
+        id: string;
+        email: string;
+        role: string;
+        firstName?: string;
+        lastName?: string;
+        createdAt?: string;
+        lastSignInAt?: string;
+        bannedUntil?: string | null;
+        isActive?: boolean;
+      };
+      settings: {
+        user_id: string;
+        email: string;
+        first_name?: string;
+        last_name?: string;
+        subscription?: {
+          plan?: string;
+          status?: string;
+          starts_at?: string;
+          ends_at?: string;
+          auto_renew?: boolean;
+        };
+        ai_limits?: {
+          chat_bonus?: number;
+          selector_bonus?: number;
+          bonus_expires_at?: string;
+        };
+        notes?: string;
+        updated_at?: string;
+        updated_by?: string;
+      };
+      analytics: {
+        surveyResponsesCount: number;
+        consultationRequestsCount: number;
+        aiChatRequestsCount: number;
+        aiMatchRequestsCount: number;
+        mostVisitedSections: string[];
+        lastActivityAt?: string;
+      };
+    };
+  }>(`/auth/users/${encodeURIComponent(userId)}/details`, { token });
+}
+
+export async function updateAuthUserSettings(
+  token: string,
+  userId: string,
+  payload: {
+    first_name?: string;
+    last_name?: string;
+    subscription?: {
+      plan?: string;
+      status?: string;
+      starts_at?: string;
+      ends_at?: string;
+      auto_renew?: boolean;
+    };
+    ai_limits?: {
+      chat_bonus?: number;
+      selector_bonus?: number;
+      bonus_expires_at?: string;
+    };
+    notes?: string;
+  }
+) {
+  return authRequestJson<{ data: any }>(
+    `/auth/users/${encodeURIComponent(userId)}/settings`,
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
   );
 }
 
@@ -120,6 +209,117 @@ export async function setAuthUserStatus(token: string, userId: string, active: b
       body: JSON.stringify({ active }),
     }
   );
+}
+
+export async function createSchoolAccount(
+  token: string,
+  payload: { email: string; password: string; schoolId?: string; schoolName?: string }
+) {
+  return authRequestJson<{
+    data: { id: string; email: string; role: string; schoolId: string };
+  }>('/auth/create-school-account', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadSchoolAccessLog(token: string) {
+  return authRequestJson<{
+    data: Array<{
+      id: string;
+      email: string;
+      password: string;
+      schoolId: string;
+      createdAt: string;
+      actor?: string;
+      status?: string;
+    }>;
+  }>('/auth/school-access-log', { token });
+}
+
+export async function clearSchoolAccessLog(token: string) {
+  return authRequestJson<{ data: Array<any> }>('/auth/school-access-log', {
+    token,
+    method: 'DELETE',
+  });
+}
+
+export async function deleteSchoolAccessLogEntry(token: string, id: string) {
+  return authRequestJson<{ ok: true }>(
+    `/auth/school-access-log/${encodeURIComponent(id)}`,
+    {
+      token,
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function deleteSchoolAccessLogEntryFull(
+  token: string,
+  payload: { id: string; email?: string; schoolId?: string }
+) {
+  const params = new URLSearchParams();
+  if (payload.email) params.set('email', payload.email);
+  if (payload.schoolId) params.set('schoolId', payload.schoolId);
+  const query = params.toString();
+  return authRequestJson<{ ok: true; data: { logDeleted: boolean; userDeleted: boolean; schoolDeleted: boolean } }>(
+    `/auth/school-access-log/${encodeURIComponent(payload.id)}/full${query ? `?${query}` : ''}`,
+    {
+      token,
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function updateSchoolAccessLogStatus(
+  token: string,
+  id: string,
+  status: 'создан' | 'выдан' | 'заполнен'
+) {
+  return authRequestJson<{
+    data: {
+      id: string;
+      email: string;
+      password: string;
+      schoolId: string;
+      createdAt: string;
+      actor?: string;
+      status: string;
+    };
+  }>(`/auth/school-access-log/${encodeURIComponent(id)}`, {
+    token,
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function upsertSchoolAccessLogEntry(
+  token: string,
+  payload: {
+    id: string;
+    email: string;
+    password?: string;
+    schoolId?: string;
+    createdAt?: string;
+    status?: 'создан' | 'выдан' | 'заполнен';
+  }
+) {
+  return authRequestJson<{
+    data: {
+      id: string;
+      email: string;
+      password: string;
+      schoolId: string;
+      createdAt: string;
+      actor?: string;
+      status: string;
+    };
+  }>('/auth/school-access-log', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function loadAllReviews(token: string) {
@@ -224,6 +424,22 @@ export async function loadProgramInfoAnalytics(
   }>(`/schools/analytics/program-info?${query}`, { token });
 }
 
+export async function requestAiSchoolChat(
+  token: string,
+  payload: { message: string; schoolIds: string[] }
+) {
+  return authRequestJson<{
+    data: {
+      reply: string;
+      recommendedSchoolIds: string[];
+    };
+  }>('/ai/school-chat', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function loadTestBillingTariffs() {
   return requestJson<{
     data: Array<{
@@ -284,4 +500,166 @@ export async function updateSchoolMonetization(
       body: JSON.stringify({ monetization }),
     }
   );
+}
+
+export async function loadRatingSurveyConfig(token: string) {
+  return authRequestJson<{
+    data: {
+      cycle_days: number;
+      updated_at: string;
+      updated_by: string;
+      questions: Array<{
+        id: string;
+        text: string;
+        description?: string;
+        type?: 'rating' | 'single_choice' | 'text';
+        options?: Array<{ id?: string; label: string; score?: number }>;
+        required?: boolean;
+        order?: number;
+        enabled: boolean;
+      }>;
+    };
+  }>('/schools/rating-surveys/config', { token });
+}
+
+export async function updateRatingSurveyConfig(
+  token: string,
+  payload: {
+    cycleDays: number;
+    questions: Array<{
+      id?: string;
+      text: string;
+      description?: string;
+      type?: 'rating' | 'single_choice' | 'text';
+      options?: Array<{ id?: string; label: string; score?: number }>;
+      required?: boolean;
+      order?: number;
+      enabled?: boolean;
+    }>;
+  }
+) {
+  return authRequestJson<{ data: any }>('/schools/rating-surveys/config', {
+    token,
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadRatingSurveyCampaigns(token: string) {
+  return authRequestJson<{
+    data: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      send_at: string;
+      status: 'draft' | 'scheduled' | 'active' | 'closed';
+      school_ids: string[];
+      target_type?: 'school' | 'all_parents' | 'specific_parents';
+      parent_emails?: string[];
+      school_names?: string[];
+      target_label?: string;
+      responses_count?: number;
+      unique_users_count?: number;
+    }>;
+  }>('/schools/rating-surveys/campaigns', { token });
+}
+
+export async function createRatingSurveyCampaign(
+  token: string,
+  payload: {
+    title: string;
+    description?: string;
+    schoolIds?: string[];
+    targetType?: 'school' | 'all_parents' | 'specific_parents';
+    parentEmails?: string[];
+    sendAt?: string;
+  }
+) {
+  return authRequestJson<{ data: any }>('/schools/rating-surveys/campaigns', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function closeRatingSurveyCampaign(token: string, campaignId: string) {
+  return authRequestJson<{ data: any }>(
+    `/schools/rating-surveys/campaigns/${encodeURIComponent(campaignId)}/close`,
+    {
+      token,
+      method: 'POST',
+    }
+  );
+}
+
+export async function loadRatingSurveyAnalytics(token: string) {
+  return authRequestJson<{
+    data: {
+      config: any;
+      campaigns_count: number;
+      responses_count: number;
+      schools: Array<{
+        school_id: string;
+        school_name: string;
+        responses_count: number;
+        survey_average: number;
+        consultations_count: number;
+        popularity_count: number;
+        current_rating: number;
+        calculated_rating: number;
+        formula: {
+          rating: number;
+          survey: number;
+          consultations: number;
+          popularity: number;
+        };
+      }>;
+    };
+  }>('/schools/rating-surveys/analytics', { token });
+}
+
+export async function loadActiveRatingSurveys(token: string) {
+  return authRequestJson<{
+    data: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      school_ids: string[];
+      school_options: Array<{ id: string; name: string; answered: boolean }>;
+      send_at: string;
+      questions: Array<{
+        id: string;
+        text: string;
+        description?: string;
+        type?: 'rating' | 'single_choice' | 'text';
+        options?: Array<{ id?: string; label: string; score?: number }>;
+        required?: boolean;
+        order?: number;
+        enabled: boolean;
+      }>;
+    }>;
+  }>('/schools/rating-surveys/active', { token });
+}
+
+export async function submitRatingSurveyResponse(
+  token: string,
+  payload: {
+    campaignId: string;
+    schoolId: string;
+    comment?: string;
+    answers: Array<{
+      questionId: string;
+      questionType?: 'rating' | 'single_choice' | 'text';
+      score?: number;
+      optionId?: string;
+      optionLabel?: string;
+      text?: string;
+    }>;
+  }
+) {
+  return authRequestJson<{ data: any }>('/schools/rating-surveys/responses', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

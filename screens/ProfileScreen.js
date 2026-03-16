@@ -28,7 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { images } from '../assets';
 import { useLocale } from '../context/LocaleContext';
 
-const GRADIENT_COLORS = ['#786AFF', '#4FCCFF'];
+const GRADIENT_COLORS = ['#E9EEF6', '#E9EEF6'];
 const AVATAR_KEY_PREFIX = 'EDUMAP_AVATAR_URI';
 
 const Section = ({ title, children }) => (
@@ -64,6 +64,8 @@ export default function ProfileScreen() {
   const { setRole, isGuest, setGuest } = useRole();
   const { account } = useAuth();
   const { t, locale, setLocale } = useLocale();
+  const updatePlanLabel =
+    locale === 'kk' ? 'Жоспарды жаңарту' : locale === 'en' ? 'Update plan' : 'Обновить план';
   const fullName = [account?.firstName, account?.lastName]
     .filter(Boolean)
     .join(' ');
@@ -185,7 +187,7 @@ export default function ProfileScreen() {
     setRole(ROLES.STUDENT);
     navigation.reset({
       index: 0,
-      routes: [{ name: 'RoleSelect' }],
+      routes: [{ name: 'SignIn' }],
     });
   };
 
@@ -333,6 +335,14 @@ export default function ProfileScreen() {
                   <Text className="font-exo text-darkGrayText">
                     {t('profile.statsPlaceholder')}
                   </Text>
+                  <Pressable
+                    className="w-full bg-bgPurple rounded-full py-3 items-center mt-2"
+                    onPress={() => navigation.navigate('ParentSubscription', { required: false })}
+                  >
+                    <Text className="text-white font-exoSemibold text-base">
+                      {updatePlanLabel}
+                    </Text>
+                  </Pressable>
                 </Section>
 
                 <Section title={t('profile.administration')}>
@@ -409,26 +419,26 @@ const styles = StyleSheet.create({
   changeButtonText: {
     fontFamily: 'exoSemibold',
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#111827',
   },
   name: {
     fontFamily: 'exoSemibold',
     fontSize: 22,
-    color: '#FFFFFF',
+    color: '#111827',
     marginTop: 12,
     textAlign: 'center',
   },
   guestLabel: {
     fontFamily: 'exoSemibold',
     fontSize: 18,
-    color: '#FFFFFF',
+    color: '#111827',
     marginTop: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'exo',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#374151',
     marginTop: 4,
   },
   body: {
@@ -464,7 +474,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'exoSemibold',
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#111827',
     marginBottom: 12,
   },
 });

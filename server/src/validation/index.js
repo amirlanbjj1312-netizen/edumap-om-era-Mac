@@ -51,22 +51,27 @@ const PAYMENT_SYSTEMS = new Set([
   'Per month',
   'Per semester',
   'Per year',
+  'In installments',
   'Free',
   'Paid',
   'Included',
   'В месяц',
   'В семестр',
   'В год',
+  'Несколькими траншами',
+  'Траншами',
   'Бесплатно',
   'Платно',
   'Включено',
   'Айына',
   'Семестрге',
   'Жылына',
+  'Бірнеше траншпен',
   'Тегін',
   'Ақылы',
   'Қамтылған',
 ]);
+const FEE_RULE_CURRENCIES = new Set(['KZT', 'USD', 'EUR']);
 const SUBSCRIPTION_STATUSES = new Set([
   '',
   'inactive',
@@ -152,6 +157,13 @@ const ensureEnum = (value, allowed, fieldName) => {
   ensure(allowed.has(raw), `${fieldName} has unsupported value`);
 };
 
+const ensureEnumList = (value, allowed, fieldName) => {
+  const items = toArray(value);
+  items.forEach((item) => {
+    ensure(allowed.has(item), `${fieldName} has unsupported value`);
+  });
+};
+
 const ensureDateString = (value, fieldName) => {
   const raw = trim(value);
   if (!raw) return;
@@ -184,10 +196,67 @@ const ensureLocalizedText = (value, fieldName, maxLen) => {
   );
 };
 
+const ensureNumericMap = (value, fieldName, { min = 0, max = 100000000, keyPattern } = {}) => {
+  if (value == null || value === '') return;
+  ensure(isObject(value), `${fieldName} must be object`);
+  Object.entries(value).forEach(([key, entryValue]) => {
+    if (keyPattern) {
+      ensure(keyPattern.test(String(key)), `${fieldName}.${key} has unsupported key`);
+    }
+    ensureNumericStringInRange(entryValue, min, max, `${fieldName}.${key}`);
+  });
+};
+
+const ensureIntegerStringInRange = (value, min, max, fieldName) => {
+  const raw = trim(value);
+  if (!raw) return;
+  ensure(/^\d+$/.test(raw), `${fieldName} must be integer`);
+  const num = Number(raw);
+  ensure(Number.isInteger(num), `${fieldName} must be integer`);
+  ensure(num >= min && num <= max, `${fieldName} must be between ${min} and ${max}`);
+};
+
 const ensureMediaUrls = (value, fieldName) => {
   const urls = toArray(value);
   ensure(urls.length <= 30, `${fieldName} has too many items`);
   urls.forEach((url) => ensure(isUrl(url), `${fieldName} contains invalid URL`));
+};
+
+const ensureUnifiedClubs = (value, fieldName) => {
+  if (!Array.isArray(value)) return;
+  ensure(value.length <= 150, `${fieldName} has too many items`);
+  value.forEach((club, index) => {
+    ensure(isObject(club), `${fieldName}.${index} must be object`);
+    ensureMaxLen(club.id, 120, `${fieldName}.${index}.id`);
+    ensureLocalizedText(club.name || club.title, `${fieldName}.${index}.name`, 220);
+    ensureLocalizedText(club.description, `${fieldName}.${index}.description`, 3000);
+    ensureLocalizedText(club.schedule, `${fieldName}.${index}.schedule`, 1000);
+    ensureMaxLen(club.age_group, 120, `${fieldName}.${index}.age_group`);
+    ensureMaxLen(club.class_range || club.grades, 120, `${fieldName}.${index}.class_range`);
+    ensureNumericStringInRange(
+      club.duration_minutes,
+      0,
+      600,
+      `${fieldName}.${index}.duration_minutes`
+    );
+    ensureMaxLen(club.location, 240, `${fieldName}.${index}.location`);
+    ensureMaxLen(club.teacher_id, 120, `${fieldName}.${index}.teacher_id`);
+    ensureMaxLen(club.teacher_name, 160, `${fieldName}.${index}.teacher_name`);
+    ensureMaxLen(club.trainer_info, 1200, `${fieldName}.${index}.trainer_info`);
+    if (trim(club.trainer_photo)) {
+      ensure(isUrl(club.trainer_photo), `${fieldName}.${index}.trainer_photo must be URL`);
+    }
+    if (club.section_photos != null && trim(club.section_photos)) {
+      ensureMediaUrls(club.section_photos, `${fieldName}.${index}.section_photos`);
+    }
+    ensureNumericStringInRange(
+      club.price_amount || club.price_monthly,
+      0,
+      100000000,
+      `${fieldName}.${index}.price_amount`
+    );
+    ensureEnum(club.price_currency, FEE_RULE_CURRENCIES, `${fieldName}.${index}.price_currency`);
+  });
 };
 
 const ensureDeepPayloadConstraints = (payload, rootName) => {
@@ -278,6 +347,38 @@ const validateNewsPayload = (payload) => {
 
   ensureDateString(payload.publishedAt, 'publishedAt');
   const tags = normalizeHashtags(payload.tags);
+  const rawIsImportant = payload.isImportant ?? payload.is_important;
+  let isImportant = false;
+  if (typeof rawIsImportant === 'boolean') {
+    isImportant = rawIsImportant;
+  } else if (rawIsImportant != null && trim(rawIsImportant)) {
+    const normalized = trim(rawIsImportant).toLowerCase();
+    ensure(
+      ['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'].includes(normalized),
+      'isImportant must be boolean'
+    );
+    isImportant = ['true', '1', 'yes', 'on'].includes(normalized);
+  }
+  const rawViews =
+    payload.views_count ?? payload.views ?? payload.popularity_score ?? payload.popularityScore;
+  ensureIntegerStringInRange(rawViews, 0, 1000000000, 'views_count');
+  const viewsCount = Number.parseInt(trim(rawViews || '0') || '0', 10) || 0;
+  const rawPublished = payload.isPublished ?? payload.is_published;
+  const rawStatus = trim(payload.status).toLowerCase();
+  let isPublished = true;
+  if (rawStatus) {
+    ensure(['draft', 'published'].includes(rawStatus), 'status has unsupported value');
+    isPublished = rawStatus === 'published';
+  } else if (typeof rawPublished === 'boolean') {
+    isPublished = rawPublished;
+  } else if (rawPublished != null && trim(rawPublished)) {
+    const normalized = trim(rawPublished).toLowerCase();
+    ensure(
+      ['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'].includes(normalized),
+      'isPublished must be boolean'
+    );
+    isPublished = ['true', '1', 'yes', 'on'].includes(normalized);
+  }
 
   return {
     ...payload,
@@ -285,6 +386,11 @@ const validateNewsPayload = (payload) => {
     tags,
     imageUrls,
     videoUrls,
+    isImportant,
+    views_count: viewsCount,
+    popularity_score: viewsCount,
+    isPublished,
+    status: isPublished ? 'published' : 'draft',
   };
 };
 
@@ -388,7 +494,7 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
   ensureLocalizedText(basicInfo.address, 'basic_info.address', 280);
   ensureLocalizedText(basicInfo.description, 'basic_info.description', 5000);
 
-  ensureEnum(basicInfo.type, SCHOOL_TYPES, 'basic_info.type');
+  ensureEnumList(basicInfo.type, SCHOOL_TYPES, 'basic_info.type');
   ensureMaxLen(basicInfo.city, 80, 'basic_info.city');
   ensureMaxLen(basicInfo.district, 120, 'basic_info.district');
   ensurePhone(basicInfo.phone, 'basic_info.phone');
@@ -415,8 +521,51 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
 
   const finance = isObject(payload.finance) ? payload.finance : {};
   ensureNumericStringInRange(finance.monthly_fee, 0, 100000000, 'finance.monthly_fee');
+  ensureNumericMap(finance.monthly_fee_by_grade, 'finance.monthly_fee_by_grade', {
+    min: 0,
+    max: 100000000,
+    keyPattern: /^(?:[1-9]|1[0-2])$/,
+  });
+  const feeRules = Array.isArray(finance.fee_rules) ? finance.fee_rules : [];
+  ensure(feeRules.length <= 20, 'finance.fee_rules has too many items');
+  let lastToGrade = 0;
+  let activeCurrency = '';
+  feeRules.forEach((rule, index) => {
+    ensure(isObject(rule), `finance.fee_rules.${index} must be object`);
+    ensureIntegerStringInRange(rule.from_grade, 1, 12, `finance.fee_rules.${index}.from_grade`);
+    ensureIntegerStringInRange(rule.to_grade, 1, 12, `finance.fee_rules.${index}.to_grade`);
+    ensureNumericStringInRange(rule.amount, 0, 100000000, `finance.fee_rules.${index}.amount`);
+    ensureEnum(rule.currency, FEE_RULE_CURRENCIES, `finance.fee_rules.${index}.currency`);
+    ensureMaxLen(rule.comment, 500, `finance.fee_rules.${index}.comment`);
+
+    const fromGrade = Number(rule.from_grade);
+    const toGrade = Number(rule.to_grade);
+    ensure(fromGrade <= toGrade, `finance.fee_rules.${index} has invalid grade range`);
+    ensure(fromGrade > lastToGrade, `finance.fee_rules.${index} overlaps previous range`);
+    lastToGrade = toGrade;
+
+    const currency = trim(rule.currency);
+    if (currency) {
+      if (!activeCurrency) activeCurrency = currency;
+      ensure(currency === activeCurrency, 'finance.fee_rules must use the same currency');
+    }
+  });
   ensureEnum(finance.payment_system, PAYMENT_SYSTEMS, 'finance.payment_system');
+  ensureEnumList(finance.payment_options, PAYMENT_SYSTEMS, 'finance.payment_options');
+  ensureMaxLen(finance.comment, 1000, 'finance.comment');
+  ensureMaxLen(finance.discounts_info, 800, 'finance.discounts_info');
+  ensureMaxLen(finance.grants_info, 800, 'finance.grants_info');
   ensureMaxLen(finance.grants_discounts, 800, 'finance.grants_discounts');
+
+  const services = isObject(payload.services) ? payload.services : {};
+  ensureNumericStringInRange(
+    services.meals_price,
+    0,
+    100000000,
+    'services.meals_price'
+  );
+  ensureEnum(services.meals_currency, FEE_RULE_CURRENCIES, 'services.meals_currency');
+  ensureUnifiedClubs(services.clubs_unified, 'services.clubs_unified');
 
   const media = isObject(payload.media) ? payload.media : {};
   ensureMediaUrls(media.photos, 'media.photos');
@@ -426,7 +575,7 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
   if (trim(media.logo)) ensure(isUrl(media.logo), 'media.logo must be valid URL');
 
   const socialLinks = isObject(media.social_links) ? media.social_links : {};
-  ['instagram', 'tiktok', 'youtube', 'facebook', 'vk', 'telegram', 'whatsapp'].forEach(
+  ['instagram', 'tiktok', 'youtube', 'facebook', 'vk', 'telegram', 'whatsapp', 'linkedin'].forEach(
     (network) => {
       const value = trim(socialLinks[network]);
       if (!value) return;
@@ -591,6 +740,33 @@ const validateUserStatusPayload = (payload, { userId }) => {
   return { userId: id, active };
 };
 
+const validateCreateSchoolAccountPayload = (payload) => {
+  ensure(isObject(payload), 'payload must be object');
+  const email = trim(payload.email).toLowerCase();
+  const password = String(payload.password || '');
+  const schoolId = trim(payload.schoolId);
+  const schoolName = trim(payload.schoolName);
+
+  ensure(email, 'Field "email" is required');
+  ensure(EMAIL_RE.test(email), 'Field "email" is invalid');
+  ensure(email.endsWith('@edumap.kz'), 'Email must end with @edumap.kz');
+  ensure(password.length >= 8, 'Password must be at least 8 characters');
+  ensure(password.length <= 128, 'Password is too long');
+  ensure(/[A-Za-z]/.test(password), 'Password must include at least one letter');
+  ensure(/\d/.test(password), 'Password must include at least one digit');
+  if (schoolId) {
+    ensure(SCHOOL_ID_RE.test(schoolId), 'Field "schoolId" is invalid');
+  }
+  ensureMaxLen(schoolName, 240, 'schoolName');
+
+  return {
+    email,
+    password,
+    schoolId,
+    schoolName,
+  };
+};
+
 const sanitizeSchoolIds = (schoolIds, maxItems = 20) => {
   ensure(Array.isArray(schoolIds), 'schoolIds must be array');
   const unique = [];
@@ -702,6 +878,7 @@ module.exports = {
   validateVerifyCodePayload,
   validateSetRolePayload,
   validateUserStatusPayload,
+  validateCreateSchoolAccountPayload,
   validateAiSchoolQueryPayload,
   validateAiSchoolChatPayload,
   validateRegisterWithCodePayload,

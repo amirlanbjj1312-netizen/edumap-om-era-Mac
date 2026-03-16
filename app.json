@@ -5,12 +5,12 @@
     "slug": "edumap",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/branding/app-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/branding/splash-logo.png",
       "resizeMode": "cover",
-      "backgroundColor": "#4FCCFF"
+      "backgroundColor": "#E9EEF6"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,25 +22,30 @@
         "NSPhotoLibraryUsageDescription": "Позвольте Edumap выбирать логотип школы из вашей фотогалереи.",
         "NSPhotoLibraryAddUsageDescription": "Edumap может сохранять выбранные изображения логотипов в библиотеке.",
         "NSCameraUsageDescription": "Edumap использует камеру, чтобы делать фото для логотипов (по желанию).",
-        "NSMicrophoneUsageDescription": "Edumap может использовать микрофон при записи видео для профиля."
+        "NSMicrophoneUsageDescription": "Edumap может использовать микрофон при записи видео для профиля.",
+        "NSLocationWhenInUseUsageDescription": "Edumap использует геопозицию, чтобы показать школы рядом с вами на карте."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/branding/adaptive-foreground.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "package": "com.ssanbaybe.edumap"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/branding/favicon.png"
     },
     "extra": {
       "apiBaseUrl": "https://edumap-backend-nkr6.onrender.com/api",
       "mapTileUrl": "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=OgpGCgtItasOMvAnoObf",
       "mapStyleUrl": "https://api.maptiler.com/maps/streets-v2/style.json?key=OgpGCgtItasOMvAnoObf",
       "supabaseUrl": "https://jjjgagtqjvewqjczkbrg.supabase.co",
-      "supabaseAnonKey": "sb_publishable_0s65ODf_HF1arkzA8BTY0g_GdKKwjM0"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqamdhZ3RxanZld3FqY3prYnJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2Nzk4MzQsImV4cCI6MjA4NDI1NTgzNH0.tCh7QFvt6kD06yvDqeWhyP71Vrljs52Ai2OmfT9iE_M"
     },
     "plugins": [
       "expo-font"

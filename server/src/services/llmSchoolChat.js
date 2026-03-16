@@ -74,11 +74,11 @@ const normalizeChatResponse = (raw, schools) => {
 };
 
 const buildMessages = (message, schools) => [
-    {
-      role: 'system',
-      content:
-        'You are a school assistant. Use ONLY the provided school data. Do not invent schools. Respond in English.',
-    },
+  {
+    role: 'system',
+    content:
+      'You are a school assistant. Use ONLY the provided school data. Do not invent schools. Always reply in the same language as the user message (ru/kk/en).',
+  },
   {
     role: 'user',
     content: [

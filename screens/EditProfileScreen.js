@@ -6,10 +6,10 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeftIcon } from 'react-native-heroicons/outline';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useAuth } from '../context/AuthContext';
 import { useRole, ROLES } from '../context/RoleContext';
 import { useLocale } from '../context/LocaleContext';
@@ -86,7 +86,7 @@ export default function EditProfileScreen({ navigation }) {
               setRole(ROLES.STUDENT);
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'RoleSelect' }],
+                routes: [{ name: 'SignIn' }],
               });
             } catch (error) {
               Alert.alert(
@@ -101,9 +101,9 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
       <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+        colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -121,9 +121,13 @@ export default function EditProfileScreen({ navigation }) {
           </Text>
           <View style={{ width: 44 }} />
         </View>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32, paddingTop: 8 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          enableOnAndroid
+          extraScrollHeight={24}
         >
           <View className="bg-white/10 rounded-2xl border border-white/20 p-4 mb-5">
             <Text className="text-white font-exoSemibold text-lg">
@@ -189,7 +193,7 @@ export default function EditProfileScreen({ navigation }) {
               {t('editProfile.action.clear')}
             </Text>
           </Pressable>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
     </SafeAreaView>
   );

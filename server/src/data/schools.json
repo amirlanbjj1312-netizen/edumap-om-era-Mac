@@ -1,0 +1,4541 @@
+[
+  {
+    "school_id": "local-amirlanbjj1312-gmail-com",
+    "basic_info": {
+      "name": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "display_name": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "type": "",
+      "school_subtype": "",
+      "city": "",
+      "district": "",
+      "address": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "description": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "coordinates": {
+        "latitude": "",
+        "longitude": ""
+      },
+      "phone": "",
+      "whatsapp_phone": "",
+      "email": "",
+      "website": "",
+      "founded_year": "",
+      "team": {
+        "principal": "",
+        "deputy_principal": "",
+        "class_curators": ""
+      },
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "admission_details": {
+        "seats_by_grade": "",
+        "enrollment_period": "",
+        "document_deadlines": "",
+        "admission_stages_detail": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "competition_per_seat": ""
+      },
+      "results": {
+        "average_exam_score": "",
+        "university_admission_rate": "",
+        "top_universities": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "olympiad_achievements": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "student_success_stories": []
+      },
+      "learning_conditions": {
+        "class_size_primary": "",
+        "class_size_middle": "",
+        "class_size_high": "",
+        "shift_mode": "",
+        "homework_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "assessment_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "digital_platforms": ""
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "transport_details": {
+        "routes": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "cost_by_district": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "pickup_schedule": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "dropoff_schedule": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false,
+        "security_protocols": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "access_policy": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "medical_office": false,
+      "health_support": {
+        "medical_staff": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "medical_hours": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "psychologist_support": "",
+        "logopedist_support": "",
+        "defectologist_support": "",
+        "allergy_support": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "parent_engagement": {
+        "feedback_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "meeting_frequency": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "parent_committee": "",
+        "response_sla_hours": ""
+      }
+    },
+    "finance": {
+      "monthly_fee": "",
+      "monthly_fee_by_grade": {},
+      "fee_rules": [],
+      "comment": "",
+      "included_in_tuition": "",
+      "extra_fees": "",
+      "registration_fee": "",
+      "registration_fee_currency": "KZT",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": "",
+      "videos": "",
+      "logo": "",
+      "logo_local_uri": "",
+      "certificates": "",
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "",
+      "created_at": "",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-haileybury.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Haileybury Astana",
+        "en": "Haileybury Astana",
+        "kk": "Haileybury Astana"
+      },
+      "display_name": {
+        "ru": "Haileybury Astana",
+        "en": "Haileybury Astana",
+        "kk": "Haileybury Astana"
+      },
+      "type": "Private",
+      "school_subtype": "",
+      "city": "Astana",
+      "district": "Almaty",
+      "address": {
+        "ru": "Ивана Панфилова 4",
+        "en": "Kabanbay Batyr Ave, Astana",
+        "kk": "Қабанбай батыр даңғылы, Астана"
+      },
+      "description": {
+        "ru": "Haileybury Astana — частная школа в Астане (тестовый кабинет).",
+        "en": "Haileybury Astana is a private school in Astana (test account).",
+        "kk": "Haileybury Astana — Астанадағы жеке мектеп (тест кабинеті)."
+      },
+      "coordinates": {
+        "latitude": "51.0900",
+        "longitude": "71.4300"
+      },
+      "phone": "+7 (701) 000-00-01",
+      "whatsapp_phone": "+7 (701) 000-00-01",
+      "email": "haileybury.astana@edumap.kz",
+      "website": "https://www.haileybury.kz",
+      "founded_year": "",
+      "team": {
+        "principal": "Пушкин",
+        "deputy_principal": "Леха",
+        "class_curators": ""
+      },
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": "",
+      "logo": ""
+    },
+    "education": {
+      "languages": "Русский, Английский, Казахский, Russian, English, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "1-11, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11",
+      "programs": {
+        "ru": "Госпрограмма (Казахстан)",
+        "en": "State curriculum (Kazakhstan)",
+        "kk": "Мембағдарлама (Қазақстан)"
+      },
+      "curricula": {
+        "national": [
+          "Госпрограмма (Казахстан)",
+          "State program (Kazakhstan)",
+          "Updated content"
+        ],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "Математика, Английский язык, Mathematics, Physics, Engineering",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "22",
+      "entrance_exam": {
+        "required": false,
+        "format": "exam",
+        "format_other": {
+          "ru": "Письменный",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "Логика",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "1 этап - 40 вопросов",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "admission_details": {
+        "seats_by_grade": "20",
+        "enrollment_period": "April-June",
+        "document_deadlines": "",
+        "admission_stages_detail": {
+          "ru": "Приди и поступи",
+          "en": "",
+          "kk": ""
+        },
+        "competition_per_seat": "No competition"
+      },
+      "results": {
+        "average_exam_score": "4.8",
+        "university_admission_rate": "95-100%",
+        "top_universities": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "olympiad_achievements": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "student_success_stories": []
+      },
+      "learning_conditions": {
+        "class_size_primary": "18",
+        "class_size_middle": "24",
+        "class_size_high": "24",
+        "shift_mode": "Double shift",
+        "homework_format": {
+          "ru": "Написание конспектов",
+          "en": "",
+          "kk": ""
+        },
+        "assessment_format": {
+          "ru": "Выставление процентов за выполненное задание",
+          "en": "",
+          "kk": ""
+        },
+        "digital_platforms": "Kundelik, Moodle"
+      }
+    },
+    "services": {
+      "after_school": true,
+      "meals": "Платное",
+      "meals_status": "Paid",
+      "meals_times_per_day": "2",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "transport_details": {
+        "routes": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "cost_by_district": {
+          "ru": "Левый берег - 3000тг/в месяц\nПравый берег - 4000тг/в месяц",
+          "en": "",
+          "kk": ""
+        },
+        "pickup_schedule": {
+          "ru": "09:00",
+          "en": "",
+          "kk": ""
+        },
+        "dropoff_schedule": {
+          "ru": "18:00",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false,
+        "security_protocols": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "access_policy": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "medical_office": true,
+      "health_support": {
+        "medical_staff": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "medical_hours": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "psychologist_support": "Full-time",
+        "logopedist_support": "Full-time",
+        "defectologist_support": "Full-time",
+        "allergy_support": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "parent_engagement": {
+        "feedback_format": {
+          "ru": "Messenger chat",
+          "en": "",
+          "kk": ""
+        },
+        "meeting_frequency": {
+          "ru": "Quarterly",
+          "en": "",
+          "kk": ""
+        },
+        "parent_committee": "Yes",
+        "response_sla_hours": "4"
+      },
+      "psychologists": true,
+      "speech_therapists": true,
+      "social_workers": false,
+      "tutors": false,
+      "special_educators": false,
+      "nurses": true,
+      "defectologists": false,
+      "clubs_count": "5",
+      "security": true,
+      "cameras": true,
+      "access_control": true,
+      "bus_routes": []
+    },
+    "finance": {
+      "monthly_fee": "17600",
+      "monthly_fee_by_grade": {
+        "1": "17600",
+        "2": "17600",
+        "3": "21156",
+        "4": "21156",
+        "5": "21156",
+        "6": "21156",
+        "7": "24080",
+        "8": "24080",
+        "9": "24080",
+        "10": "26600",
+        "11": "26600",
+        "12": "26600"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 2,
+          "amount": 17600,
+          "currency": "EUR",
+          "comment": ""
+        },
+        {
+          "from_grade": 3,
+          "to_grade": 6,
+          "amount": 21156,
+          "currency": "EUR",
+          "comment": ""
+        },
+        {
+          "from_grade": 7,
+          "to_grade": 9,
+          "amount": 24080,
+          "currency": "EUR",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 12,
+          "amount": 26600,
+          "currency": "EUR",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "included_in_tuition": "",
+      "extra_fees": " Гарантийное обеспечение: 750 000 тенге - служит гарантией исполнения договорных обязательств.",
+      "registration_fee": "50000",
+      "registration_fee_currency": "KZT",
+      "payment_system": "Per month",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-haileybury.astana/logo/1773408470371-unknown.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      },
+      "instagram_url": "",
+      "tiktok_url": "",
+      "youtube_url": "",
+      "facebook_url": "",
+      "vk_url": "",
+      "telegram_url": ""
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "city": "Astana",
+      "district": "Есиль",
+      "address": "проспект Кабанбай батыра, Астана"
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-13T10:56:11.232Z",
+      "created_at": "",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-spectrum.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Spectrum International School Astana",
+        "en": "Spectrum International School Astana",
+        "kk": "Spectrum International School Astana"
+      },
+      "display_name": {
+        "ru": "Spectrum International School Astana",
+        "en": "Spectrum International School Astana",
+        "kk": "Spectrum International School Astana"
+      },
+      "type": "Private",
+      "school_subtype": "",
+      "city": "Astana",
+      "district": "Алматы",
+      "address": {
+        "ru": "район Алматы, Астана",
+        "en": "Almaty district, Astana",
+        "kk": "Алматы ауданы, Астана"
+      },
+      "description": {
+        "ru": "Spectrum International School Astana — частная школа в Астане (тестовый кабинет).",
+        "en": "Spectrum International School Astana is a private school in Astana (test account).",
+        "kk": "Spectrum International School Astana — Астанадағы жеке мектеп (тест кабинеті)."
+      },
+      "coordinates": {
+        "latitude": "51.1269",
+        "longitude": "71.4786"
+      },
+      "phone": "+7 (701) 000-00-02",
+      "whatsapp_phone": "+7 (701) 000-00-02",
+      "email": "spectrum.astana@edumap.kz",
+      "website": "https://spectruminternational.school",
+      "founded_year": "",
+      "team": {
+        "principal": "",
+        "deputy_principal": "",
+        "class_curators": ""
+      },
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": "",
+      "logo": ""
+    },
+    "education": {
+      "languages": "Русский, Английский, Казахский",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "1-11",
+      "programs": {
+        "ru": "Госпрограмма (Казахстан)",
+        "en": "State curriculum (Kazakhstan)",
+        "kk": "Мембағдарлама (Қазақстан)"
+      },
+      "curricula": {
+        "national": [
+          "Госпрограмма (Казахстан)"
+        ],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "Математика, Английский язык",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "22",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "admission_details": {
+        "seats_by_grade": "",
+        "enrollment_period": "",
+        "document_deadlines": "",
+        "admission_stages_detail": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "competition_per_seat": ""
+      },
+      "results": {
+        "average_exam_score": "",
+        "university_admission_rate": "",
+        "top_universities": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "olympiad_achievements": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "learning_conditions": {
+        "class_size_primary": "",
+        "class_size_middle": "",
+        "class_size_high": "",
+        "shift_mode": "",
+        "homework_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "assessment_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "digital_platforms": ""
+      }
+    },
+    "services": {
+      "after_school": true,
+      "meals": "Платное",
+      "meals_status": "Paid",
+      "meals_times_per_day": "2",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/teachers/1773440127984-unknown.jpeg",
+        "description": {
+          "ru": "Он самый кайфовый преподаватель",
+          "en": "",
+          "kk": ""
+        },
+        "members": [
+          {
+            "id": "1773439847267-jqqpvx",
+            "full_name": "Смагулов Амирлан Бауржанович",
+            "position": "Учитель старших классов",
+            "subjects": "Алгебра",
+            "experience_years": "6",
+            "category": "Педагог-мастер",
+            "teaching_languages": "Russian",
+            "exam_prep": "ЕНТ",
+            "photo_url": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/teachers/1773440127984-unknown.jpeg",
+            "bio": {
+              "ru": "Он самый кайфовый преподаватель",
+              "en": "",
+              "kk": ""
+            },
+            "education_degree": "Магистратура в Lawrence Tech University"
+          }
+        ]
+      },
+      "transport": false,
+      "transport_details": {
+        "routes": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "cost_by_district": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "pickup_schedule": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "dropoff_schedule": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [
+        {
+          "id": "1773430497165-m5xgup",
+          "name": {
+            "ru": "Карате",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "японское боевое искусство, система защиты и нападения. В 2020 году — олимпийский вид спорта, в 2024 году карате не было представлено в программе Олимпийских игр. На начальном этапе карате представляло собой систему рукопашного боя, предназначавшуюся только для самообороны.",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "Понедельник, Среда, Пятница 16:00-17:00",
+            "en": "",
+            "kk": ""
+          },
+          "age_group": "",
+          "class_range": "1-4",
+          "duration_minutes": "",
+          "location": "",
+          "teacher_id": "",
+          "teacher_name": "Ким Валерий",
+          "trainer_info": "• КМС\n• Чемпион мира 2025",
+          "trainer_photo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/clubs-trainers/1773437081098-crop.php.webp",
+          "section_photos": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/clubs-sections/1773437128548-crop.php.webp",
+          "price_amount": "30000",
+          "price_currency": "KZT",
+          "price_monthly": "30000",
+          "grades": "1-4"
+        },
+        {
+          "id": "1773435939455-ravl34",
+          "name": {
+            "ru": "Робототехника",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "это прикладная наука, занимающаяся проектированием, созданием и применением автоматизированных технических систем (роботов). Она объединяет электронику, механику, программирование и искусственный интеллект. Робототехника незаменима для автоматизации производства, работы в опасных условиях, медицины и повседневной жизни.",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "Понедельник, Вторник, Среда, Четверг, Пятница, Суббота 14:30-16:00",
+            "en": "",
+            "kk": ""
+          },
+          "age_group": "",
+          "class_range": "10",
+          "duration_minutes": "",
+          "location": "",
+          "teacher_id": "",
+          "teacher_name": "Стаз Михайлов",
+          "trainer_info": "",
+          "trainer_photo": "",
+          "section_photos": "",
+          "price_amount": "89000",
+          "price_currency": "KZT",
+          "price_monthly": "89000",
+          "grades": "10"
+        },
+        {
+          "id": "1773436010571-ttz3jr",
+          "name": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "age_group": "",
+          "class_range": "",
+          "duration_minutes": "",
+          "location": "",
+          "teacher_id": "",
+          "teacher_name": "",
+          "trainer_info": "",
+          "trainer_photo": "",
+          "section_photos": "",
+          "price_amount": "",
+          "price_currency": "KZT",
+          "price_monthly": "",
+          "grades": ""
+        }
+      ],
+      "clubs_catalog": [
+        {
+          "id": "1773430497165-m5xgup",
+          "name": {
+            "ru": "Карате",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "японское боевое искусство, система защиты и нападения. В 2020 году — олимпийский вид спорта, в 2024 году карате не было представлено в программе Олимпийских игр. На начальном этапе карате представляло собой систему рукопашного боя, предназначавшуюся только для самообороны.",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "Понедельник, Среда, Пятница 16:00-17:00",
+            "en": "",
+            "kk": ""
+          },
+          "teacher_name": "Ким Валерий",
+          "trainer_info": "• КМС\n• Чемпион мира 2025",
+          "trainer_photo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/clubs-trainers/1773437081098-crop.php.webp",
+          "section_photos": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/clubs-sections/1773437128548-crop.php.webp",
+          "grades": "1-4",
+          "price_monthly": "30000",
+          "price_currency": "KZT"
+        },
+        {
+          "id": "1773435939455-ravl34",
+          "name": {
+            "ru": "Робототехника",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "это прикладная наука, занимающаяся проектированием, созданием и применением автоматизированных технических систем (роботов). Она объединяет электронику, механику, программирование и искусственный интеллект. Робототехника незаменима для автоматизации производства, работы в опасных условиях, медицины и повседневной жизни.",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "Понедельник, Вторник, Среда, Четверг, Пятница, Суббота 14:30-16:00",
+            "en": "",
+            "kk": ""
+          },
+          "teacher_name": "Стаз Михайлов",
+          "trainer_info": "",
+          "trainer_photo": "",
+          "section_photos": "",
+          "grades": "10",
+          "price_monthly": "89000",
+          "price_currency": "KZT"
+        },
+        {
+          "id": "1773436010571-ttz3jr",
+          "name": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "description": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "schedule": {
+            "ru": "",
+            "en": "",
+            "kk": ""
+          },
+          "teacher_name": "",
+          "trainer_info": "",
+          "trainer_photo": "",
+          "section_photos": "",
+          "grades": "",
+          "price_monthly": "",
+          "price_currency": "KZT"
+        }
+      ],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false,
+        "security_protocols": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "access_policy": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "medical_office": true,
+      "health_support": {
+        "medical_staff": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "medical_hours": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "psychologist_support": "",
+        "logopedist_support": "",
+        "defectologist_support": "",
+        "allergy_support": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "parent_engagement": {
+        "feedback_format": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "meeting_frequency": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "parent_committee": "",
+        "response_sla_hours": ""
+      },
+      "psychologists": true,
+      "speech_therapists": true,
+      "social_workers": false,
+      "tutors": false,
+      "special_educators": false,
+      "nurses": true,
+      "defectologists": false,
+      "clubs_count": "5",
+      "security": true,
+      "cameras": true,
+      "access_control": true,
+      "bus_routes": []
+    },
+    "finance": {
+      "monthly_fee": "8065000",
+      "monthly_fee_by_grade": {
+        "1": "8065000",
+        "2": "8065000",
+        "3": "8065000",
+        "4": "8065000",
+        "5": "8065000",
+        "6": "8500000",
+        "7": "8500000",
+        "8": "8500000",
+        "9": "8950000",
+        "10": "8950000",
+        "11": "8950000",
+        "12": "8950000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 5,
+          "amount": 8065000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 6,
+          "to_grade": 8,
+          "amount": 8500000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 9,
+          "to_grade": 10,
+          "amount": 8950000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 11,
+          "to_grade": 12,
+          "amount": 8950000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "Регистрационный взнос 100 000 тенге",
+      "included_in_tuition": "",
+      "extra_fees": "",
+      "registration_fee": "",
+      "registration_fee_currency": "KZT",
+      "payment_system": "Per year",
+      "payment_options": [
+        "Per year",
+        "In installments"
+      ],
+      "discounts_info": "Двум и более детям из одной семьи",
+      "grants_info": "За высокие академические/спортивные или др. достижения",
+      "grants_discounts": "Скидки: Двум и более детям из одной семьи; Гранты: За высокие академические/спортивные или др. достижения",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [
+        "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/photos/1773426868256-orig.jpeg",
+        "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/photos/1773439929449-crop.php.webp"
+      ],
+      "videos": [
+        "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/videos/1773427206742-img_8665.mov"
+      ],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/logo/1773427137826-unknown.png",
+      "logo_local_uri": "",
+      "certificates": [
+        "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-spectrum.astana/certificates/1773427430679-2-.docx"
+      ],
+      "social_links": {
+        "instagram": "https://www.instagram.com/spectrum_is?igsh=MTg1bWJ5eWMzcmlsdQ==",
+        "tiktok": "https://www.tiktok.com/@_sixwqz?_r=1&_t=ZS-94jFMeEVvcK",
+        "youtube": "https://youtu.be/hga9COysGHo?feature=shared",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": "https://www.linkedin.com/in/amirlan-smagulov-075486292?utm_source=share_via&utm_content=profile&utm_medium=member_ios"
+      },
+      "instagram_url": "",
+      "tiktok_url": "",
+      "youtube_url": "",
+      "facebook_url": "",
+      "vk_url": "",
+      "telegram_url": ""
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "city": "Astana",
+      "district": "Алматы",
+      "address": "район Алматы, Астана"
+    },
+    "system": {
+      "reviews_count": 1,
+      "rating": 3.1,
+      "updated_at": "2026-03-13T10:56:11.247Z",
+      "created_at": "",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": [],
+      "rating_formula": {
+        "survey": 4,
+        "consultations": 1,
+        "popularity": 1,
+        "consultations_count": 0,
+        "popularity_count": 0,
+        "survey_responses_count": 1,
+        "updated_at": "2026-03-16T06:30:02.603Z"
+      }
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    },
+    "surveys": {
+      "average_score": 4,
+      "responses_count": 1,
+      "last_campaign_id": "1773642501115-08p57x",
+      "last_response_at": "2026-03-16T06:30:02.599Z"
+    }
+  },
+  {
+    "school_id": "school-miras.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Miras Astana School",
+        "en": "Miras Astana School",
+        "kk": "Miras Astana School"
+      },
+      "display_name": {
+        "ru": "Miras Astana School",
+        "en": "Miras Astana School",
+        "kk": "Miras Astana School"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Нура",
+      "address": {
+        "ru": "район Нура, Астана",
+        "en": "Nura district, Astana",
+        "kk": "Нұра ауданы, Астана"
+      },
+      "description": {
+        "ru": "Miras Astana School — частная школа в Астане (тестовый кабинет).",
+        "en": "Miras Astana School is a private school in Astana (test account).",
+        "kk": "Miras Astana School — Астанадағы жеке мектеп (тест кабинеті)."
+      },
+      "coordinates": {
+        "latitude": "51.1250",
+        "longitude": "71.4100"
+      },
+      "phone": "+7 (701) 000-00-03",
+      "whatsapp_phone": "+7 (701) 000-00-03",
+      "email": "miras.astana@edumap.kz",
+      "website": "https://miras.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": "",
+      "logo": ""
+    },
+    "education": {
+      "languages": "Русский, Английский, Казахский",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "1-11",
+      "programs": {
+        "ru": "Госпрограмма (Казахстан)",
+        "en": "State curriculum (Kazakhstan)",
+        "kk": "Мембағдарлама (Қазақстан)"
+      },
+      "curricula": {
+        "national": [
+          "Госпрограмма (Казахстан)"
+        ],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "Математика, Английский язык",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "22",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": true,
+      "meals": "Платное",
+      "meals_status": "Paid",
+      "meals_times_per_day": "2",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": true,
+      "psychologists": true,
+      "speech_therapists": true,
+      "social_workers": false,
+      "tutors": false,
+      "special_educators": false,
+      "nurses": true,
+      "defectologists": false,
+      "clubs_count": "5",
+      "security": true,
+      "cameras": true,
+      "access_control": true,
+      "bus_routes": []
+    },
+    "finance": {
+      "monthly_fee": "48000000",
+      "monthly_fee_by_grade": {
+        "1": "48000000",
+        "2": "48000000",
+        "3": "48000000",
+        "4": "48000000",
+        "5": "48000000",
+        "6": "48000000",
+        "7": "48000000",
+        "8": "48000000",
+        "9": "48000000",
+        "10": "48000000",
+        "11": "48000000",
+        "12": "48000000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 12,
+          "amount": 48000000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-miras.astana/logo/1773483835089-miras-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      },
+      "instagram_url": "",
+      "tiktok_url": "",
+      "youtube_url": "",
+      "facebook_url": "",
+      "vk_url": "",
+      "telegram_url": ""
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "city": "Astana",
+      "district": "Нура",
+      "address": "район Нура, Астана"
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-13T10:56:11.248Z",
+      "created_at": "",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "local-quantumsch1-edumap-kz",
+    "basic_info": {
+      "name": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "display_name": {
+        "ru": "Quantum STEM School",
+        "en": "",
+        "kk": ""
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Улица Е-899",
+        "en": "",
+        "kk": ""
+      },
+      "description": {
+        "ru": "Очень классная школа",
+        "en": "",
+        "kk": ""
+      },
+      "coordinates": {
+        "latitude": "",
+        "longitude": ""
+      },
+      "phone": "",
+      "whatsapp_phone": "",
+      "email": "",
+      "website": "",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "1000000",
+      "monthly_fee_by_grade": {
+        "1": "1000000",
+        "2": "1000000",
+        "3": "1000000",
+        "4": "1000000",
+        "5": "1000000",
+        "6": "1000000",
+        "7": "1000000",
+        "8": "1000000",
+        "9": "1000000",
+        "10": "1000000",
+        "11": "1000000",
+        "12": "1000000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 12,
+          "amount": 1000000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/local-quantumsch1-edumap-kz/logo/1773483395280-images-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "",
+      "created_at": "",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-nurorda.astana",
+    "basic_info": {
+      "name": {
+        "ru": "NURORDA",
+        "en": "NURORDA",
+        "kk": "NURORDA"
+      },
+      "display_name": {
+        "ru": "NURORDA",
+        "en": "NURORDA",
+        "kk": "NURORDA"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Almaty",
+      "address": {
+        "ru": "Касым Аманжолов 34",
+        "en": "Astana, Esil district, school 01",
+        "kk": "Астана, Есіл ауданы, мектеп 01"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы NURORDA в Астане.",
+        "en": "Basic profile of private school NURORDA in Astana.",
+        "kk": "Астанадағы NURORDA жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1272",
+        "longitude": "71.4785"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private01@edumap.kz",
+      "website": "https://astana-private-01.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "Russian, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "360000",
+      "monthly_fee_by_grade": {
+        "1": "360000",
+        "5": "430000",
+        "10": "530000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 360000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 430000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 10,
+          "amount": 530000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-nurorda.astana/logo/1773505470315-images-2-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:14.867Z",
+      "created_at": "2026-03-14T11:07:14.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-astana-garden.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Astana Garden School",
+        "en": "Astana Garden School",
+        "kk": "Astana Garden School"
+      },
+      "display_name": {
+        "ru": "Astana Garden School",
+        "en": "Astana Garden School",
+        "kk": "Astana Garden School"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Алихан Бокейхана 34",
+        "en": "Astana, Esil district, school 02",
+        "kk": "Астана, Есіл ауданы, мектеп 02"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Astana Garden School в Астане.",
+        "en": "Basic profile of private school Astana Garden School in Astana.",
+        "kk": "Астанадағы Astana Garden School жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.0924",
+        "longitude": "71.4287"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private02@edumap.kz",
+      "website": "https://astana-private-02.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "English, Russian, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "370000",
+      "monthly_fee_by_grade": {
+        "1": "370000",
+        "2": "370000",
+        "3": "370000",
+        "4": "370000",
+        "5": "440000",
+        "6": "440000",
+        "7": "440000",
+        "8": "440000",
+        "9": "440000",
+        "10": "440000",
+        "11": "440000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 4,
+          "amount": 370000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 11,
+          "amount": 440000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-astana-garden.astana/logo/1773504983694-astana-garden-school-astana-kazakhstan-cropped.jpg",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:15.867Z",
+      "created_at": "2026-03-14T11:07:15.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-quantum-tech.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Quantum TECH School",
+        "en": "Quantum TECH School",
+        "kk": "Quantum TECH School"
+      },
+      "display_name": {
+        "ru": "Quantum TECH School",
+        "en": "Quantum TECH School",
+        "kk": "Quantum TECH School"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Турар Рыскулова 9/1",
+        "en": "Astana, Esil district, school 03",
+        "kk": "Астана, Есіл ауданы, мектеп 03"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Quantum TECH School в Астане.",
+        "en": "Basic profile of private school Quantum TECH School in Astana.",
+        "kk": "Астанадағы Quantum TECH School жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.0866",
+        "longitude": "71.4190"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private03@edumap.kz",
+      "website": "https://astana-private-03.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "English, Russian, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "Not included in tuition",
+      "meals_times_per_day": "3",
+      "meals_free_until_grade": "",
+      "meals_price": "500000",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "380000",
+      "monthly_fee_by_grade": {
+        "1": "380000",
+        "5": "450000",
+        "7": "550000",
+        "8": "550000",
+        "9": "550000",
+        "10": "550000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 380000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 450000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 7,
+          "to_grade": 10,
+          "amount": 550000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-quantum-tech.astana/logo/1773504618638-quantumtechschool_logo-cropped.jpg",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:16.867Z",
+      "created_at": "2026-03-14T11:07:16.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-qsi.astana",
+    "basic_info": {
+      "name": {
+        "ru": "QSI International School of Astana",
+        "en": "QSI International School of Astana",
+        "kk": "QSI International School of Astana"
+      },
+      "display_name": {
+        "ru": "QSI International School of Astana",
+        "en": "QSI International School of Astana",
+        "kk": "QSI International School of Astana"
+      },
+      "type": "Private",
+      "school_subtype": "International School",
+      "city": "Astana",
+      "district": "Nura",
+      "address": {
+        "ru": "Баян Сулу 17",
+        "en": "Astana, Esil district, school 04",
+        "kk": "Астана, Есіл ауданы, мектеп 04"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы QSI International School of Astana в Астане.",
+        "en": "Basic profile of private school QSI International School of Astana in Astana.",
+        "kk": "Астанадағы QSI International School of Astana жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1462",
+        "longitude": "71.3896"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private04@edumap.kz",
+      "website": "https://astana-private-04.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "English, Russian, Chinese",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "390000",
+      "monthly_fee_by_grade": {
+        "1": "390000",
+        "5": "460000",
+        "10": "560000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 390000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 460000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 10,
+          "amount": 560000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-qsi.astana/logo/1773503799446-qsi-cropped.webp",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:17.867Z",
+      "created_at": "2026-03-14T11:07:17.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-riviera.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Riviera International School",
+        "en": "Riviera International School",
+        "kk": "Riviera International School"
+      },
+      "display_name": {
+        "ru": "Riviera International School",
+        "en": "Riviera International School",
+        "kk": "Riviera International School"
+      },
+      "type": "Private, International",
+      "city": "Astana",
+      "district": "Almaty District",
+      "address": {
+        "ru": "Бауыржан Момушылы 1/1",
+        "en": "Astana, Esil district, school 05",
+        "kk": "Астана, Есіл ауданы, мектеп 05"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Riviera International School в Астане.",
+        "en": "Basic profile of private school Riviera International School in Astana.",
+        "kk": "Астанадағы Riviera International School жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1319",
+        "longitude": "71.4531"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private05@edumap.kz",
+      "website": "https://astana-private-05.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "Russian, English, French",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_price": "",
+      "meals_currency": "KZT",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "400000",
+      "monthly_fee_by_grade": {
+        "1": "400000",
+        "5": "470000",
+        "10": "570000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 400000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 470000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 10,
+          "amount": 570000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per year",
+      "payment_options": [
+        "Per year"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-riviera.astana/logo/1773503468679-riviera-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:18.867Z",
+      "created_at": "2026-03-14T11:07:18.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-alpamys.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Alpamys School",
+        "en": "Alpamys School",
+        "kk": "Alpamys School"
+      },
+      "display_name": {
+        "ru": "Alpamys School",
+        "en": "Alpamys School",
+        "kk": "Alpamys School"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Кабанбай Батыра 49/2",
+        "en": "Astana, Esil district, school 06",
+        "kk": "Астана, Есіл ауданы, мектеп 06"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Alpamys School в Астане.",
+        "en": "Basic profile of private school Alpamys School in Astana.",
+        "kk": "Астанадағы Alpamys School жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1024",
+        "longitude": "71.4006"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private06@edumap.kz",
+      "website": "https://astana-private-06.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "Russian, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "410000",
+      "monthly_fee_by_grade": {
+        "1": "410000",
+        "5": "480000",
+        "10": "580000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 410000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 480000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 10,
+          "amount": 580000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-alpamys.astana/logo/1773503243012-alpamys-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:19.867Z",
+      "created_at": "2026-03-14T11:07:19.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-economic-lyceum.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Экономический лицей",
+        "en": "Economic Lyceum",
+        "kk": "Экономикалық лицей"
+      },
+      "display_name": {
+        "ru": "Экономический лицей",
+        "en": "Economic Lyceum",
+        "kk": "Экономикалық лицей"
+      },
+      "type": "State",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Туркестан 8/3",
+        "en": "Astana, Esil district, school 07",
+        "kk": "Астана, Есіл ауданы, мектеп 07"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Экономический лицей в Астане.",
+        "en": "Basic profile of private school Economic Lyceum in Astana.",
+        "kk": "Астанадағы Экономикалық лицей жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1147",
+        "longitude": "71.4293"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private07@edumap.kz",
+      "website": "https://astana-private-07.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "Russian, Kazakh",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "420000",
+      "monthly_fee_by_grade": {
+        "1": "420000",
+        "5": "490000",
+        "10": "590000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 1,
+          "amount": 420000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 5,
+          "amount": 490000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 10,
+          "to_grade": 10,
+          "amount": 590000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-economic-lyceum.astana/logo/1773503013906-cropped.png",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:20.867Z",
+      "created_at": "2026-03-14T11:07:20.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-neotech.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Neotech Digital School",
+        "en": "Neotech Digital School",
+        "kk": "Neotech Digital School"
+      },
+      "display_name": {
+        "ru": "Neotech Digital School",
+        "en": "Neotech Digital School",
+        "kk": "Neotech Digital School"
+      },
+      "type": "Private",
+      "city": "Astana",
+      "district": "Yesil",
+      "address": {
+        "ru": "Ильяс Омарова 10",
+        "en": "Astana, Esil district, school 08",
+        "kk": "Астана, Есіл ауданы, мектеп 08"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Neotech Digital School в Астане.",
+        "en": "Basic profile of private school Neotech Digital School in Astana.",
+        "kk": "Астанадағы Neotech Digital School жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "51.1380",
+        "longitude": "71.3715"
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private08@edumap.kz",
+      "website": "https://astana-private-08.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "Russian, English",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "430000",
+      "monthly_fee_by_grade": {
+        "1": "430000",
+        "2": "430000",
+        "3": "430000",
+        "4": "430000",
+        "5": "500000",
+        "6": "500000",
+        "7": "500000",
+        "8": "600000",
+        "9": "600000",
+        "10": "600000",
+        "11": "600000",
+        "12": "600000"
+      },
+      "fee_rules": [
+        {
+          "from_grade": 1,
+          "to_grade": 4,
+          "amount": 430000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 5,
+          "to_grade": 7,
+          "amount": 500000,
+          "currency": "KZT",
+          "comment": ""
+        },
+        {
+          "from_grade": 8,
+          "to_grade": 12,
+          "amount": 600000,
+          "currency": "KZT",
+          "comment": ""
+        }
+      ],
+      "comment": "",
+      "payment_system": "Per month",
+      "payment_options": [
+        "Per month"
+      ],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": [],
+      "videos": [],
+      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/school-neotech.astana/logo/1773501746653-niotech-cropped.jpg",
+      "logo_local_uri": "",
+      "certificates": [],
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:21.867Z",
+      "created_at": "2026-03-14T11:07:21.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-ziyatker.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Зияткер",
+        "en": "Ziyatker",
+        "kk": "Зияткер"
+      },
+      "display_name": {
+        "ru": "Зияткер",
+        "en": "Ziyatker",
+        "kk": "Зияткер"
+      },
+      "type": "Частная",
+      "city": "Астана",
+      "district": "Есиль",
+      "address": {
+        "ru": "Астана, район Есиль, школа 09",
+        "en": "Astana, Esil district, school 09",
+        "kk": "Астана, Есіл ауданы, мектеп 09"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Зияткер в Астане.",
+        "en": "Basic profile of private school Ziyatker in Astana.",
+        "kk": "Астанадағы Зияткер жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "",
+        "longitude": ""
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private09@edumap.kz",
+      "website": "https://astana-private-09.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "440000",
+      "monthly_fee_by_grade": {
+        "1": 440000,
+        "5": 510000,
+        "10": 610000
+      },
+      "fee_rules": [],
+      "comment": "",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": "",
+      "videos": "",
+      "logo": "",
+      "logo_local_uri": "",
+      "certificates": "",
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:22.867Z",
+      "created_at": "2026-03-14T11:07:22.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  },
+  {
+    "school_id": "school-ziyly-urpaq.astana",
+    "basic_info": {
+      "name": {
+        "ru": "Зиялы Урпак",
+        "en": "Zialy Urpaq",
+        "kk": "Зиялы Урпақ"
+      },
+      "display_name": {
+        "ru": "Зиялы Урпак",
+        "en": "Zialy Urpaq",
+        "kk": "Зиялы Урпақ"
+      },
+      "type": "Частная",
+      "city": "Астана",
+      "district": "Есиль",
+      "address": {
+        "ru": "Астана, район Есиль, школа 10",
+        "en": "Astana, Esil district, school 10",
+        "kk": "Астана, Есіл ауданы, мектеп 10"
+      },
+      "description": {
+        "ru": "Базовый профиль частной школы Зиялы Урпак в Астане.",
+        "en": "Basic profile of private school Zialy Urpaq in Astana.",
+        "kk": "Астанадағы Зиялы Урпақ жекеменшік мектебінің базалық профилі."
+      },
+      "coordinates": {
+        "latitude": "",
+        "longitude": ""
+      },
+      "phone": "+7 (717) 200-00-00",
+      "whatsapp_phone": "+7 (701) 000-00-00",
+      "email": "astana.private10@edumap.kz",
+      "website": "https://astana-private-10.edumap.kz",
+      "founded_year": "",
+      "license_details": {
+        "number": "",
+        "issued_at": "",
+        "valid_until": ""
+      },
+      "license_accreditation": ""
+    },
+    "education": {
+      "languages": "",
+      "languages_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "grades": "",
+      "programs": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "curricula": {
+        "national": [],
+        "international": [],
+        "additional": [],
+        "other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      },
+      "advanced_subjects": "",
+      "advanced_subjects_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "average_class_size": "",
+      "entrance_exam": {
+        "required": false,
+        "format": "",
+        "format_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "subjects": "",
+        "subjects_other": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "stages": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        }
+      }
+    },
+    "services": {
+      "after_school": false,
+      "meals": "",
+      "meals_status": "",
+      "meals_times_per_day": "",
+      "meals_free_until_grade": "",
+      "meals_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "foreign_teachers": false,
+      "foreign_teachers_notes": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "teaching_staff": {
+        "photo": "",
+        "description": {
+          "ru": "",
+          "en": "",
+          "kk": ""
+        },
+        "members": []
+      },
+      "transport": false,
+      "inclusive_education": false,
+      "specialists": "",
+      "specialists_other": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "clubs": "",
+      "clubs_unified": [],
+      "clubs_catalog": [],
+      "clubs_other": {
+        "ru": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "en": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        },
+        "kk": {
+          "sports": "",
+          "arts": "",
+          "stem": "",
+          "language": "",
+          "leadership": "",
+          "other": ""
+        }
+      },
+      "safety": {
+        "security": false,
+        "cameras": false,
+        "access_control": false
+      },
+      "medical_office": false
+    },
+    "finance": {
+      "monthly_fee": "450000",
+      "monthly_fee_by_grade": {
+        "1": 450000,
+        "5": 520000,
+        "10": 620000
+      },
+      "fee_rules": [],
+      "comment": "",
+      "payment_system": "",
+      "payment_options": [],
+      "discounts_info": "",
+      "grants_info": "",
+      "grants_discounts": "",
+      "free_places": false,
+      "funding_state": false,
+      "funding_self": false
+    },
+    "media": {
+      "photos": "",
+      "videos": "",
+      "logo": "",
+      "logo_local_uri": "",
+      "certificates": "",
+      "social_links": {
+        "instagram": "",
+        "tiktok": "",
+        "youtube": "",
+        "facebook": "",
+        "vk": "",
+        "telegram": "",
+        "linkedin": ""
+      }
+    },
+    "location": {
+      "transport_stop_type": "",
+      "nearest_metro_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "nearest_bus_stop": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      },
+      "distance_to_metro_km": "",
+      "distance_to_bus_stop_km": "",
+      "service_area": {
+        "ru": "",
+        "en": "",
+        "kk": ""
+      }
+    },
+    "system": {
+      "reviews_count": 0,
+      "rating": 0,
+      "updated_at": "2026-03-14T11:07:23.867Z",
+      "created_at": "2026-03-14T11:07:23.867Z",
+      "is_active": true,
+      "hidden_from_users": false,
+      "audit_log": [],
+      "notifications": []
+    },
+    "monetization": {
+      "is_promoted": false,
+      "subscription_status": "inactive",
+      "plan_name": "",
+      "priority_weight": 0,
+      "starts_at": "",
+      "ends_at": "",
+      "last_tariff_id": "",
+      "payments": []
+    }
+  }
+]

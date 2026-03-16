@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
+import { localeOptions, useParentLocale } from '@/lib/parentLocale';
 
 type Status = 'idle' | 'submitting' | 'sent' | 'error';
 
 export default function ParentRegistrationPage() {
   const router = useRouter();
+  const { locale, setLocale, t } = useParentLocale();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -39,13 +40,13 @@ export default function ParentRegistrationPage() {
     event.preventDefault();
     if (password !== passwordConfirm) {
       setStatus('error');
-      setMessage('Пароли не совпадают.');
+      setMessage(t('passwords_mismatch'));
       return;
     }
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
       setStatus('error');
-      setMessage('Укажите email и пароль.');
+      setMessage(t('provide_email_password'));
       return;
     }
     setStatus('submitting');
@@ -63,7 +64,6 @@ export default function ParentRegistrationPage() {
           firstName: firstName || undefined,
           name: firstName || undefined,
           lastName: lastName || undefined,
-          contactPhone: phone || undefined,
           registrationSource: 'web-parent',
         },
         emailRedirectTo: redirectTo,
@@ -75,60 +75,62 @@ export default function ParentRegistrationPage() {
       return;
     }
     setStatus('sent');
-    setMessage('Письмо отправлено. Подтвердите email и войдите в кабинет.');
+    router.replace(`/onboarding?email=${encodeURIComponent(normalizedEmail)}`);
   };
 
   return (
     <div className="page">
       <div className="container">
         <div className="card" style={{ maxWidth: 560, margin: '40px auto' }}>
-          <h1 style={{ marginTop: 0 }}>Регистрация родителя</h1>
-          <p className="muted">После подтверждения email вход выполняется через общую страницу /login.</p>
+          <div className="locale-toggle" style={{ marginBottom: 8 }}>
+            {localeOptions.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`locale-chip ${locale === item.value ? 'active' : ''}`}
+                onClick={() => setLocale(item.value)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <h1 style={{ marginTop: 0 }}>{t('parent_reg_title')}</h1>
+          <p className="muted">{t('parent_reg_subtitle')}</p>
 
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label>Имя</label>
+              <label>{t('first_name')}</label>
               <input
                 className="input"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 type="text"
-                placeholder="Имя"
+                placeholder={t('first_name_placeholder')}
               />
             </div>
             <div className="field">
-              <label>Фамилия</label>
+              <label>{t('last_name')}</label>
               <input
                 className="input"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 type="text"
-                placeholder="Фамилия"
+                placeholder={t('last_name_placeholder')}
               />
             </div>
             <div className="field">
-              <label>Email</label>
+              <label>{t('email')}</label>
               <input
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
-                placeholder="parent@email.com"
+                placeholder={t('parent_email_placeholder')}
                 required
               />
             </div>
             <div className="field">
-              <label>Телефон</label>
-              <input
-                className="input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                type="text"
-                placeholder="+7 (___) ___-__-__"
-              />
-            </div>
-            <div className="field">
-              <label>Пароль</label>
+              <label>{t('password')}</label>
               <input
                 className="input"
                 value={password}
@@ -139,7 +141,7 @@ export default function ParentRegistrationPage() {
               />
             </div>
             <div className="field">
-              <label>Повторите пароль</label>
+              <label>{t('confirm_password')}</label>
               <input
                 className="input"
                 value={passwordConfirm}
@@ -155,16 +157,13 @@ export default function ParentRegistrationPage() {
             ) : null}
 
             <button className="button" type="submit" disabled={status === 'submitting'}>
-              {status === 'submitting' ? 'Создаем аккаунт...' : 'Создать аккаунт'}
+              {status === 'submitting' ? t('creating_account') : t('create_account')}
             </button>
           </form>
 
           <div style={{ marginTop: 16, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             <Link className="muted" href="/login">
-              Уже есть аккаунт? Войти
-            </Link>
-            <Link className="muted" href="/register">
-              Назад к выбору роли
+              {t('have_account')}
             </Link>
           </div>
         </div>

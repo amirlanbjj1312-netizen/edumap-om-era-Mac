@@ -2,6 +2,7 @@ export const TYPE_LABEL_KEYS = {
   State: 'schools.type.state',
   Private: 'schools.type.private',
   International: 'schools.type.international',
+  Autonomous: 'schools.type.autonomous',
 };
 
 export const LANGUAGE_LABEL_KEYS = {
@@ -11,11 +12,18 @@ export const LANGUAGE_LABEL_KEYS = {
   Chinese: 'schools.language.chinese',
   French: 'schools.language.french',
   German: 'schools.language.german',
+  'Английский': 'schools.language.english',
+  'Русский': 'schools.language.russian',
+  'Казахский': 'schools.language.kazakh',
+  'Китайский': 'schools.language.chinese',
+  'Французский': 'schools.language.french',
+  'Немецкий': 'schools.language.german',
 };
 
 export const MEAL_LABEL_KEYS = {
   Free: 'schools.meals.free',
   Paid: 'schools.meals.paid',
+  Included: 'schools.meals.included',
   'No meals': 'schools.meals.none',
 };
 
@@ -58,6 +66,7 @@ export const DISTRICT_LABEL_KEYS = {
 };
 
 export const CURRICULA_LABEL_KEYS = {
+  'State program': 'schools.curricula.state_program',
   'State program (Kazakhstan)': 'schools.curricula.state_program',
   'Updated content': 'schools.curricula.updated_content',
   'NIS Integrated Program': 'schools.curricula.nis',
@@ -74,6 +83,22 @@ export const CURRICULA_LABEL_KEYS = {
   'British National Curriculum': 'schools.curricula.british',
   'Bilingual Program': 'schools.curricula.bilingual',
   'Author program': 'schools.curricula.author',
+  'Госпрограмма (Казахстан)': 'schools.curricula.state_program',
+  'Обновленное содержание': 'schools.curricula.updated_content',
+  'Интегрированная программа НИШ': 'schools.curricula.nis',
+  'Cambridge Primary': 'schools.curricula.cambridge_primary',
+  'Cambridge Lower Secondary': 'schools.curricula.cambridge_lower_secondary',
+  'Cambridge IGCSE': 'schools.curricula.cambridge_igcse',
+  'Cambridge A-Level': 'schools.curricula.cambridge_a_level',
+  'IB PYP': 'schools.curricula.ib_pyp',
+  'STEAM': 'schools.curricula.steam',
+  'STEM': 'schools.curricula.stem',
+  'Монтессори': 'schools.curricula.montessori',
+  'Вальдорфская': 'schools.curricula.waldorf',
+  'Американская программа': 'schools.curricula.american',
+  'Британская программа': 'schools.curricula.british',
+  'Билингвальная программа': 'schools.curricula.bilingual',
+  'Авторская программа': 'schools.curricula.author',
 };
 
 export const SUBJECT_LABEL_KEYS = {
@@ -90,6 +115,9 @@ export const SUBJECT_LABEL_KEYS = {
   Business: 'schools.subject.business',
   Entrepreneurship: 'schools.subject.entrepreneurship',
   'English Language': 'schools.subject.english_language',
+  'Kazakh Language': 'schools.subject.kazakh_language',
+  'Russian Language': 'schools.subject.russian_language',
+  Logic: 'schools.subject.logic',
   'World History': 'schools.subject.world_history',
   Geography: 'schools.subject.geography',
   'Design & Technology': 'schools.subject.design_technology',
@@ -97,6 +125,29 @@ export const SUBJECT_LABEL_KEYS = {
   Music: 'schools.subject.music',
   'Media Studies': 'schools.subject.media_studies',
   Psychology: 'schools.subject.psychology',
+  'Математика': 'schools.subject.mathematics',
+  'Физика': 'schools.subject.physics',
+  'Химия': 'schools.subject.chemistry',
+  'Биология': 'schools.subject.biology',
+  'Информатика': 'schools.subject.computer_science',
+  'Робототехника': 'schools.subject.robotics',
+  'Инженерия': 'schools.subject.engineering',
+  'Искусственный интеллект': 'schools.subject.artificial_intelligence',
+  'Анализ данных': 'schools.subject.data_science',
+  'Экономика': 'schools.subject.economics',
+  'Бизнес': 'schools.subject.business',
+  'Предпринимательство': 'schools.subject.entrepreneurship',
+  'Английский язык': 'schools.subject.english_language',
+  'Казахский язык': 'schools.subject.kazakh_language',
+  'Русский язык': 'schools.subject.russian_language',
+  'Логика': 'schools.subject.logic',
+  'Всемирная история': 'schools.subject.world_history',
+  'География': 'schools.subject.geography',
+  'Дизайн и технологии': 'schools.subject.design_technology',
+  'Искусство и дизайн': 'schools.subject.art_design',
+  'Музыка': 'schools.subject.music',
+  'Медиазнания': 'schools.subject.media_studies',
+  'Психология': 'schools.subject.psychology',
 };
 
 export const SPECIALIST_LABEL_KEYS = {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { supabase } from '@/lib/supabaseClient';
+import { useImageCropper } from '@/lib/useImageCropper';
 
 const isModerator = (role: string) => role === 'moderator' || role === 'superadmin';
 
@@ -19,6 +20,13 @@ const splitList = (value: string) =>
     .filter(Boolean);
 
 const joinList = (value: string[] = []) => value.filter(Boolean).join(', ');
+const mergeMediaUrls = (prevValue: string, nextUrls: string[], maxItems = 20) => {
+  const merged = [...splitList(prevValue), ...nextUrls]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  const unique = Array.from(new Set(merged));
+  return joinList(unique.slice(0, maxItems));
+};
 const normalizeTag = (value: string) =>
   String(value || '')
     .trim()
@@ -40,6 +48,39 @@ const toDateTimeLocalValue = (value: string) => {
   const minutes = pad(parsed.getMinutes());
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+const isImportantNews = (item: any) => {
+  const raw = item?.isImportant ?? item?.is_important ?? false;
+  if (typeof raw === 'boolean') return raw;
+  const normalized = String(raw || '')
+    .trim()
+    .toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
+const getViewsCount = (item: any) => {
+  const raw =
+    item?.views_count ??
+    item?.views ??
+    item?.popularity_score ??
+    item?.popularityScore ??
+    0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.round(parsed));
+};
+const isPublishedNews = (item: any) => {
+  const status = String(item?.status || '')
+    .trim()
+    .toLowerCase();
+  if (status === 'draft') return false;
+  if (status === 'published') return true;
+  const raw = item?.isPublished ?? item?.is_published;
+  if (typeof raw === 'boolean') return raw;
+  const normalized = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) return true;
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
 
 const initialForm = {
   title: '',
@@ -56,6 +97,8 @@ const initialForm = {
   contentEn: '',
   contentKk: '',
   publishedAt: '',
+  isImportant: false,
+  viewsCount: '0',
 };
 const CATEGORY_OPTIONS = [
   { value: 'announcements', labels: { ru: 'Объявления', en: 'Announcements', kk: 'Хабарландырулар' } },
@@ -105,11 +148,15 @@ export default function AdminNewsPage() {
   const [news, setNews] = useState<any[]>([]);
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(initialForm);
+  const [listMode, setListMode] = useState<'all' | 'important' | 'latest' | 'popular'>('all');
   const [tagInput, setTagInput] = useState('');
   const [activeFontFamily, setActiveFontFamily] = useState(FONT_OPTIONS[0]);
   const [activeFontSize, setActiveFontSize] = useState('16');
   const [activeTextColor, setActiveTextColor] = useState('#1f2a44');
+  const { openImageCropper, cropperModal } = useImageCropper();
   const contentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const inlineImageInputRef = useRef<HTMLInputElement | null>(null);
+  const inlineVideoInputRef = useRef<HTMLInputElement | null>(null);
   const localeKey = (locale === 'ru' || locale === 'en' || locale === 'kk' ? locale : 'ru') as
     | 'ru'
     | 'en'
@@ -135,6 +182,8 @@ export default function AdminNewsPage() {
             imageUrls: 'Image URLs (comma separated)',
             videoUrls: 'Video URLs (comma separated)',
             publishedAt: 'Publish date and time (optional)',
+            isImportant: 'Important news',
+            viewsCount: 'Popularity (views)',
           }
         : locale === 'kk'
         ? {
@@ -146,6 +195,8 @@ export default function AdminNewsPage() {
             imageUrls: 'Сурет URL-дары (үтір арқылы)',
             videoUrls: 'Видео URL-дары (үтір арқылы)',
             publishedAt: 'Жариялау күні мен уақыты (міндетті емес)',
+            isImportant: 'Маңызды жаңалық',
+            viewsCount: 'Танымалдық (қаралым саны)',
           }
         : {
             title: 'Название',
@@ -156,6 +207,8 @@ export default function AdminNewsPage() {
             imageUrls: 'URL изображений (через запятую)',
             videoUrls: 'URL видео (через запятую)',
             publishedAt: 'Дата и время публикации (необязательно)',
+            isImportant: 'Важная новость',
+            viewsCount: 'Популярность (просмотры)',
           },
     [locale]
   );
@@ -213,6 +266,8 @@ export default function AdminNewsPage() {
             bullets: '• List',
             numbers: '1. List',
             link: 'Link',
+            image: 'Image',
+            video: 'Video',
             color: 'Color',
             left: 'Left',
             center: 'Center',
@@ -230,6 +285,8 @@ export default function AdminNewsPage() {
             bullets: '• Тізім',
             numbers: '1. Тізім',
             link: 'Сілтеме',
+            image: 'Сурет',
+            video: 'Видео',
             color: 'Түс',
             left: 'Сол',
             center: 'Орта',
@@ -246,6 +303,8 @@ export default function AdminNewsPage() {
             bullets: '• Список',
             numbers: '1. Список',
             link: 'Ссылка',
+            image: 'Фото',
+            video: 'Видео',
             color: 'Цвет',
             left: 'Лево',
             center: 'Центр',
@@ -256,6 +315,30 @@ export default function AdminNewsPage() {
     [locale]
   );
   const tagsList = useMemo(() => splitList(form.tags), [form.tags]);
+  const imageCount = useMemo(() => splitList(form.imageUrls).length, [form.imageUrls]);
+  const videoCount = useMemo(() => splitList(form.videoUrls).length, [form.videoUrls]);
+  const prepareImageFiles = useCallback(
+    async (files: File[]) => {
+      const prepared: File[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          prepared.push(file);
+          continue;
+        }
+        const cropped = await openImageCropper(file, {
+          title: locale === 'en' ? 'Crop image' : locale === 'kk' ? 'Суретті қию' : 'Обрезать фото',
+          aspect: 16 / 9,
+        });
+        if (!cropped) {
+          // Если обрезку отменили для одного файла — не блокируем остальные.
+          continue;
+        }
+        prepared.push(cropped);
+      }
+      return prepared;
+    },
+    [locale, openImageCropper]
+  );
   const publishedAtInputValue = useMemo(
     () => toDateTimeLocalValue(form.publishedAt),
     [form.publishedAt]
@@ -336,6 +419,8 @@ export default function AdminNewsPage() {
       contentEn: item?.contentEn || '',
       contentKk: item?.contentKk || '',
       publishedAt: item?.publishedAt || '',
+      isImportant: isImportantNews(item),
+      viewsCount: String(getViewsCount(item)),
     });
   }, []);
   const uploadNewsImages = useCallback(
@@ -399,11 +484,22 @@ export default function AdminNewsPage() {
       try {
         setUploadingImages(true);
         setMediaMessage('');
-        const urls = await uploadNewsImages(files);
+        const preparedFiles = await prepareImageFiles(files);
+        if (!preparedFiles?.length) {
+          setMediaMessage(
+            locale === 'en'
+              ? 'No images were added'
+              : locale === 'kk'
+              ? 'Суреттер қосылмады'
+              : 'Фото не были добавлены'
+          );
+          return;
+        }
+        const urls = await uploadNewsImages(preparedFiles);
         if (urls.length) {
           setForm((prev) => ({
             ...prev,
-            imageUrls: joinList([...splitList(prev.imageUrls), ...urls]),
+            imageUrls: mergeMediaUrls(prev.imageUrls, urls, 20),
           }));
           setMediaMessage(t('saved'));
         }
@@ -418,7 +514,7 @@ export default function AdminNewsPage() {
         setUploadingImages(false);
       }
     },
-    [t, uploadNewsImages]
+    [locale, prepareImageFiles, t, uploadNewsImages]
   );
   const uploadNewsVideos = useCallback(
     async (files: File[]) => {
@@ -485,7 +581,7 @@ export default function AdminNewsPage() {
         if (urls.length) {
           setForm((prev) => ({
             ...prev,
-            videoUrls: joinList([...splitList(prev.videoUrls), ...urls]),
+            videoUrls: mergeMediaUrls(prev.videoUrls, urls, 20),
           }));
           setMediaMessage(t('saved'));
         }
@@ -501,7 +597,7 @@ export default function AdminNewsPage() {
     [localizedVideoUpload.error, t, uploadNewsVideos]
   );
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (publish: boolean) => {
     if (!token || !isModerator(actorRole)) return;
     if (!form.title.trim()) {
       setMessage('Title is required');
@@ -524,7 +620,12 @@ export default function AdminNewsPage() {
       content: form.content.trim(),
       contentEn: form.contentEn.trim(),
       contentKk: form.contentKk.trim(),
-      publishedAt: form.publishedAt.trim(),
+      publishedAt: form.publishedAt.trim() || (publish ? new Date().toISOString() : ''),
+      isImportant: Boolean(form.isImportant),
+      views_count: getViewsCount({ views_count: form.viewsCount }),
+      popularity_score: getViewsCount({ popularity_score: form.viewsCount }),
+      isPublished: publish,
+      status: publish ? 'published' : 'draft',
     };
 
     try {
@@ -614,6 +715,89 @@ export default function AdminNewsPage() {
     },
     [applyContentFormat]
   );
+  const insertIntoContent = useCallback(
+    (snippet: string) => {
+      const node = contentInputRef.current;
+      const currentValue = getLocalizedField('content');
+      if (!node) {
+        setLocalizedField('content', `${currentValue}${snippet}`);
+        return;
+      }
+      const start = node.selectionStart ?? currentValue.length;
+      const end = node.selectionEnd ?? currentValue.length;
+      const nextValue = currentValue.slice(0, start) + snippet + currentValue.slice(end);
+      setLocalizedField('content', nextValue);
+      requestAnimationFrame(() => {
+        node.focus();
+        const cursor = start + snippet.length;
+        node.setSelectionRange(cursor, cursor);
+      });
+    },
+    [getLocalizedField, setLocalizedField]
+  );
+  const insertInlineMedia = useCallback(
+    (urls: string[], kind: 'image' | 'video') => {
+      if (!urls.length) return;
+      const blocks = urls
+        .map((url) => {
+          const safeUrl = String(url || '').replace(/"/g, '%22').trim();
+          if (!safeUrl) return '';
+          if (kind === 'image') {
+            return `<img src="${safeUrl}" alt="news-image" style="max-width:100%;border-radius:12px;" />`;
+          }
+          return `<video controls src="${safeUrl}" style="max-width:100%;border-radius:12px;"></video>`;
+        })
+        .filter(Boolean)
+        .join('\n');
+      if (!blocks) return;
+      insertIntoContent(`\n${blocks}\n`);
+    },
+    [insertIntoContent]
+  );
+  const handleInlineImageUpload = useCallback(
+    async (event: any) => {
+      const files = Array.from(event?.target?.files || []) as File[];
+      if (!files.length) return;
+      try {
+        setUploadingImages(true);
+        setMediaMessage('');
+        const preparedFiles = await prepareImageFiles(files);
+        if (!preparedFiles?.length) return;
+        const urls = await uploadNewsImages(preparedFiles);
+        insertInlineMedia(urls, 'image');
+        setMediaMessage(t('saved'));
+      } catch (error: any) {
+        setMediaMessage(error?.message || t('newsAdminImageUploadError'));
+      } finally {
+        if (event?.currentTarget) {
+          event.currentTarget.value = '';
+        }
+        setUploadingImages(false);
+      }
+    },
+    [insertInlineMedia, prepareImageFiles, t, uploadNewsImages]
+  );
+  const handleInlineVideoUpload = useCallback(
+    async (event: any) => {
+      const files = Array.from(event?.target?.files || []) as File[];
+      if (!files.length) return;
+      try {
+        setUploadingVideos(true);
+        setMediaMessage('');
+        const urls = await uploadNewsVideos(files);
+        insertInlineMedia(urls, 'video');
+        setMediaMessage(t('saved'));
+      } catch (error: any) {
+        setMediaMessage(error?.message || localizedVideoUpload.error);
+      } finally {
+        if (event?.currentTarget) {
+          event.currentTarget.value = '';
+        }
+        setUploadingVideos(false);
+      }
+    },
+    [insertInlineMedia, localizedVideoUpload.error, t, uploadNewsVideos]
+  );
 
   const remove = useCallback(
     async (id: string) => {
@@ -638,6 +822,18 @@ export default function AdminNewsPage() {
       ),
     [news]
   );
+  const filteredNews = useMemo(() => {
+    if (listMode === 'important') {
+      return sorted.filter((item) => isImportantNews(item));
+    }
+    if (listMode === 'latest') {
+      return sorted;
+    }
+    if (listMode === 'popular') {
+      return [...sorted].sort((a, b) => getViewsCount(b) - getViewsCount(a));
+    }
+    return sorted;
+  }, [listMode, sorted]);
 
   if (!authReady) {
     return <div className="card">{t('checkingSession')}</div>;
@@ -732,6 +928,13 @@ export default function AdminNewsPage() {
           <p className="upload-choice-note" style={{ marginTop: 6 }}>{localizedTagExample}</p>
         </label>
         <Field label={localizedFieldLabels.imageUrls} value={form.imageUrls} onChange={(value) => setForm((p) => ({ ...p, imageUrls: value }))} textarea />
+        <p className="muted" style={{ marginTop: -6, marginBottom: 8 }}>
+          {locale === 'en'
+            ? `Added images: ${imageCount}`
+            : locale === 'kk'
+            ? `Қосылған суреттер: ${imageCount}`
+            : `Добавлено фото: ${imageCount}`}
+        </p>
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{t('newsAdminImageUploadLabel')}</span>
           <input
@@ -750,6 +953,13 @@ export default function AdminNewsPage() {
         </p>
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
         <Field label={localizedFieldLabels.videoUrls} value={form.videoUrls} onChange={(value) => setForm((p) => ({ ...p, videoUrls: value }))} textarea />
+        <p className="muted" style={{ marginTop: -6, marginBottom: 8 }}>
+          {locale === 'en'
+            ? `Added videos: ${videoCount}`
+            : locale === 'kk'
+            ? `Қосылған видеолар: ${videoCount}`
+            : `Добавлено видео: ${videoCount}`}
+        </p>
         <label className="field" style={{ marginBottom: 10 }}>
           <span>{localizedVideoUpload.label}</span>
           <input
@@ -835,6 +1045,20 @@ export default function AdminNewsPage() {
               >
                 {contentToolbarLabels.link}
               </button>
+              <button
+                type="button"
+                className="news-editor-button"
+                onClick={() => inlineImageInputRef.current?.click()}
+              >
+                {contentToolbarLabels.image}
+              </button>
+              <button
+                type="button"
+                className="news-editor-button"
+                onClick={() => inlineVideoInputRef.current?.click()}
+              >
+                {contentToolbarLabels.video}
+              </button>
               <label className="news-editor-color">
                 <span>{contentToolbarLabels.color}</span>
                 <input
@@ -867,6 +1091,24 @@ export default function AdminNewsPage() {
             rows={6}
             onChange={(event) => setLocalizedField('content', event.target.value)}
           />
+          <input
+            ref={inlineImageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleInlineImageUpload}
+            disabled={uploadingImages || saving}
+          />
+          <input
+            ref={inlineVideoInputRef}
+            type="file"
+            accept="video/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleInlineVideoUpload}
+            disabled={uploadingVideos || saving}
+          />
         </label>
         <Field
           label={localizedFieldLabels.publishedAt}
@@ -879,10 +1121,63 @@ export default function AdminNewsPage() {
           }
           type="datetime-local"
         />
+        <label className="field" style={{ marginBottom: 10 }}>
+          <span>{localizedFieldLabels.isImportant}</span>
+          <label className="checkbox-inline" style={{ marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={Boolean(form.isImportant)}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, isImportant: event.target.checked }))
+              }
+            />
+            <span>
+              {locale === 'en'
+                ? 'Show in important block'
+                : locale === 'kk'
+                ? 'Маңызды блокта көрсету'
+                : 'Показывать в блоке важных новостей'}
+            </span>
+          </label>
+        </label>
+        <Field
+          label={localizedFieldLabels.viewsCount}
+          value={String(form.viewsCount)}
+          onChange={(value) => setForm((prev) => ({ ...prev, viewsCount: value }))}
+          type="number"
+        />
 
         <div className="actions">
-          <button type="button" className="primary" onClick={submit} disabled={saving}>
-            {saving ? t('saving') : editId ? t('newsAdminUpdate') : t('newsAdminPublish')}
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => submit(false)}
+            disabled={saving}
+          >
+            {saving
+              ? t('saving')
+              : locale === 'en'
+              ? editId
+                ? 'Update draft'
+                : 'Save draft'
+              : locale === 'kk'
+              ? editId
+                ? 'Қараламаны жаңарту'
+                : 'Қаралама ретінде сақтау'
+              : editId
+              ? 'Обновить черновик'
+              : 'Сохранить как черновик'}
+          </button>
+          <button type="button" className="primary" onClick={() => submit(true)} disabled={saving}>
+            {saving
+              ? t('saving')
+              : editId
+              ? locale === 'en'
+                ? 'Update and publish'
+                : locale === 'kk'
+                ? 'Жаңартып жариялау'
+                : 'Обновить и опубликовать'
+              : t('newsAdminPublish')}
           </button>
           {editId ? (
             <button type="button" className="button secondary" onClick={resetForm}>
@@ -894,14 +1189,81 @@ export default function AdminNewsPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
+          {[
+            {
+              key: 'all' as const,
+              label: locale === 'en' ? 'All' : locale === 'kk' ? 'Барлығы' : 'Все',
+            },
+            {
+              key: 'important' as const,
+              label: locale === 'en' ? 'Important' : locale === 'kk' ? 'Маңызды' : 'Важные',
+            },
+            {
+              key: 'latest' as const,
+              label: locale === 'en' ? 'Latest' : locale === 'kk' ? 'Соңғылары' : 'Последние',
+            },
+            {
+              key: 'popular' as const,
+              label: locale === 'en' ? 'Popular' : locale === 'kk' ? 'Танымал' : 'Популярные',
+            },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className="option-chip"
+              onClick={() => setListMode(tab.key)}
+              style={
+                listMode === tab.key
+                  ? { background: 'rgba(80, 105, 245, 0.18)', borderColor: '#5069f5' }
+                  : undefined
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         {loading ? (
           <p className="muted">{t('usersLoading')}</p>
-        ) : sorted.length ? (
+        ) : filteredNews.length ? (
           <div className="schools-admin-list">
-            {sorted.map((item) => (
+            {filteredNews.map((item) => (
               <div key={item.id} className="schools-admin-card">
                 <p className="request-title">{item.title || item.id}</p>
                 <p className="muted">{item.summary || '—'}</p>
+                <p className="muted">
+                  {(isPublishedNews(item)
+                    ? locale === 'en'
+                      ? 'Published'
+                      : locale === 'kk'
+                      ? 'Жарияланған'
+                      : 'Опубликовано'
+                    : locale === 'en'
+                    ? 'Draft'
+                    : locale === 'kk'
+                    ? 'Қаралама'
+                    : 'Черновик') +
+                    ' • ' +
+                    (isImportantNews(item)
+                    ? locale === 'en'
+                      ? 'Important'
+                      : locale === 'kk'
+                      ? 'Маңызды'
+                      : 'Важная'
+                    : locale === 'en'
+                    ? 'Regular'
+                    : locale === 'kk'
+                    ? 'Қалыпты'
+                    : 'Обычная') +
+                    ` • ${localizedFieldLabels.viewsCount}: ${getViewsCount(item)}`}
+                </p>
                 <p className="muted">{item.publishedAt ? new Date(item.publishedAt).toLocaleString() : '—'}</p>
                 <div className="schools-admin-actions">
                   <button type="button" className="button secondary" onClick={() => startEdit(item)}>
@@ -918,6 +1280,7 @@ export default function AdminNewsPage() {
           <p className="muted">{t('newsAdminEmpty')}</p>
         )}
       </div>
+      {cropperModal}
     </div>
   );
 }

@@ -17,15 +17,11 @@ const Chip = ({ label }) => (
 const CategoryChip = ({ label, active, onPress }) => (
   <Pressable
     className={`px-4 py-2 rounded-full mr-3 border ${
-      active ? 'bg-[#1FA6FF] border-[#1FA6FF]' : 'bg-white border-[#1FA6FF]'
+      active ? 'bg-[#DBEAFE] border-[#93C5FD]' : 'bg-white border-[#1FA6FF]'
     }`}
     onPress={onPress}
   >
-    <Text
-      className={`font-exoSemibold text-sm ${
-        active ? 'text-white' : 'text-[#1FA6FF]'
-      }`}
-    >
+    <Text className="font-exoSemibold text-sm text-darkGrayText">
       {label}
     </Text>
   </Pressable>
@@ -109,9 +105,9 @@ export default function NewsScreen() {
   }, [sortedNews, activeFilter]);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
       <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+        colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -122,7 +118,7 @@ export default function NewsScreen() {
           contentContainerStyle={{ paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          <Text className="text-white font-exoSemibold text-3xl mb-6">
+          <Text className="text-darkGrayText font-exoSemibold text-3xl mb-6">
             {t('news.title')}
           </Text>
 

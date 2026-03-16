@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   PLAN_LIMITS,
   type ParentPlanId,
   getParentPlan,
   setParentPlan,
 } from '@/lib/parentSubscription';
+import { isGuestMode } from '@/lib/guestMode';
 
 const PLAN_LABEL: Record<ParentPlanId, string> = {
   trial: 'Trial',
@@ -21,6 +23,7 @@ const PLAN_PRICE: Record<ParentPlanId, string> = {
 };
 
 export default function ParentSubscriptionPage() {
+  const [guest] = useState(() => isGuestMode());
   const [state, setState] = useState(() => getParentPlan());
   const [inlineStatus, setInlineStatus] = useState('');
   const [nowTs, setNowTs] = useState(() => Date.now());
@@ -40,6 +43,7 @@ export default function ParentSubscriptionPage() {
   const limits = PLAN_LIMITS[state.planId];
 
   const switchPlan = (planId: ParentPlanId) => {
+    if (guest) return;
     const next = setParentPlan(planId);
     setState(next);
     setInlineStatus(`Тариф ${PLAN_LABEL[planId]} активирован`);
@@ -50,6 +54,25 @@ export default function ParentSubscriptionPage() {
     <div className="card">
       <h2 className="section-title">Подписка родителя</h2>
       <p className="muted">Текущий план и управление тарифами в веб-кабинете.</p>
+      {guest ? (
+        <div
+          style={{
+            marginTop: 10,
+            border: '1px solid rgba(86,103,253,0.22)',
+            borderRadius: 12,
+            padding: 12,
+            background: '#f4f7ff',
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 700 }}>Управление подпиской доступно после входа</p>
+          <p className="muted" style={{ margin: '6px 0 0' }}>
+            В гостевом режиме вы видите демо-тарифы без сохранения.
+          </p>
+          <Link className="button" href="/login">
+            Войти
+          </Link>
+        </div>
+      ) : null}
 
       <div
         style={{
@@ -101,6 +124,7 @@ export default function ParentSubscriptionPage() {
             'AI-подбор: 5 запросов/день',
           ]}
           active={state.planId === 'standard'}
+          guest={guest}
           onSelect={() => switchPlan('standard')}
         />
         <PlanCard
@@ -114,6 +138,7 @@ export default function ParentSubscriptionPage() {
             'AI-подбор: без лимита',
           ]}
           active={state.planId === 'pro'}
+          guest={guest}
           onSelect={() => switchPlan('pro')}
         />
       </div>
@@ -127,6 +152,7 @@ function PlanCard({
   features,
   badge,
   active,
+  guest,
   onSelect,
 }: {
   title: string;
@@ -134,6 +160,7 @@ function PlanCard({
   features: string[];
   badge?: string;
   active?: boolean;
+  guest?: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -170,11 +197,11 @@ function PlanCard({
       <button
         type="button"
         className="button"
-        style={{ marginTop: 12, opacity: active ? 0.7 : 1 }}
-        disabled={Boolean(active)}
+        style={{ marginTop: 12, opacity: active || guest ? 0.7 : 1 }}
+        disabled={Boolean(active || guest)}
         onClick={onSelect}
       >
-        {active ? 'Текущий план' : 'Выбрать'}
+        {active ? 'Текущий план' : guest ? 'Войти для выбора' : 'Выбрать'}
       </button>
     </div>
   );

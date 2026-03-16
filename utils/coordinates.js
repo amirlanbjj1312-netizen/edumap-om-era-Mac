@@ -1,7 +1,12 @@
 export const DEFAULT_MAP_TILE_SIZE = 1024;
 
 export const parseCoordinate = (value) => {
-  const parsed = parseFloat(value);
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const normalized =
+    typeof value === 'string' ? value.trim().replace(',', '.') : value;
+  const parsed = parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 };
 

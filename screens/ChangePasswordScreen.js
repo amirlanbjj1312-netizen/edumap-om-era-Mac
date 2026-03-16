@@ -6,24 +6,39 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeftIcon } from 'react-native-heroicons/outline';
+import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from 'react-native-heroicons/outline';
 import { useAuth } from '../context/AuthContext';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-const InputField = ({ label, value, onChangeText, placeholder }) => (
+const InputField = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  onToggleSecure,
+}) => (
   <View className="mb-4">
     <Text className="text-white font-exoSemibold mb-2">{label}</Text>
-    <View className="bg-white rounded-xl border border-bgPurple/15 px-4 py-3">
+    <View className="bg-white rounded-xl border border-bgPurple/15 px-4 py-3 flex-row items-center">
       <TextInput
+        key={secureTextEntry ? 'secure' : 'text'}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#9CA3AF"
-        secureTextEntry
-        className="font-exo text-darkGrayText"
+        secureTextEntry={secureTextEntry}
+        className="font-exo text-darkGrayText flex-1"
       />
+      <Pressable onPress={onToggleSecure} hitSlop={8}>
+        {secureTextEntry ? (
+          <EyeIcon size={18} color="#64748B" />
+        ) : (
+          <EyeSlashIcon size={18} color="#64748B" />
+        )}
+      </Pressable>
     </View>
   </View>
 );
@@ -33,6 +48,9 @@ export default function ChangePasswordScreen({ navigation }) {
   const [current, setCurrent] = useState('');
   const [nextPwd, setNextPwd] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const validate = () => {
     if (!current) {
@@ -63,9 +81,9 @@ export default function ChangePasswordScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#44C5F5' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#E9EEF6' }}>
       <LinearGradient
-        colors={['#44C5F5', '#7E73F4', '#44C5F5']}
+        colors={['#E9EEF6', '#E9EEF6', '#E9EEF6']}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -83,27 +101,37 @@ export default function ChangePasswordScreen({ navigation }) {
           </Text>
           <View style={{ width: 44 }} />
         </View>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32, paddingTop: 8 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          enableOnAndroid
+          extraScrollHeight={24}
         >
           <InputField
             label="Current password"
             value={current}
             onChangeText={setCurrent}
             placeholder="Enter current password"
+            secureTextEntry={!showCurrent}
+            onToggleSecure={() => setShowCurrent((prev) => !prev)}
           />
           <InputField
             label="New password"
             value={nextPwd}
             onChangeText={setNextPwd}
             placeholder="Enter new password"
+            secureTextEntry={!showNext}
+            onToggleSecure={() => setShowNext((prev) => !prev)}
           />
           <InputField
             label="Confirm new password"
             value={confirm}
             onChangeText={setConfirm}
             placeholder="Repeat new password"
+            secureTextEntry={!showConfirm}
+            onToggleSecure={() => setShowConfirm((prev) => !prev)}
           />
 
           <Pressable
@@ -114,7 +142,7 @@ export default function ChangePasswordScreen({ navigation }) {
               Save password
             </Text>
           </Pressable>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </LinearGradient>
     </SafeAreaView>
   );

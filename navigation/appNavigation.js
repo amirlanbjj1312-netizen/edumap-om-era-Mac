@@ -47,6 +47,9 @@ import SchoolCompareScreen from '../screens/SchoolCompareScreen';
 import UserChatsScreen from '../screens/UserChatsScreen';
 import ChatRoomScreen from '../screens/ChatRoomScreen';
 import ParentSubscriptionScreen from '../screens/ParentSubscriptionScreen';
+import SchoolClubsScreen from '../screens/SchoolClubsScreen';
+import SchoolClubDetailScreen from '../screens/SchoolClubDetailScreen';
+import ClubTeacherProfileScreen from '../screens/ClubTeacherProfileScreen';
 import { navigationRef } from './navigationRef';
 
 const Tab = createBottomTabNavigator();
@@ -183,6 +186,21 @@ export default function AppNavigation() {
           name="ParentSubscription"
           options={{ headerShown: false }}
           component={ParentSubscriptionScreen}
+        />
+        <Stack.Screen
+          name="SchoolClubs"
+          options={{ headerShown: false }}
+          component={SchoolClubsScreen}
+        />
+        <Stack.Screen
+          name="SchoolClubDetail"
+          options={{ headerShown: false }}
+          component={SchoolClubDetailScreen}
+        />
+        <Stack.Screen
+          name="ClubTeacherProfile"
+          options={{ headerShown: false }}
+          component={ClubTeacherProfileScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

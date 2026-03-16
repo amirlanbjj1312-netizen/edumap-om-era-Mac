@@ -17,8 +17,8 @@ export default function App() {
 
   const loadCustomFont = async () => {
     await Font.loadAsync({
-      exo: require('./assets/fonts/Exo/static/Exo-Regular.ttf'),
-      exoSemibold: require('./assets/fonts/Exo/static/Exo-SemiBold.ttf'),
+      exo: require('./assets/fonts/Inter/static/Inter_24pt-Regular.ttf'),
+      exoSemibold: require('./assets/fonts/Geologica/static/Geologica-SemiBold.ttf'),
       roboto: require('./assets/fonts/Roboto/Roboto-Light.ttf'),
       robotoBold: require('./assets/fonts/Roboto/Roboto-Bold.ttf'),
       italianno: require('./assets/fonts/Italianno-Regular.ttf'),

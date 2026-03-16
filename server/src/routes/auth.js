@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs/promises');
+const path = require('path');
 const sgMail = require('@sendgrid/mail');
 const { createClient } = require('@supabase/supabase-js');
 const { OtpStore } = require('../services/otpStore');
@@ -8,12 +10,29 @@ const {
   validateVerifyCodePayload,
   validateSetRolePayload,
   validateUserStatusPayload,
+  validateCreateSchoolAccountPayload,
   validateRegisterWithCodePayload,
   validateResetPasswordWithCodePayload,
 } = require('../validation');
+const {
+  readSchoolAccessLog,
+  appendSchoolAccessLog,
+  clearSchoolAccessLog,
+  updateSchoolAccessLogStatus,
+  upsertSchoolAccessLogEntry,
+  deleteSchoolAccessLogEntry,
+  ALLOWED_STATUSES,
+} = require('../services/schoolAccessLogStore');
+const { deleteSchool } = require('../services/schoolsStore');
+const { listSurveyResponses } = require('../services/ratingSurveyStore');
+const {
+  getUserAdminSettings,
+  upsertUserAdminSettings,
+} = require('../services/userAdminStore');
 
 const buildAuthRouter = (config) => {
   const router = express.Router();
+  const consultationsPath = path.resolve(__dirname, '../data/consultations.json');
   const isOtpBypassEnabled =
     String(process.env.DEV_OTP_BYPASS || '').trim().toLowerCase() === 'true' ||
     String(process.env.DEV_OTP_BYPASS || '').trim() === '1';
@@ -360,6 +379,8 @@ const buildAuthRouter = (config) => {
         email: user.email || '',
         createdAt: user.created_at || '',
         role: getUserRole(user) || 'user',
+        firstName: String(user?.user_metadata?.firstName || '').trim(),
+        lastName: String(user?.user_metadata?.lastName || '').trim(),
         bannedUntil: user.banned_until || null,
         isActive: !user.banned_until,
       }));
@@ -478,6 +499,467 @@ const buildAuthRouter = (config) => {
       if (error instanceof ValidationError) {
         return res.status(400).json({ error: error.message });
       }
+      next(error);
+    }
+  });
+
+  router.get('/users/:id/details', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (!hasMinRole(actorRole, 'moderator')) {
+        return res
+          .status(403)
+          .json({ error: 'Only moderator or superadmin can manage users' });
+      }
+
+      const userId = String(req.params?.id || '').trim();
+      if (!userId) {
+        return res.status(400).json({ error: 'user id is required' });
+      }
+
+      const { data: targetUserData, error: targetError } =
+        await supabaseAdmin.auth.admin.getUserById(userId);
+      if (targetError || !targetUserData?.user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const targetUser = targetUserData.user;
+      const targetRole = getUserRole(targetUser) || 'user';
+      if (actorRole !== 'superadmin' && hasMinRole(targetRole, 'superadmin')) {
+        return res
+          .status(403)
+          .json({ error: 'Moderator cannot edit superadmin accounts' });
+      }
+
+      const settings = await getUserAdminSettings(
+        targetUser.id,
+        targetUser.email || ''
+      );
+
+      const surveyResponses = await listSurveyResponses();
+      const surveyResponsesByUser = surveyResponses.filter(
+        (item) => item?.user_id === targetUser.id
+      );
+
+      let consultationRows = [];
+      try {
+        const rawConsultations = await fs.readFile(consultationsPath, 'utf8');
+        const parsed = JSON.parse(rawConsultations);
+        if (Array.isArray(parsed)) consultationRows = parsed;
+      } catch {
+        consultationRows = [];
+      }
+      const targetEmail = String(targetUser.email || '')
+        .trim()
+        .toLowerCase();
+      const consultationsByUser = consultationRows.filter((item) => {
+        const candidates = [
+          item?.email,
+          item?.user_email,
+          item?.userEmail,
+          item?.parent_email,
+          item?.parentEmail,
+          item?.contact_email,
+          item?.contactEmail,
+        ];
+        return candidates.some(
+          (value) =>
+            String(value || '')
+              .trim()
+              .toLowerCase() === targetEmail
+        );
+      });
+
+      const lastSurveyAt =
+        surveyResponsesByUser
+          .map((item) => Date.parse(String(item?.created_at || '')))
+          .filter((ts) => Number.isFinite(ts))
+          .sort((a, b) => b - a)[0] || 0;
+      const lastConsultAt =
+        consultationsByUser
+          .map((item) =>
+            Date.parse(String(item?.createdAt || item?.created_at || ''))
+          )
+          .filter((ts) => Number.isFinite(ts))
+          .sort((a, b) => b - a)[0] || 0;
+      const lastSignInTs = Date.parse(String(targetUser.last_sign_in_at || '')) || 0;
+      const lastActivityTs = Math.max(lastSignInTs, lastSurveyAt, lastConsultAt);
+
+      return res.json({
+        data: {
+          user: {
+            id: targetUser.id,
+            email: targetUser.email || '',
+            role: targetRole,
+            firstName: String(targetUser?.user_metadata?.firstName || '').trim(),
+            lastName: String(targetUser?.user_metadata?.lastName || '').trim(),
+            createdAt: targetUser.created_at || '',
+            lastSignInAt: targetUser.last_sign_in_at || '',
+            bannedUntil: targetUser.banned_until || null,
+            isActive: !targetUser.banned_until,
+          },
+          settings,
+          analytics: {
+            surveyResponsesCount: surveyResponsesByUser.length,
+            consultationRequestsCount: consultationsByUser.length,
+            aiChatRequestsCount: 0,
+            aiMatchRequestsCount: 0,
+            mostVisitedSections: ['schools', 'news', 'profile'],
+            lastActivityAt: lastActivityTs
+              ? new Date(lastActivityTs).toISOString()
+              : '',
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/users/:id/settings', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (!hasMinRole(actorRole, 'moderator')) {
+        return res
+          .status(403)
+          .json({ error: 'Only moderator or superadmin can manage users' });
+      }
+
+      const userId = String(req.params?.id || '').trim();
+      if (!userId) {
+        return res.status(400).json({ error: 'user id is required' });
+      }
+
+      const { data: targetUserData, error: targetError } =
+        await supabaseAdmin.auth.admin.getUserById(userId);
+      if (targetError || !targetUserData?.user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const targetUser = targetUserData.user;
+      const targetRole = getUserRole(targetUser) || 'user';
+      if (actorRole !== 'superadmin' && hasMinRole(targetRole, 'superadmin')) {
+        return res
+          .status(403)
+          .json({ error: 'Moderator cannot edit superadmin accounts' });
+      }
+
+      const body = req.body || {};
+      const nextSettings = await upsertUserAdminSettings({
+        user_id: userId,
+        email: targetUser.email || '',
+        first_name: body?.first_name || body?.firstName || '',
+        last_name: body?.last_name || body?.lastName || '',
+        subscription: {
+          plan: body?.subscription?.plan,
+          status: body?.subscription?.status,
+          starts_at: body?.subscription?.starts_at,
+          ends_at: body?.subscription?.ends_at,
+          auto_renew: body?.subscription?.auto_renew,
+        },
+        ai_limits: {
+          chat_bonus: body?.ai_limits?.chat_bonus,
+          selector_bonus: body?.ai_limits?.selector_bonus,
+          bonus_expires_at: body?.ai_limits?.bonus_expires_at,
+        },
+        notes: body?.notes,
+        updated_by: actor.email || actor.id || 'moderator',
+      });
+
+      return res.json({ data: nextSettings });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/create-school-account', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res
+          .status(403)
+          .json({ error: 'Only superadmin can create school accounts' });
+      }
+
+      const { email, password, schoolId, schoolName } =
+        validateCreateSchoolAccountPayload(req.body || {});
+      const existing = await resolveUserByEmail(email);
+      if (existing) {
+        return res.status(409).json({ error: 'User with this email already exists' });
+      }
+      const inferredSchoolId =
+        schoolId ||
+        `school-${String(email.split('@')[0] || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9._-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 60) || Date.now()}`;
+
+      const userMetadata = {
+        role: 'admin',
+        school_id: inferredSchoolId,
+        school_name: schoolName || '',
+        created_by: actor.email || actor.id || 'superadmin',
+      };
+      const appMetadata = {
+        role: 'admin',
+        school_id: inferredSchoolId,
+      };
+
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: userMetadata,
+        app_metadata: appMetadata,
+      });
+      if (error || !data?.user) {
+        return res
+          .status(400)
+          .json({ error: error?.message || 'Failed to create school account' });
+      }
+      await appendSchoolAccessLog({
+        email,
+        password,
+        schoolId: inferredSchoolId,
+        actor: actor.email || actor.id || 'superadmin',
+      });
+
+      return res.json({
+        data: {
+          id: data.user.id,
+          email: data.user.email || email,
+          role: 'admin',
+          schoolId: inferredSchoolId,
+        },
+      });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      next(error);
+    }
+  });
+
+  router.get('/school-access-log', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can view school access log' });
+      }
+      const data = await readSchoolAccessLog();
+      return res.json({ data });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/school-access-log', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can clear school access log' });
+      }
+      const data = await clearSchoolAccessLog();
+      return res.json({ data });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/school-access-log', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can update school access log' });
+      }
+      const id = String(req.body?.id || '').trim();
+      const email = String(req.body?.email || '')
+        .trim()
+        .toLowerCase();
+      const password = String(req.body?.password || '');
+      const schoolId = String(req.body?.schoolId || '').trim();
+      const createdAt = String(req.body?.createdAt || '').trim();
+      const status = String(req.body?.status || '')
+        .trim()
+        .toLowerCase();
+      if (!id || !email) {
+        return res.status(400).json({ error: 'id and email are required' });
+      }
+      if (status && !ALLOWED_STATUSES.has(status)) {
+        return res.status(400).json({ error: 'Invalid status. Use: создан, выдан, заполнен' });
+      }
+      const passwordForAuth = password.trim();
+      if (passwordForAuth && passwordForAuth !== '-' && passwordForAuth.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+
+      let authSync = 'skipped';
+      if (passwordForAuth && passwordForAuth !== '-') {
+        try {
+          const authUser = await resolveUserByEmail(email);
+          if (authUser?.id) {
+            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+              authUser.id,
+              { password: passwordForAuth }
+            );
+            if (updateError) {
+              authSync = 'failed';
+            } else {
+              authSync = 'ok';
+            }
+          } else {
+            authSync = 'user_not_found';
+          }
+        } catch {
+          authSync = 'failed';
+        }
+      }
+
+      const row = await upsertSchoolAccessLogEntry({
+        id,
+        email,
+        password,
+        schoolId,
+        createdAt,
+        status: status || 'создан',
+        actor: actor.email || actor.id || 'superadmin',
+      });
+      return res.json({ data: row, authSync });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch('/school-access-log/:id', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can update school access log' });
+      }
+      const id = String(req.params.id || '').trim();
+      const status = String(req.body?.status || '')
+        .trim()
+        .toLowerCase();
+      if (!id) {
+        return res.status(400).json({ error: 'id is required' });
+      }
+      if (!ALLOWED_STATUSES.has(status)) {
+        return res.status(400).json({ error: 'Invalid status. Use: создан, выдан, заполнен' });
+      }
+      const row = await updateSchoolAccessLogStatus(id, status);
+      if (!row) {
+        return res.status(404).json({ error: 'School access log entry not found' });
+      }
+      return res.json({ data: row });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/school-access-log/:id', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can update school access log' });
+      }
+      const id = String(req.params.id || '').trim();
+      if (!id) {
+        return res.status(400).json({ error: 'id is required' });
+      }
+      const ok = await deleteSchoolAccessLogEntry(id);
+      if (!ok) {
+        return res.status(404).json({ error: 'School access log entry not found' });
+      }
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/school-access-log/:id/full', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor);
+      if (actorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Only superadmin can delete school account data' });
+      }
+
+      const id = String(req.params.id || '').trim();
+      const email = String(req.query?.email || '')
+        .trim()
+        .toLowerCase();
+      const schoolId = String(req.query?.schoolId || '').trim();
+      if (!id) {
+        return res.status(400).json({ error: 'id is required' });
+      }
+
+      let userDeleted = false;
+      if (email) {
+        const authUser = await resolveUserByEmail(email);
+        if (authUser?.id) {
+          const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+          if (deleteUserError) {
+            return res.status(500).json({ error: deleteUserError.message || 'Failed to delete school admin user' });
+          }
+          userDeleted = true;
+        }
+      }
+
+      let schoolDeleted = false;
+      if (schoolId) {
+        await deleteSchool(schoolId);
+        schoolDeleted = true;
+      }
+
+      const logDeleted = await deleteSchoolAccessLogEntry(id);
+
+      return res.json({
+        ok: true,
+        data: {
+          logDeleted,
+          userDeleted,
+          schoolDeleted,
+        },
+      });
+    } catch (error) {
       next(error);
     }
   });

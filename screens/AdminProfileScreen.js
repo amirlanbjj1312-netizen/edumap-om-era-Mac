@@ -25,11 +25,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRole, ROLES } from '../context/RoleContext';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { useSchools } from '../context/SchoolsContext';
 import { images } from '../assets';
 import { useLocale } from '../context/LocaleContext';
 
-const GRADIENT_COLORS = ['#786AFF', '#4FCCFF'];
+const GRADIENT_COLORS = ['#E9EEF6', '#E9EEF6'];
 const AVATAR_KEY_PREFIX = 'EDUMAP_AVATAR_URI';
+
+const normalizeEmail = (value = '') => value.trim().toLowerCase();
+const buildFallbackSchoolId = (value) => {
+  const base = (value || 'school')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `local-${base || 'school'}`;
+};
 
 const Section = ({ title, children }) => (
   <View className="mb-7">
@@ -63,6 +75,7 @@ export default function AdminProfileScreen() {
   const navigation = useNavigation();
   const { setRole, isGuest, setGuest } = useRole();
   const { account } = useAuth();
+  const { profiles } = useSchools();
   const { t, locale, setLocale } = useLocale();
   const fullName = [account?.firstName, account?.lastName]
     .filter(Boolean)
@@ -78,6 +91,24 @@ export default function AdminProfileScreen() {
     return `${AVATAR_KEY_PREFIX}_${identity}`;
   }, [account?.id, account?.email]);
   const [avatarUri, setAvatarUri] = useState(null);
+
+  const schoolNotifications = useMemo(() => {
+    const email = normalizeEmail(account?.email || '');
+    const fallbackSchoolId = buildFallbackSchoolId(account?.email || account?.organization);
+    const profile =
+      profiles.find((item) => item?.school_id === fallbackSchoolId) ||
+      profiles.find(
+        (item) => normalizeEmail(item?.basic_info?.email || '') === email
+      );
+    const list = Array.isArray(profile?.system?.notifications)
+      ? profile.system.notifications
+      : [];
+    return [...list].sort(
+      (a, b) =>
+        new Date(b?.created_at || 0).getTime() -
+        new Date(a?.created_at || 0).getTime()
+    );
+  }, [account?.email, account?.organization, profiles]);
 
   useEffect(() => {
     let isMounted = true;
@@ -185,7 +216,7 @@ export default function AdminProfileScreen() {
     setRole(ROLES.STUDENT);
     navigation.reset({
       index: 0,
-      routes: [{ name: 'RoleSelect' }],
+      routes: [{ name: 'SignIn' }],
     });
   };
 
@@ -274,6 +305,41 @@ export default function AdminProfileScreen() {
                   <Text className="font-exo text-darkGrayText">
                     {t('adminProfile.section.schoolInfo.body')}
                   </Text>
+                </Section>
+
+                <Section title={t('adminProfile.section.notifications.title')}>
+                  {schoolNotifications.length ? (
+                    schoolNotifications.slice(0, 20).map((item) => {
+                      const unread = !item?.read_at;
+                      return (
+                        <View
+                          key={item?.id || `${item?.created_at}-${item?.text}`}
+                          style={[styles.notificationItem, unread && styles.notificationItemUnread]}
+                        >
+                          <Text className="font-exo text-darkGrayText">
+                            {item?.text || '—'}
+                          </Text>
+                          <Text style={styles.notificationMeta}>
+                            {t('adminProfile.section.notifications.from')} {item?.from || 'moderator'} ·{' '}
+                            {item?.created_at
+                              ? new Date(item.created_at).toLocaleString()
+                              : '—'}
+                          </Text>
+                          {unread ? (
+                            <View style={styles.notificationBadge}>
+                              <Text style={styles.notificationBadgeText}>
+                                {t('adminProfile.section.notifications.new')}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <Text className="font-exo text-darkGrayText/70">
+                      {t('adminProfile.section.notifications.empty')}
+                    </Text>
+                  )}
                 </Section>
 
                 <Pressable
@@ -368,5 +434,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#FFFFFF',
     marginBottom: 12,
+  },
+  notificationItem: {
+    borderWidth: 1,
+    borderColor: 'rgba(86, 103, 253, 0.2)',
+    borderRadius: 14,
+    padding: 10,
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  notificationItemUnread: {
+    borderColor: 'rgba(245, 158, 11, 0.45)',
+    backgroundColor: '#FFFBEB',
+  },
+  notificationMeta: {
+    fontFamily: 'exo',
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  notificationBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  notificationBadgeText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 12,
+    color: '#9A3412',
   },
 });

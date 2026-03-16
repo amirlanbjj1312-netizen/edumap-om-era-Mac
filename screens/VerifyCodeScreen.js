@@ -112,6 +112,7 @@ export default function VerifyCodeScreen() {
               params: {
                 firstName: signupValues?.name,
                 lastName: signupValues?.lastName,
+                required: true,
               },
             },
           ],

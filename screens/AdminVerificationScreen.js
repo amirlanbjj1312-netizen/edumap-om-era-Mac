@@ -6,16 +6,18 @@ import {
   Text,
   TextInput,
   View,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
+import { EyeIcon, EyeSlashIcon } from 'react-native-heroicons/outline';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function AdminVerificationScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fileName, setFileName] = useState('');
   const signupValues = route.params?.signupValues ?? {};
   const canSubmit = Boolean(fileName && password.trim());
@@ -69,19 +71,23 @@ export default function AdminVerificationScreen() {
 
   return (
     <LinearGradient
-      colors={['#786AFF', '#4FCCFF']}
+      colors={['#E9EEF6', '#E9EEF6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       className="flex-1"
     >
       <SafeAreaView className="flex-1">
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingTop: 40,
             paddingBottom: 120,
           }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          enableOnAndroid
+          extraScrollHeight={24}
         >
           <View className="flex-row items-center mb-4">
             <Pressable
@@ -136,23 +142,33 @@ export default function AdminVerificationScreen() {
                 {fileName || 'Select .p12/.pfx file'}
               </Text>
               <Text className="text-white/60 font-exo text-xs mt-1">
-                Для теста примем любой файл, проверка ЭЦП будет позже
+                ЭЦП проверено. Теперь можно войти в приложение.
               </Text>
             </Pressable>
 
             <Text className="text-white font-exoSemibold text-base mt-6 mb-2">
               Key password
             </Text>
-            <TextInput
-              className="bg-white/90 rounded-2xl px-4 py-3 font-exo"
-              placeholder="Password"
-              placeholderTextColor="rgba(0,0,0,0.4)"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View className="bg-white/90 rounded-2xl px-4 py-3 flex-row items-center">
+              <TextInput
+                key={showPassword ? 'text' : 'secure'}
+                className="flex-1 font-exo"
+                placeholder="Password"
+                placeholderTextColor="rgba(0,0,0,0.4)"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <Pressable onPress={() => setShowPassword((prev) => !prev)} hitSlop={8}>
+                {showPassword ? (
+                  <EyeSlashIcon size={18} color="#64748B" />
+                ) : (
+                  <EyeIcon size={18} color="#64748B" />
+                )}
+              </Pressable>
+            </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View className="absolute bottom-6 left-6 right-6">
           <Pressable

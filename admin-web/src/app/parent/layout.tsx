@@ -7,13 +7,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { isGuestMode, setGuestMode } from '@/lib/guestMode';
+import { useParentLocale } from '@/lib/parentLocale';
 
 const NAV_ITEMS = [
-  { href: '/parent/news', label: 'Новости' },
-  { href: '/parent/schools', label: 'Школы' },
-  { href: '/parent/courses', label: 'Курсы' },
-  { href: '/parent/chat', label: 'Чат' },
-  { href: '/parent/profile', label: 'Профиль' },
+  { href: '/parent/news', labelKey: 'nav_news' },
+  { href: '/parent/schools', labelKey: 'nav_schools' },
+  { href: '/parent/profile', labelKey: 'nav_profile' },
 ];
 
 export default function ParentLayout({ children }: { children: ReactNode }) {
@@ -21,6 +20,77 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [guest, setGuest] = useState(false);
+  const { t, locale } = useParentLocale();
+  const isMapFullscreen = pathname === '/parent/schools/map' || pathname.startsWith('/parent/schools/map/');
+  const footerUi =
+    locale === 'en'
+      ? {
+          roleTag: 'Parent account',
+          navTitle: 'Navigation',
+          socialsTitle: 'Social',
+          contactsTitle: 'Contacts',
+          legalTitle: 'Legal',
+          support: 'Support',
+          faq: 'FAQ',
+          compare: 'Comparison',
+          schools: 'Schools',
+          news: 'News',
+          profile: 'Profile',
+          instagram: 'Instagram',
+          telegram: 'Telegram',
+          whatsapp: 'WhatsApp',
+          phonePrimary: '+7 747 550 0012',
+          phoneSecondary: '+7 701 536 4689',
+          email: 'info@edumap.kz',
+          privacy: 'Privacy policy',
+          terms: 'Terms of use',
+          rights: 'All rights reserved.',
+        }
+      : locale === 'kk'
+        ? {
+            roleTag: 'Ата-ана кабинеті',
+            navTitle: 'Навигация',
+            socialsTitle: 'Әлеуметтік желілер',
+            contactsTitle: 'Байланыс',
+            legalTitle: 'Құқықтық ақпарат',
+            support: 'Қолдау',
+            faq: 'FAQ',
+            compare: 'Салыстыру',
+            schools: 'Мектептер',
+            news: 'Жаңалықтар',
+            profile: 'Профиль',
+            instagram: 'Instagram',
+            telegram: 'Telegram',
+            whatsapp: 'WhatsApp',
+            phonePrimary: '+7 747 550 0012',
+            phoneSecondary: '+7 701 536 4689',
+            email: 'info@edumap.kz',
+            privacy: 'Құпиялық саясаты',
+            terms: 'Платформа ережелері',
+            rights: 'Барлық құқықтар қорғалған.',
+          }
+        : {
+            roleTag: 'Кабинет родителя',
+            navTitle: 'Навигация',
+            socialsTitle: 'Мы в соцсетях',
+            contactsTitle: 'Контакты',
+            legalTitle: 'Правовая информация',
+            support: 'Поддержка',
+            faq: 'FAQ',
+            compare: 'Сравнение',
+            schools: 'Школы',
+            news: 'Новости',
+            profile: 'Профиль',
+            instagram: 'Instagram',
+            telegram: 'Telegram',
+            whatsapp: 'WhatsApp',
+            phonePrimary: '+7 747 550 0012',
+            phoneSecondary: '+7 701 536 4689',
+            email: 'info@edumap.kz',
+            privacy: 'Политика конфиденциальности',
+            terms: 'Правила пользования',
+            rights: 'Все права защищены.',
+          };
 
   useEffect(() => {
     let mounted = true;
@@ -82,7 +152,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
     return (
       <div className="page">
         <div className="container">
-          <div className="card">Проверяем сессию...</div>
+          <div className="card">{t('checking_session')}</div>
         </div>
       </div>
     );
@@ -91,25 +161,84 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   return (
     <div className="page">
       <div className="container">
-        <header className="topbar">
-          <div className="brand">EDUMAP Parent</div>
-          <nav className="topnav">
-            {guest ? <span className="guest-pill">Гость</span> : null}
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'active' : ''}
-              >
-                {item.label}
+        {!isMapFullscreen ? (
+          <header className="topbar">
+            <div className="topbar-brand-wrap">
+              <Link href="/parent/schools" className="brand parent-brand">
+                EDUMAP
               </Link>
-            ))}
-            <button type="button" className="topnav-logout" onClick={handleSignOut}>
-              Выйти
-            </button>
-          </nav>
-        </header>
+            </div>
+            <nav className={`topnav ${guest ? 'guest-nav' : ''}`}>
+              {guest ? <span className="guest-pill">{t('guest')}</span> : null}
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'active' : ''} ${guest ? 'guest-nav-item' : ''}`}
+                >
+                  {t(item.labelKey)}
+                </Link>
+              ))}
+              <button type="button" className="topnav-logout" onClick={handleSignOut}>
+                {t('logout')}
+              </button>
+            </nav>
+          </header>
+        ) : null}
         <main>{children}</main>
+        {!isMapFullscreen ? (
+          <footer className="app-footer parent-app-footer">
+            <div className="app-footer-main">
+              <div className="app-footer-grid">
+                <div className="app-footer-col app-footer-brand-col">
+                  <p className="app-footer-brand">EDUMAP Parent</p>
+                  <p className="app-footer-text">{footerUi.roleTag}</p>
+                </div>
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.navTitle}</p>
+                  <Link href="/parent/news">{footerUi.news}</Link>
+                  <Link href="/parent/schools">{footerUi.schools}</Link>
+                  <Link href="/parent/profile">{footerUi.profile}</Link>
+                </div>
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.socialsTitle}</p>
+                  <a href="#" aria-disabled="true">
+                    {footerUi.instagram}
+                  </a>
+                  <a href="#" aria-disabled="true">
+                    {footerUi.telegram}
+                  </a>
+                  <a href="#" aria-disabled="true">
+                    {footerUi.whatsapp}
+                  </a>
+                </div>
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.contactsTitle}</p>
+                  <a href={`tel:${footerUi.phonePrimary.replace(/\s+/g, '')}`}>
+                    {footerUi.phonePrimary}
+                  </a>
+                  <a href={`tel:${footerUi.phoneSecondary.replace(/\s+/g, '')}`}>
+                    {footerUi.phoneSecondary}
+                  </a>
+                  <a href={`mailto:${footerUi.email}`}>{footerUi.email}</a>
+                </div>
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.legalTitle}</p>
+                  <a href="#" aria-disabled="true">
+                    {footerUi.privacy}
+                  </a>
+                  <a href="#" aria-disabled="true">
+                    {footerUi.terms}
+                  </a>
+                  <Link href="/parent/faq">{footerUi.faq}</Link>
+                </div>
+              </div>
+              <div className="app-footer-bottom">
+                © {new Date().getFullYear()} EDUMAP. {footerUi.rights}
+              </div>
+            </div>
+          </footer>
+        ) : null}
       </div>
     </div>
   );
