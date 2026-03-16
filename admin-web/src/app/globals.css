@@ -1363,6 +1363,62 @@ a {
   justify-content: center;
 }
 
+.schools-mobile-filter-bar {
+  display: none;
+  margin: 12px 0 14px;
+}
+
+.schools-mobile-filter-trigger {
+  width: 100%;
+  justify-content: center;
+}
+
+.schools-mobile-filter-trigger.active {
+  background: #eaf2ff;
+  border-color: #7da6f2;
+  color: #2f63c9;
+}
+
+.schools-mobile-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: rgba(18, 28, 56, 0.36);
+  padding: 16px;
+}
+
+.schools-mobile-filter-panel {
+  width: min(100%, 440px);
+  max-height: calc(100vh - 32px);
+  margin: 0 auto;
+  overflow: auto;
+  border-radius: 20px;
+}
+
+.schools-mobile-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.schools-mobile-filter-head .schools-filter-title {
+  margin: 0;
+}
+
+.schools-mobile-filter-close {
+  border: 1px solid #d7dfef;
+  background: #fff;
+  color: #41537a;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .booking-cards-grid {
   grid-template-columns: 1fr;
   gap: 14px;
@@ -3978,8 +4034,9 @@ a {
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
   }
 
   .brand {
@@ -4029,7 +4086,11 @@ a {
   }
 
   .schools-filter-sidebar {
-    position: static;
+    display: none;
+  }
+
+  .schools-mobile-filter-bar {
+    display: block;
   }
 
   .booking-cards-grid {
