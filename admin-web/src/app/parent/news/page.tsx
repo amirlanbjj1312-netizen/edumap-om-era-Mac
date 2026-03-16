@@ -183,7 +183,36 @@ const pickLocalized = (item: NewsItem, locale: 'ru' | 'en' | 'kk') => {
   );
 };
 
-const toCategory = (item: NewsItem) => String(item.category || '').trim().toLowerCase();
+const CATEGORY_ORDER = ['announcements', 'tips', 'events', 'competitions'] as const;
+type NewsCategory = (typeof CATEGORY_ORDER)[number];
+
+const CATEGORY_ALIASES: Record<NewsCategory, string[]> = {
+  announcements: [
+    'announcements',
+    'announcement',
+    'объявления',
+    'объявление',
+    'жаңалықтар',
+    'хабарландыру',
+    'admissions',
+    'admission',
+  ],
+  tips: ['tips', 'tip', 'полезные советы', 'советы', 'пайдалы кеңестер'],
+  events: ['events', 'event', 'события', 'событие', 'оқиғалар', 'оқиға'],
+  competitions: ['competitions', 'competition', 'конкурсы', 'конкурс', 'байқаулар', 'байқау'],
+};
+
+const normalizeNewsCategory = (value: unknown): NewsCategory => {
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase();
+  for (const key of CATEGORY_ORDER) {
+    if (CATEGORY_ALIASES[key].includes(raw)) return key;
+  }
+  return 'announcements';
+};
+
+const toCategory = (item: NewsItem) => normalizeNewsCategory(item.category);
 const toTimestamp = (item: NewsItem) => {
   const raw = String(item.published_at || item.publishedAt || item.updatedAt || '').trim();
   const ts = Date.parse(raw);
@@ -218,9 +247,6 @@ const isPublishedNews = (item: NewsItem) => {
   return ['true', '1', 'yes', 'on'].includes(normalized);
 };
 
-const CATEGORY_ORDER = ['announcements', 'tips', 'events', 'competitions'] as const;
-type NewsCategory = (typeof CATEGORY_ORDER)[number];
-
 const CATEGORY_LABELS: Record<NewsCategory, { ru: string; en: string; kk: string }> = {
   announcements: { ru: 'Объявления', en: 'Announcements', kk: 'Хабарландырулар' },
   tips: { ru: 'Полезные советы', en: 'Useful tips', kk: 'Пайдалы кеңестер' },
@@ -243,6 +269,10 @@ export default function ParentNewsPage() {
       .then((payload) => {
         if (!mounted) return;
         setRows(Array.isArray(payload?.data) ? payload.data : []);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setRows([]);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -293,9 +323,11 @@ export default function ParentNewsPage() {
       .filter((item) => isImportantNews(item))
       .sort((a, b) => toTimestamp(b) - toTimestamp(a));
     if (flagged.length) return flagged;
-    return visibleRows
+    const announcements = visibleRows
       .filter((item) => toCategory(item) === 'announcements')
       .sort((a, b) => toTimestamp(b) - toTimestamp(a));
+    if (announcements.length) return announcements;
+    return [...visibleRows].sort((a, b) => toTimestamp(b) - toTimestamp(a));
   }, [visibleRows]);
   const categoryNews = useMemo(
     () =>
