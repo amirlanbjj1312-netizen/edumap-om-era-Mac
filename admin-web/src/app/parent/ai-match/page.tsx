@@ -312,7 +312,7 @@ export default function ParentAiMatchPage() {
           .filter(Boolean)
       )
     ) as Array<'astana' | 'almaty'>;
-    const keys = cityKeys.length ? cityKeys : ['astana'];
+    const keys: Array<'astana' | 'almaty'> = cityKeys.length ? cityKeys : ['astana'];
     return keys.map((key) => ({ key, label: CITY_LABELS[key][locale] }));
   }, [rows, locale]);
 

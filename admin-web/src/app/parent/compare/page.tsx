@@ -465,7 +465,14 @@ export default function ParentComparePage() {
         case 'medicalOffice':
           return asBoolText(getIn(school, 'services.medical_office'), locale);
         case 'monthly':
-          return formatSchoolFee(school, locale, '—');
+          return formatSchoolFee(
+            {
+              finance: school.finance,
+              basic_info: { price: getIn(school, 'basic_info.price') },
+            },
+            locale,
+            '—'
+          );
         case 'monthlyByGrade':
           return formatGradeFees(school.finance, locale);
         case 'discounts':
