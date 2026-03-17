@@ -1438,19 +1438,22 @@ export default function ParentSchoolsPage() {
                       </div>
                       <div className="market-school-main">
                         <p className="parent-school-name">{schoolTitle}</p>
-                        <p className="market-school-city">
-                          {localizeOption(
-                            toText(row.basic_info?.city) ||
-                              toText(row.basic_info?.district) ||
-                              t('city_default')
-                          ).toUpperCase()}
-                        </p>
-                        <p className="muted market-school-phone">{schoolTypeLabel || t('not_specified')}</p>
+                        <div className="parent-school-badges">
+                          <span className="school-chip parent-school-badge">
+                            {localizeOption(
+                              toText(row.basic_info?.city) ||
+                                toText(row.basic_info?.district) ||
+                                t('city_default')
+                            ).toUpperCase()}
+                          </span>
+                          <span className="school-chip parent-school-badge">
+                            {schoolTypeLabel || t('not_specified')}
+                          </span>
+                        </div>
                         <p className="muted market-school-phone">{formatKzPhone(toText(row.basic_info?.phone)) || t('phone_unknown')}</p>
                         {isPrivateSchool ? (
                           <p className="market-school-price">
-                            {priceLabel}:{' '}
-                            {formattedFee}
+                            {priceLabel}: {formattedFee}
                           </p>
                         ) : null}
                       </div>

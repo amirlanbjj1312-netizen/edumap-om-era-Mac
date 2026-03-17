@@ -1026,11 +1026,14 @@ a {
   min-width: 220px;
   max-width: 220px;
   flex: 0 0 220px;
+  min-height: 58px;
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .market-chip.active {
@@ -1953,6 +1956,19 @@ a {
   overflow-wrap: anywhere;
   color: #1f2a44;
   letter-spacing: -0.01em;
+}
+
+.parent-school-badges {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.parent-school-badge {
+  background: #f1f5ff;
+  border-color: #d8e2fb;
+  color: #355fb9;
 }
 
 .market-school-city {
@@ -4176,31 +4192,27 @@ a {
   }
 
   .market-school-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 76px minmax(0, 1fr);
     align-items: start;
-    gap: 12px;
+    gap: 10px;
   }
 
   .school-image-placeholder {
-    width: 100%;
-    height: 168px;
-    border-radius: 16px;
-    font-size: 28px;
+    width: 76px;
+    height: 76px;
+    border-radius: 14px;
+    font-size: 24px;
   }
 
   .school-image-placeholder img {
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    inset: 5px;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+    object-fit: contain;
   }
 
   .market-school-main {
     min-width: 0;
-  }
-
-  .market-school-city {
-    margin-top: 2px;
   }
 
   .market-school-phone {
@@ -4208,18 +4220,18 @@ a {
   }
 
   .market-school-price {
-    margin-top: 8px;
-    color: #1f355d;
+    margin-top: 10px;
+    color: #2f63c9;
     font-weight: 800;
-    font-size: 17px;
-    line-height: 1.3;
+    font-size: 18px;
+    line-height: 1.25;
   }
 
   .market-school-side-actions {
     grid-column: 1 / -1;
     width: 100%;
     min-width: 0;
-    margin-top: 0;
+    margin-top: 2px;
     align-items: stretch;
   }
 
@@ -4229,32 +4241,31 @@ a {
   }
 
   .parent-school-name {
-    font-size: 26px;
-    line-height: 1.12;
+    font-size: 17px;
+    line-height: 1.2;
     overflow-wrap: anywhere;
   }
 
-  .market-school-city,
   .market-school-phone,
   .market-school-price {
     overflow-wrap: anywhere;
   }
 
   .parent-school-meta {
-    margin-top: 12px;
+    margin-top: 8px;
   }
 
   .parent-school-expand-hint {
-    margin-top: 12px;
+    margin-top: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 48px;
-    border-radius: 14px;
+    min-height: 44px;
+    border-radius: 12px;
     background: #eef3ff;
     border: 1px solid #d6e0f7;
     color: #355fb9;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
   }
 
