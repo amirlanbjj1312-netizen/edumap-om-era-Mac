@@ -1021,8 +1021,7 @@ export default function ParentSchoolsPage() {
   ].filter(Boolean).length;
 
   const filtersContent = (
-    <div className="schools-filter-card">
-      <p className="schools-filter-title">{ft('filters')}</p>
+    <>
       <label className="field">
         <span>{ft('city')}</span>
         <select className="input" value={cityFilter} onChange={(e) => {
@@ -1219,7 +1218,7 @@ export default function ParentSchoolsPage() {
       <button type="button" className="button secondary schools-filter-reset" onClick={resetFilters}>
         {ft('reset')}
       </button>
-    </div>
+    </>
   );
 
   return (
@@ -1290,7 +1289,6 @@ export default function ParentSchoolsPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="schools-mobile-filter-head">
-              <p className="schools-filter-title">{ft('filters')}</p>
               <button
                 type="button"
                 className="schools-mobile-filter-close"
@@ -1299,15 +1297,43 @@ export default function ParentSchoolsPage() {
               >
                 ×
               </button>
+              <p className="schools-mobile-filter-heading">{ft('filters')}</p>
+              <button
+                type="button"
+                className="schools-mobile-filter-clear"
+                onClick={resetFilters}
+              >
+                {ft('reset')}
+              </button>
             </div>
-            {filtersContent}
+            <div className="schools-mobile-filter-scroll">
+              <div className="schools-filter-card schools-filter-card-mobile">
+                {filtersContent}
+              </div>
+            </div>
+            <div className="schools-mobile-filter-actions">
+              <button
+                type="button"
+                className="button schools-mobile-filter-apply"
+                onClick={() => setMobileFiltersOpen(false)}
+              >
+                {locale === 'en'
+                  ? `Show ${sortedRows.length} results`
+                  : locale === 'kk'
+                    ? `${sortedRows.length} нәтижені көрсету`
+                    : `Показать ${sortedRows.length} результатов`}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
 
       <div className="schools-booking-layout">
         <aside className="schools-filter-sidebar">
-          {filtersContent}
+          <div className="schools-filter-card">
+            <p className="schools-filter-title">{ft('filters')}</p>
+            {filtersContent}
+          </div>
           {guest ? <p className="muted">{t('guest_schools_note')}</p> : null}
         </aside>
 
