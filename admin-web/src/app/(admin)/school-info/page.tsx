@@ -2902,14 +2902,6 @@ export default function SchoolInfoPage() {
                     />
                   </FieldRow>
                   <FieldRow>
-                    <SubjectPicker
-                      label="Предметы для вступительного"
-                      options={withCurrentOptions(TEACHER_SUBJECT_OPTIONS, subjectsValues)}
-                      values={subjectsValues}
-                      onChange={(next: string[]) =>
-                        updateStudentSuccessStory(index, { admission_subjects: next.join(', ') })
-                      }
-                    />
                     <Input
                       label="Срок подачи документов"
                       type="date"
