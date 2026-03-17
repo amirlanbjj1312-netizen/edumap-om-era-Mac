@@ -90,6 +90,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         stages: { ru: '', en: '', kk: '' },
       },
       admission_details: {
+        has_available_seats: false,
         seats_by_grade: '',
         enrollment_period: '',
         document_deadlines: '',

@@ -1737,6 +1737,12 @@ export default function SchoolInfoPage() {
     () => parseSeatGradesValue(getDeep(profile, 'education.admission_details.seats_by_grade')),
     [profile]
   );
+  const hasAvailableSeats = useMemo(
+    () =>
+      Boolean(getDeep(profile, 'education.admission_details.has_available_seats')) ||
+      seatGradesValue.length > 0,
+    [profile, seatGradesValue.length]
+  );
   const getStudentSuccessStories = () => {
     const raw = getDeep(profile, 'education.results.student_success_stories', []);
     if (!Array.isArray(raw)) return [];
@@ -3207,13 +3213,13 @@ export default function SchoolInfoPage() {
         <FieldRow>
           <Toggle
             label="Есть свободные места"
-            checked={seatGradesValue.length > 0}
-            onChange={(value: boolean) =>
-              updateField(
-                'education.admission_details.seats_by_grade',
-                value ? formatSeatGradesValue(seatGradesValue) : ''
-              )
-            }
+            checked={hasAvailableSeats}
+            onChange={(value: boolean) => {
+              updateField('education.admission_details.has_available_seats', value);
+              if (!value) {
+                updateField('education.admission_details.seats_by_grade', '');
+              }
+            }}
           />
           <Select
             label="Период набора"
@@ -3233,7 +3239,7 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
-        {seatGradesValue.length > 0 ? (
+        {hasAvailableSeats ? (
           <CheckboxGroup
             label="Свободные места по классам"
             options={ADMISSION_SEAT_GRADE_OPTIONS}
