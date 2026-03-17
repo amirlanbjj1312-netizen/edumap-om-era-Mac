@@ -2974,24 +2974,6 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <SubjectPicker
-            label="Предметы"
-            options={withCurrentOptions(
-              TEACHER_SUBJECT_OPTIONS,
-              normalizeListValue(getDeep(profile, 'education.entrance_exam.subjects', ''))
-            )}
-            values={normalizeListValue(getDeep(profile, 'education.entrance_exam.subjects', ''))}
-            onChange={(next: string[]) => updateListField('education.entrance_exam.subjects', next)}
-          />
-          <Input
-            label="Предметы (доп.)"
-            value={getDeep(profile, localePath('education.entrance_exam.subjects_other'))}
-            onChange={(value: string) =>
-              updateField(localePath('education.entrance_exam.subjects_other'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
           <TextArea
             label="Этапы"
             value={getDeep(profile, localePath('education.entrance_exam.stages'))}
