@@ -1251,7 +1251,7 @@ export default function SchoolInfoPage() {
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<
-    'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
+    'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   >('basic');
   const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
   const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | 'deputy_principal' | null>(null);
@@ -1355,7 +1355,7 @@ export default function SchoolInfoPage() {
     updateField('services.nurses', selected.includes('Медсестра'));
   };
   const changeTab = (
-    tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
+    tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   ) => {
     setActiveTab(tab);
     requestAnimationFrame(() => {
@@ -2307,6 +2307,13 @@ export default function SchoolInfoPage() {
           </button>
           <button
             type="button"
+            className={activeTab === 'clubs' ? 'active' : ''}
+            onClick={() => changeTab('clubs')}
+          >
+            {t('Кружки')}
+          </button>
+          <button
+            type="button"
             className={activeTab === 'media' ? 'active' : ''}
             onClick={() => changeTab('media')}
           >
@@ -3184,6 +3191,7 @@ export default function SchoolInfoPage() {
           )}
 
           {activeTab === 'services' && (
+            <>
             <Section title="Сервисы">
         <FieldRow>
           <Select
@@ -3363,6 +3371,35 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
+        <FieldRow>
+          <Toggle
+            label="Транспорт"
+            checked={Boolean(getDeep(profile, 'services.transport'))}
+            onChange={(value: boolean) => updateField('services.transport', value)}
+          />
+          <Toggle
+            label="Инклюзив"
+            checked={Boolean(getDeep(profile, 'services.inclusive_education'))}
+            onChange={(value: boolean) => updateField('services.inclusive_education', value)}
+          />
+          <Toggle
+            label="Продленка"
+            checked={Boolean(getDeep(profile, 'services.after_school'))}
+            onChange={(value: boolean) => updateField('services.after_school', value)}
+          />
+        </FieldRow>
+        {Boolean(getDeep(profile, 'services.after_school')) ? (
+          <FieldRow>
+            <Input
+              label="До скольки"
+              type="time"
+              value={getDeep(profile, 'services.after_school_until')}
+              onChange={(value: string) => updateField('services.after_school_until', value)}
+            />
+          </FieldRow>
+        ) : null}
+        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
+            </Section>
         <Section title="Руководство школы">
           <div className="teacher-list">
             {leadershipMembers.map(({ key, title, member }) => {
@@ -3739,7 +3776,11 @@ export default function SchoolInfoPage() {
             <p className="muted">{t('Добавьте хотя бы одного преподавателя.')}</p>
           )}
         </Section>
-        <Section title="Каталог кружков и секций">
+          </>
+          )}
+
+        {activeTab === 'clubs' && (
+          <Section title="Каталог кружков и секций">
           {clubsCatalog.length ? (
             <div className="teacher-list">
               {clubsCatalog.map((club: any, index: number) => {
@@ -4132,37 +4173,8 @@ export default function SchoolInfoPage() {
               </div>
             </>
           )}
-        </Section>
-        <FieldRow>
-          <Toggle
-            label="Транспорт"
-            checked={Boolean(getDeep(profile, 'services.transport'))}
-            onChange={(value: boolean) => updateField('services.transport', value)}
-          />
-          <Toggle
-            label="Инклюзив"
-            checked={Boolean(getDeep(profile, 'services.inclusive_education'))}
-            onChange={(value: boolean) => updateField('services.inclusive_education', value)}
-          />
-          <Toggle
-            label="Продленка"
-            checked={Boolean(getDeep(profile, 'services.after_school'))}
-            onChange={(value: boolean) => updateField('services.after_school', value)}
-          />
-        </FieldRow>
-        {Boolean(getDeep(profile, 'services.after_school')) ? (
-          <FieldRow>
-            <Input
-              label="До скольки"
-              type="time"
-              value={getDeep(profile, 'services.after_school_until')}
-              onChange={(value: string) => updateField('services.after_school_until', value)}
-            />
-          </FieldRow>
-        ) : null}
-        {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
-            </Section>
-          )}
+          </Section>
+        )}
 
           {activeTab === 'media' && (
             <Section title="Медиа">
