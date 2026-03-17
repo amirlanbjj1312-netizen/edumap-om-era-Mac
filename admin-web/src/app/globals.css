@@ -4224,7 +4224,7 @@ a {
   .market-school-row {
     grid-template-columns: 76px minmax(0, 1fr);
     align-items: start;
-    gap: 20px;
+    gap: 16px;
   }
 
   .school-image-placeholder {
@@ -4243,7 +4243,8 @@ a {
 
   .market-school-main {
     min-width: 0;
-    padding-top: 10px;
+    padding-top: 6px;
+    padding-left: 6px;
   }
 
   .market-school-phone {
@@ -4262,7 +4263,7 @@ a {
     grid-column: 1 / -1;
     width: 100%;
     min-width: 0;
-    margin-top: 2px;
+    margin-top: -2px;
     align-items: stretch;
   }
 
@@ -4292,11 +4293,11 @@ a {
   }
 
   .parent-school-meta {
-    margin-top: 4px;
+    margin-top: 0;
   }
 
   .parent-school-expand-hint {
-    margin-top: 10px;
+    margin-top: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
