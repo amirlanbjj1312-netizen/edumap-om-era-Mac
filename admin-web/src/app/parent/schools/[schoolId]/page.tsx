@@ -131,7 +131,7 @@ const SECTION_TITLES: Record<string, { ru: string; en: string; kk: string }> = {
   media: { ru: 'Социальные сети', en: 'Social media', kk: 'Әлеуметтік желілер' },
   services: { ru: 'Сервис и безопасность', en: 'Services and safety', kk: 'Қызмет пен қауіпсіздік' },
   reviews: { ru: 'Отзывы', en: 'Reviews', kk: 'Пікірлер' },
-  staff: { ru: 'Преподавательский состав', en: 'Teaching staff', kk: 'Педагог құрамы' },
+  staff: { ru: 'Команда школы', en: 'School team', kk: 'Мектеп командасы' },
 };
 
 type IconKind = 'type' | 'price' | 'address' | 'city' | 'district' | 'rating' | 'phone' | 'education' | 'info' | 'globe' | 'shield' | 'chat' | 'user';
@@ -320,6 +320,21 @@ const mergeUniqueRows = (
     seen.add(key);
   }
   return out;
+};
+
+const localizeCuratorFormat = (value: string, locale: 'ru' | 'en' | 'kk') => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'per_class') {
+    return locale === 'en' ? 'One per class' : locale === 'kk' ? 'Әр сыныпқа бір куратор' : 'По одному на класс';
+  }
+  if (normalized === 'by_parallel') {
+    return locale === 'en' ? 'By grade level' : locale === 'kk' ? 'Параллельдер бойынша' : 'По параллелям';
+  }
+  if (normalized === 'curator_service') {
+    return locale === 'en' ? 'Curator service' : locale === 'kk' ? 'Кураторлық қызмет' : 'Кураторская служба';
+  }
+  return value;
 };
 
 const pickImage = (source: unknown) => {
@@ -905,45 +920,7 @@ export default function ParentSchoolDetailsPage() {
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
   ].filter((item) => item.value);
-  const basicInfoExtraRows = flattenDetails(getIn(school, 'basic_info')).filter((row) => {
-    const label = row.label.toLowerCase();
-    if (!row.value?.trim()) return false;
-    return ![
-      'название',
-      'отображаемое название',
-      'тип школы',
-      'подтип школы',
-      'город',
-      'район',
-      'адрес',
-      'телефон',
-      'whatsapp',
-      'email',
-      'сайт',
-      'координаты',
-      'широта',
-      'долгота',
-      'price',
-      'logo',
-      'photos',
-      'videos',
-      'certificates',
-    ].some((item) => label === item);
-  });
-  const contactRows = mergeUniqueRows(
-    contactItems.map((item) => ({ label: item.label, value: item.value })),
-    basicInfoExtraRows
-  ).filter((row) => {
-    const normalized = row.label.toLowerCase().trim();
-    return ![
-      'адрес',
-      'район',
-      'address',
-      'district',
-      'мекенжай',
-      'аудан',
-    ].includes(normalized);
-  });
+  const contactRows = contactItems.map((item) => ({ label: item.label, value: item.value }));
   const educationLanguages = localizeUniqueList(getIn(school, 'education.languages'), locale);
   const educationPrograms = Array.from(
     new Set(
@@ -1055,17 +1032,35 @@ export default function ParentSchoolDetailsPage() {
             item.student_photo
         )
     : [];
-  const staffRaw = getIn(school, 'services.teaching_staff.members');
-  const staffItems = Array.isArray(staffRaw)
-    ? staffRaw
-        .map((item) => {
-          if (!item || typeof item !== 'object') return null;
-          const nameValue = toText((item as Record<string, unknown>).name) || 'Преподаватель';
-          const roleValue = toText((item as Record<string, unknown>).position) || toText((item as Record<string, unknown>).role);
-          return { label: nameValue, value: roleValue || '—' };
-        })
-        .filter(Boolean) as Array<{ label: string; value: string }>
-    : [];
+  const teamRows = [
+    {
+      label: locale === 'en' ? 'Principal' : locale === 'kk' ? 'Директор' : 'Директор',
+      value: pickFirstText(school, ['basic_info.team.principal']),
+    },
+    {
+      label: locale === 'en' ? 'Deputy principal' : locale === 'kk' ? 'Директор орынбасары' : 'Зам. директора',
+      value: pickFirstText(school, ['basic_info.team.deputy_principal']),
+    },
+    {
+      label: locale === 'en' ? 'Class curators' : locale === 'kk' ? 'Сынып кураторлары' : 'Кураторы классов',
+      value: getIn(school, 'basic_info.team.class_curators_enabled') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Curator format' : locale === 'kk' ? 'Куратор форматы' : 'Формат кураторства',
+      value: localizeCuratorFormat(
+        pickFirstText(school, ['basic_info.team.class_curators_format']),
+        locale
+      ),
+    },
+    {
+      label: locale === 'en' ? 'Curator comment' : locale === 'kk' ? 'Куратор түсіндірмесі' : 'Комментарий по кураторам',
+      value: pickFirstText(
+        school,
+        ['basic_info.team.class_curators_comment', 'basic_info.team.class_curators'],
+        ''
+      ),
+    },
+  ].filter((item) => item.value);
   const socialLinksRaw: Array<{ key: SocialKey; label: string; value: string; href: string }> = [
     {
       key: 'instagram',
@@ -1135,6 +1130,7 @@ export default function ParentSchoolDetailsPage() {
         photo_url: toText(item.photo_url),
       }))
     : [];
+  const hasTeamSection = teamRows.length > 0 || teachers.length > 0;
   const serviceRows = [
     { label: locale === 'en' ? 'After-school care' : locale === 'kk' ? 'Ұзартылған күн' : 'Продленка', value: getIn(school, 'services.after_school') ? ui.available : ui.unavailable },
     {
@@ -1520,7 +1516,9 @@ export default function ParentSchoolDetailsPage() {
               section.key === 'reviews'
                 ? reviewItems
                 : section.key === 'staff'
-                  ? staffItems
+                  ? hasTeamSection
+                    ? [{ label: 'team', value: 'team' }]
+                    : []
                   : section.key === 'services'
                     ? servicesAllRows
                     : section.key === 'basic_info'
@@ -1733,28 +1731,40 @@ export default function ParentSchoolDetailsPage() {
                       </div>
                     ) : section.key === 'staff' ? (
                       <div className="school-staff-wrap">
-                        <div className="school-staff-filters">
-                          <span>{ui.allSubjects}</span>
-                          <span>{ui.anyExperience}</span>
-                          <span>{ui.allLanguages}</span>
-                        </div>
-                        <div className="school-staff-grid">
-                          {teachers.length ? (
-                            teachers.map((teacher, idx) => (
-                              <button key={`${teacher.full_name}-${idx}`} type="button" className="school-staff-card" onClick={() => setActiveTeacher(teacher)}>
-                                {teacher.photo_url ? (
-                                  <Image src={teacher.photo_url} alt={teacher.full_name} width={160} height={130} className="school-staff-photo" unoptimized />
-                                ) : (
-                                  <div className="school-staff-photo school-staff-photo-empty">{teacher.full_name.slice(0, 1)}</div>
-                                )}
-                                <p className="school-staff-name">{teacher.full_name}</p>
-                                <p className="muted">{teacher.subjects || teacher.position || '—'}</p>
-                              </button>
-                            ))
-                          ) : (
-                            <p className="muted" style={{ margin: 0 }}>{ui.teachersEmpty}</p>
-                          )}
-                        </div>
+                        {teamRows.length ? (
+                          <div className="school-service-list" style={{ marginBottom: teachers.length ? 16 : 0 }}>
+                            {teamRows.map((row, index) => (
+                              <div key={`${row.label}-${index}`} className="school-service-item">
+                                <p>{row.label}</p>
+                                <strong>{row.value}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {teachers.length ? (
+                          <>
+                            <div className="school-staff-filters">
+                              <span>{ui.allSubjects}</span>
+                              <span>{ui.anyExperience}</span>
+                              <span>{ui.allLanguages}</span>
+                            </div>
+                            <div className="school-staff-grid">
+                              {teachers.map((teacher, idx) => (
+                                <button key={`${teacher.full_name}-${idx}`} type="button" className="school-staff-card" onClick={() => setActiveTeacher(teacher)}>
+                                  {teacher.photo_url ? (
+                                    <Image src={teacher.photo_url} alt={teacher.full_name} width={160} height={130} className="school-staff-photo" unoptimized />
+                                  ) : (
+                                    <div className="school-staff-photo school-staff-photo-empty">{teacher.full_name.slice(0, 1)}</div>
+                                  )}
+                                  <p className="school-staff-name">{teacher.full_name}</p>
+                                  <p className="muted">{teacher.subjects || teacher.position || '—'}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : !teamRows.length ? (
+                          <p className="muted" style={{ margin: 0 }}>{ui.teachersEmpty}</p>
+                        ) : null}
                       </div>
                     ) : (
                       <dl>
