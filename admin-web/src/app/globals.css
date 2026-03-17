@@ -2673,6 +2673,38 @@ a {
   gap: 10px;
 }
 
+.school-service-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-service-card {
+  border: 1px solid #d8e2f3;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(104, 130, 196, 0.08);
+}
+
+.school-service-card.is-positive {
+  border-color: #cddcf9;
+  background: linear-gradient(180deg, #f9fcff 0%, #eef5ff 100%);
+}
+
+.school-service-card p {
+  margin: 0 0 6px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.school-service-card strong {
+  display: block;
+  color: #1f2a44;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
 .school-service-item p {
   margin: 0;
   color: #6b7280;
@@ -2870,6 +2902,22 @@ a {
 .school-staff-wrap {
   display: grid;
   gap: 12px;
+}
+
+.school-personnel-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.school-personnel-chip {
+  border: 1px solid #cfd8ec;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #2d62d8;
+  font-weight: 700;
+  font-size: 14px;
+  background: #f4f7ff;
 }
 
 .school-staff-filters {
@@ -4783,6 +4831,10 @@ a {
 
   .school-consult-btn {
     font-size: 16px;
+  }
+
+  .school-service-card-grid {
+    grid-template-columns: 1fr;
   }
 
   .school-admission-title {

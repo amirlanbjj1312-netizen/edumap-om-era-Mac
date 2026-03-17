@@ -27,6 +27,12 @@ type TeacherCard = {
   photo_url: string;
 };
 
+type ServiceCard = {
+  label: string;
+  value: string;
+  tone?: 'positive' | 'neutral';
+};
+
 type StudentSuccessStory = {
   student_name: string;
   admitted_to: string;
@@ -1243,6 +1249,7 @@ export default function ParentSchoolDetailsPage() {
       value: getIn(school, 'services.nurses') ? ui.yes : '',
     },
   ].filter((item) => item.value);
+  const personnelChips = personnelRows.map((item) => item.label);
   const socialLinksRaw: Array<{ key: SocialKey; label: string; value: string; href: string }> = [
     {
       key: 'instagram',
@@ -1313,77 +1320,48 @@ export default function ParentSchoolDetailsPage() {
       }))
     : [];
   const hasTeamSection = teamRows.length > 0 || personnelRows.length > 0 || teachers.length > 0;
-  const serviceRows = [
+  const serviceCards: ServiceCard[] = [
     {
       label: locale === 'en' ? 'After-school care' : locale === 'kk' ? 'Ұзартылған күн' : 'Продленка',
       value: formatAfterSchoolValue(school, locale, ui.available, ui.unavailable),
+      tone: getIn(school, 'services.after_school') ? ('positive' as const) : ('neutral' as const),
     },
     {
       label: locale === 'en' ? 'Meals' : locale === 'kk' ? 'Тамақтану' : 'Питание',
       value: formatMealsValue(school, locale, ui.notSpecified),
+      tone: 'positive' as const,
     },
-    { label: locale === 'en' ? 'Transport' : locale === 'kk' ? 'Көлік' : 'Транспорт', value: getIn(school, 'services.transport') ? ui.available : ui.unavailable },
-    { label: locale === 'en' ? 'Inclusive education' : locale === 'kk' ? 'Инклюзивті білім' : 'Инклюзивное обучение', value: getIn(school, 'services.inclusive_education') ? ui.supported : ui.notSupported },
     {
-      label: locale === 'en' ? 'Specialists' : locale === 'kk' ? 'Мамандар' : 'Специалисты',
-      value: localizeCsv(
-        pickFirstText(school, ['services.specialists', 'services.specialists_other.ru'], ui.notSpecified),
-        locale
-      ),
+      label: locale === 'en' ? 'Transport' : locale === 'kk' ? 'Көлік' : 'Транспорт',
+      value: getIn(school, 'services.transport') ? ui.available : ui.unavailable,
+      tone: getIn(school, 'services.transport') ? ('positive' as const) : ('neutral' as const),
     },
-    { label: locale === 'en' ? 'Foreign teachers' : locale === 'kk' ? 'Шетелдік мұғалімдер' : 'Иностранные преподаватели', value: getIn(school, 'services.foreign_teachers') ? ui.yes : ui.no },
-    { label: locale === 'en' ? 'Security' : locale === 'kk' ? 'Күзет' : 'Охрана', value: getIn(school, 'services.safety.security') ? ui.yes : ui.no },
-    { label: locale === 'en' ? 'Cameras' : locale === 'kk' ? 'Камералар' : 'Камеры', value: getIn(school, 'services.safety.cameras') ? ui.yes : ui.no },
-    { label: locale === 'en' ? 'Access control' : locale === 'kk' ? 'Кіруді бақылау' : 'Контроль доступа', value: getIn(school, 'services.safety.access_control') ? ui.yes : ui.no },
-    { label: locale === 'en' ? 'Medical room' : locale === 'kk' ? 'Медпункт' : 'Медпункт', value: getIn(school, 'services.medical_office') ? ui.available : ui.unavailable },
-  ];
-  const serviceRowLabels = new Set(
-    serviceRows.map((item) => item.label.toLowerCase().trim())
-  );
-  const hiddenServiceLabels = new Set([
-    'meals',
-    'meals status',
-    'meals times per day',
-    'meals free until grade',
-    'meals price',
-    'meals currency',
-    'medical office',
-    'security',
-    'cameras',
-    'access control',
-    'foreign teachers',
-    'psychologists',
-    'speech therapists',
-    'defectologists',
-    'special educators',
-    'social workers',
-    'tutors',
-    'nurses',
-    'photo',
-    'description',
-    'описание',
-    'сипаттама',
-    'members',
-    'clubs count',
-    'clubs_count',
-    'routes',
-    'cost by district',
-    'pickup schedule',
-    'dropoff schedule',
-    'medical staff',
-    'medical hours',
-    'allergy support',
-    'security protocols',
-    'access policy',
-    'feedback format',
-    'meeting frequency',
-  ]);
-  const serviceExtraRows = flattenDetails(getIn(school, 'services')).filter((row) => {
-    if (!row.value?.trim()) return false;
-    const normalized = row.label.toLowerCase().trim();
-    return !serviceRowLabels.has(normalized) && !hiddenServiceLabels.has(normalized);
-  });
-  const servicesAllRows = mergeUniqueRows(serviceRows, serviceExtraRows);
+    {
+      label: locale === 'en' ? 'Inclusive education' : locale === 'kk' ? 'Инклюзивті білім' : 'Инклюзивное обучение',
+      value: getIn(school, 'services.inclusive_education') ? ui.supported : ui.notSupported,
+      tone: getIn(school, 'services.inclusive_education') ? ('positive' as const) : ('neutral' as const),
+    },
+    {
+      label: locale === 'en' ? 'Medical room' : locale === 'kk' ? 'Медкабинет' : 'Медкабинет',
+      value: getIn(school, 'services.medical_office') ? ui.available : ui.unavailable,
+      tone: getIn(school, 'services.medical_office') ? ('positive' as const) : ('neutral' as const),
+    },
+    {
+      label: locale === 'en' ? 'Security' : locale === 'kk' ? 'Күзет' : 'Охрана',
+      value: getIn(school, 'services.safety.security') ? ui.yes : ui.no,
+      tone: getIn(school, 'services.safety.security') ? ('positive' as const) : ('neutral' as const),
+    },
+    {
+      label: locale === 'en' ? 'Cameras' : locale === 'kk' ? 'Камералар' : 'Камеры',
+      value: getIn(school, 'services.safety.cameras') ? ui.yes : ui.no,
+      tone: getIn(school, 'services.safety.cameras') ? ('positive' as const) : ('neutral' as const),
+    },
+    {
+      label: locale === 'en' ? 'Access control' : locale === 'kk' ? 'Кіруді бақылау' : 'Контроль доступа',
+      value: getIn(school, 'services.safety.access_control') ? ui.yes : ui.no,
+      tone: getIn(school, 'services.safety.access_control') ? ('positive' as const) : ('neutral' as const),
+    },
+  ].filter((item) => item.value && item.value !== ui.notSpecified);
 
   const programInfoCatalog: Record<string, { ru: ProgramDetails; en: ProgramDetails; kk: ProgramDetails }> = {
     state_program: {
@@ -1746,7 +1724,7 @@ export default function ParentSchoolDetailsPage() {
                     ? [{ label: 'team', value: 'team' }]
                     : []
                   : section.key === 'services'
-                    ? servicesAllRows
+                    ? serviceCards
                     : section.key === 'basic_info'
                       ? contactRows
                     : section.key === 'education'
@@ -1828,9 +1806,12 @@ export default function ParentSchoolDetailsPage() {
                         ) : null}
                       </div>
                     ) : section.key === 'services' ? (
-                      <div className="school-service-list">
-                        {servicesAllRows.map((row, index) => (
-                          <div key={`${row.label}-${index}`} className="school-service-item">
+                      <div className="school-service-card-grid">
+                        {serviceCards.map((row, index) => (
+                          <div
+                            key={`${row.label}-${index}`}
+                            className={`school-service-card${row.tone === 'positive' ? ' is-positive' : ''}`}
+                          >
                             <p>{row.label}</p>
                             <strong>{row.value}</strong>
                           </div>
@@ -1936,14 +1917,18 @@ export default function ParentSchoolDetailsPage() {
                             ))}
                           </div>
                         ) : null}
-                        {personnelRows.length ? (
-                          <div className="school-service-list" style={{ marginBottom: teachers.length ? 16 : 0 }}>
-                            {personnelRows.map((row, index) => (
-                              <div key={`${row.label}-${index}`} className="school-service-item">
-                                <p>{row.label}</p>
-                                <strong>{row.value}</strong>
-                              </div>
-                            ))}
+                        {personnelChips.length ? (
+                          <div style={{ marginBottom: teachers.length ? 16 : 0 }}>
+                            <p className="school-programs-title" style={{ marginTop: 0 }}>
+                              {locale === 'en' ? 'Support team' : locale === 'kk' ? 'Қолдау командасы' : 'Члены персонала'}
+                            </p>
+                            <div className="school-personnel-chip-row">
+                              {personnelChips.map((label, index) => (
+                                <span key={`${label}-${index}`} className="school-personnel-chip">
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                         {teachers.length ? (
@@ -1973,7 +1958,7 @@ export default function ParentSchoolDetailsPage() {
                       </div>
                     ) : (
                       <dl>
-                        {items.map((item, itemIndex) => (
+                        {items.map((item: { label: string; value: string }, itemIndex: number) => (
                           <div key={`${section.key}-${item.label}-${itemIndex}`} className="parent-school-kv">
                             <dt>{item.label}</dt>
                             <dd>{item.value}</dd>
