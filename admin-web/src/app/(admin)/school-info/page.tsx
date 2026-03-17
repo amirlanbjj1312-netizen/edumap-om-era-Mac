@@ -3420,122 +3420,122 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
-        <Section title="Наш преподавательский состав">
-          <Section title="Руководство школы">
-            <div className="teacher-list">
-              {leadershipMembers.map(({ key, title, member }) => {
-                const isExpanded = expandedLeadershipKey === key;
-                const summaryParts = [
-                  String(member?.full_name || '').trim(),
-                  String(member?.position || '').trim(),
-                  String(member?.bio?.[contentLocale] || '').trim(),
-                ].filter(Boolean);
-                return (
-                  <div key={key} className="teacher-card">
-                    <div className="teacher-card-head">
-                      <h3>{t(title)}</h3>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          className="button secondary"
-                          onClick={() =>
-                            setExpandedLeadershipKey((prev) => (prev === key ? null : key))
-                          }
-                        >
-                          {isExpanded ? t('Свернуть') : t('Развернуть')}
-                        </button>
-                      </div>
+        <Section title="Руководство школы">
+          <div className="teacher-list">
+            {leadershipMembers.map(({ key, title, member }) => {
+              const isExpanded = expandedLeadershipKey === key;
+              const summaryParts = [
+                String(member?.full_name || '').trim(),
+                String(member?.position || '').trim(),
+                String(member?.bio?.[contentLocale] || '').trim(),
+              ].filter(Boolean);
+              return (
+                <div key={key} className="teacher-card">
+                  <div className="teacher-card-head">
+                    <h3>{t(title)}</h3>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() =>
+                          setExpandedLeadershipKey((prev) => (prev === key ? null : key))
+                        }
+                      >
+                        {isExpanded ? t('Свернуть') : t('Развернуть')}
+                      </button>
                     </div>
-                    {!isExpanded ? (
-                      <p className="muted" style={{ marginTop: 8 }}>
-                        {summaryParts.join(' • ') || t('Не выбрано')}
-                      </p>
-                    ) : null}
-                    {isExpanded ? (
-                      <>
-                        <FieldRow>
-                          <Input
-                            label="ФИО"
-                            value={member?.full_name || ''}
-                            onChange={(value: string) =>
-                              updateLeadershipMember(key, { full_name: value })
-                            }
-                          />
-                          <Input
-                            label="Должность"
-                            value={member?.position || ''}
-                            onChange={(value: string) =>
-                              updateLeadershipMember(key, { position: value })
-                            }
-                          />
-                        </FieldRow>
-                        <FieldRow>
-                          <label className="field">
-                            <span>{t('Фото руководителя (файл)')}</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (event) => {
-                                const input = event.currentTarget;
-                                const file = input.files?.[0];
-                                if (!file) return;
-                                try {
-                                  setMediaMessage('');
-                                  const preparedFiles = await prepareImageFiles([file], {
-                                    title: t('Фото руководителя (файл)'),
-                                    aspect: 1,
-                                  });
-                                  if (!preparedFiles?.length) return;
-                                  const urls = await uploadMediaFiles(preparedFiles, 'leadership');
-                                  if (urls[0]) {
-                                    updateLeadershipMember(key, { photo_url: urls[0] }, true);
-                                  }
-                                } catch (error: any) {
-                                  setMediaMessage(
-                                    error?.message ||
-                                      'Не удалось загрузить фото руководителя. Проверьте bucket в Supabase.'
-                                  );
-                                } finally {
-                                  input.value = '';
-                                }
-                              }}
-                            />
-                            {member?.photo_url ? (
-                              <div className="teacher-photo-preview">
-                                <img src={member.photo_url} alt={member.full_name || title} />
-                                <button
-                                  type="button"
-                                  className="button secondary"
-                                  onClick={() => updateLeadershipMember(key, { photo_url: '' }, true)}
-                                >
-                                  {t('Удалить фото')}
-                                </button>
-                              </div>
-                            ) : null}
-                          </label>
-                        </FieldRow>
-                        <FieldRow>
-                          <TextArea
-                            label="Короткое описание"
-                            rows={3}
-                            value={member?.bio?.[contentLocale] || ''}
-                            onChange={(value: string) =>
-                              updateLeadershipMember(key, {
-                                bio: {
-                                  ...(member?.bio || { ru: '', en: '', kk: '' }),
-                                  [contentLocale]: value,
-                                },
-                              })
-                            }
-                          />
-                        </FieldRow>
-                      </>
-                    ) : null}
                   </div>
-                );
-              })}
-            </div>
-          </Section>
+                  {!isExpanded ? (
+                    <p className="muted" style={{ marginTop: 8 }}>
+                      {summaryParts.join(' • ') || t('Не выбрано')}
+                    </p>
+                  ) : null}
+                  {isExpanded ? (
+                    <>
+                      <FieldRow>
+                        <Input
+                          label="ФИО"
+                          value={member?.full_name || ''}
+                          onChange={(value: string) =>
+                            updateLeadershipMember(key, { full_name: value })
+                          }
+                        />
+                        <Input
+                          label="Должность"
+                          value={member?.position || ''}
+                          onChange={(value: string) =>
+                            updateLeadershipMember(key, { position: value })
+                          }
+                        />
+                      </FieldRow>
+                      <FieldRow>
+                        <label className="field">
+                          <span>{t('Фото руководителя (файл)')}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (event) => {
+                              const input = event.currentTarget;
+                              const file = input.files?.[0];
+                              if (!file) return;
+                              try {
+                                setMediaMessage('');
+                                const preparedFiles = await prepareImageFiles([file], {
+                                  title: t('Фото руководителя (файл)'),
+                                  aspect: 1,
+                                });
+                                if (!preparedFiles?.length) return;
+                                const urls = await uploadMediaFiles(preparedFiles, 'leadership');
+                                if (urls[0]) {
+                                  updateLeadershipMember(key, { photo_url: urls[0] }, true);
+                                }
+                              } catch (error: any) {
+                                setMediaMessage(
+                                  error?.message ||
+                                    'Не удалось загрузить фото руководителя. Проверьте bucket в Supabase.'
+                                );
+                              } finally {
+                                input.value = '';
+                              }
+                            }}
+                          />
+                          {member?.photo_url ? (
+                            <div className="teacher-photo-preview">
+                              <img src={member.photo_url} alt={member.full_name || title} />
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => updateLeadershipMember(key, { photo_url: '' }, true)}
+                              >
+                                {t('Удалить фото')}
+                              </button>
+                            </div>
+                          ) : null}
+                        </label>
+                      </FieldRow>
+                      <FieldRow>
+                        <TextArea
+                          label="Короткое описание"
+                          rows={3}
+                          value={member?.bio?.[contentLocale] || ''}
+                          onChange={(value: string) =>
+                            updateLeadershipMember(key, {
+                              bio: {
+                                ...(member?.bio || { ru: '', en: '', kk: '' }),
+                                [contentLocale]: value,
+                              },
+                            })
+                          }
+                        />
+                      </FieldRow>
+                    </>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+        <Section title="Наш преподавательский состав">
           <div className="teacher-actions">
             <button
               type="button"
