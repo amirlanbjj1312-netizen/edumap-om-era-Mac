@@ -176,6 +176,13 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         access_policy: { ru: '', en: '', kk: '' },
       },
       medical_office: false,
+      psychologists: false,
+      speech_therapists: false,
+      social_workers: false,
+      tutors: false,
+      special_educators: false,
+      nurses: false,
+      defectologists: false,
       health_support: {
         medical_staff: { ru: '', en: '', kk: '' },
         medical_hours: { ru: '', en: '', kk: '' },

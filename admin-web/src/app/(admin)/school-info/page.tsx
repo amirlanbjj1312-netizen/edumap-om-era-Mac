@@ -169,6 +169,15 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'ФИО': { en: 'Full name', kk: 'Аты-жөні' },
   'Короткое описание': { en: 'Short description', kk: 'Қысқаша сипаттама' },
   'Фото руководителя (файл)': { en: 'Leadership photo (file)', kk: 'Басшылық фотосы (файл)' },
+  'Члены персонала': { en: 'Staff members', kk: 'Персонал мүшелері' },
+  Психолог: { en: 'Psychologist', kk: 'Психолог' },
+  Логопед: { en: 'Speech therapist', kk: 'Логопед' },
+  Дефектолог: { en: 'Defectologist', kk: 'Дефектолог' },
+  Спецпедагог: { en: 'Special educator', kk: 'Арнайы педагог' },
+  Тьютор: { en: 'Tutor', kk: 'Тьютор' },
+  'Социальный работник': { en: 'Social worker', kk: 'Әлеуметтік қызметкер' },
+  Медсестра: { en: 'Nurse', kk: 'Медбике' },
+  Медкабинет: { en: 'Medical room', kk: 'Медкабинет' },
   Телефон: { en: 'Phone', kk: 'Телефон' },
   WhatsApp: { en: 'WhatsApp', kk: 'WhatsApp' },
   Email: { en: 'Email', kk: 'Email' },
@@ -804,6 +813,15 @@ const ADMISSION_PERIOD_OPTIONS = [
 const UNIVERSITY_ADMISSION_RATE_OPTIONS = ['<50%', '50-70%', '70-85%', '85-95%', '95-100%'];
 const SUPPORT_LEVEL_OPTIONS = ['No', 'On request', 'Part-time', 'Full-time'];
 const PARENT_COMMITTEE_OPTIONS = ['No', 'Yes'];
+const PERSONNEL_MEMBER_OPTIONS = [
+  'Психолог',
+  'Логопед',
+  'Дефектолог',
+  'Спецпедагог',
+  'Тьютор',
+  'Социальный работник',
+  'Медсестра',
+];
 const RESPONSE_SLA_OPTIONS = ['4', '8', '12', '24', '48', '72'];
 const DIGITAL_PLATFORM_OPTIONS = [
   'Kundelik',
@@ -1311,9 +1329,29 @@ export default function SchoolInfoPage() {
       ),
     [profile, legacyCuratorsValue]
   );
+  const personnelMembersValue = useMemo(() => {
+    const next: string[] = [];
+    if (Boolean(getDeep(profile, 'services.psychologists'))) next.push('Психолог');
+    if (Boolean(getDeep(profile, 'services.speech_therapists'))) next.push('Логопед');
+    if (Boolean(getDeep(profile, 'services.defectologists'))) next.push('Дефектолог');
+    if (Boolean(getDeep(profile, 'services.special_educators'))) next.push('Спецпедагог');
+    if (Boolean(getDeep(profile, 'services.tutors'))) next.push('Тьютор');
+    if (Boolean(getDeep(profile, 'services.social_workers'))) next.push('Социальный работник');
+    if (Boolean(getDeep(profile, 'services.nurses'))) next.push('Медсестра');
+    return next;
+  }, [profile]);
 
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
+  };
+  const updatePersonnelMembers = (selected: string[]) => {
+    updateField('services.psychologists', selected.includes('Психолог'));
+    updateField('services.speech_therapists', selected.includes('Логопед'));
+    updateField('services.defectologists', selected.includes('Дефектолог'));
+    updateField('services.special_educators', selected.includes('Спецпедагог'));
+    updateField('services.tutors', selected.includes('Тьютор'));
+    updateField('services.social_workers', selected.includes('Социальный работник'));
+    updateField('services.nurses', selected.includes('Медсестра'));
   };
   const changeTab = (
     tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
@@ -3249,75 +3287,17 @@ export default function SchoolInfoPage() {
             }
           />
         </FieldRow>
+        <CheckboxGroup
+          label="Члены персонала"
+          options={PERSONNEL_MEMBER_OPTIONS}
+          values={personnelMembersValue}
+          onChange={(next: string[]) => updatePersonnelMembers(next)}
+        />
         <FieldRow>
-          <TextArea
-            label="Медперсонал"
-            rows={2}
-            value={getDeep(profile, localePath('services.health_support.medical_staff'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.health_support.medical_staff'), value)
-            }
-          />
-          <TextArea
-            label="График медкабинета"
-            rows={2}
-            value={getDeep(profile, localePath('services.health_support.medical_hours'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.health_support.medical_hours'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Select
-            label="Поддержка психолога"
-            value={getDeep(profile, 'services.health_support.psychologist_support')}
-            onChange={(value: string) =>
-              updateField('services.health_support.psychologist_support', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                SUPPORT_LEVEL_OPTIONS,
-                String(getDeep(profile, 'services.health_support.psychologist_support') || '')
-              ).map((item) => ({
-                value: item,
-                label: translateOption(item, contentLocale),
-              })),
-            ]}
-          />
-          <Select
-            label="Поддержка логопеда"
-            value={getDeep(profile, 'services.health_support.logopedist_support')}
-            onChange={(value: string) =>
-              updateField('services.health_support.logopedist_support', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                SUPPORT_LEVEL_OPTIONS,
-                String(getDeep(profile, 'services.health_support.logopedist_support') || '')
-              ).map((item) => ({
-                value: item,
-                label: translateOption(item, contentLocale),
-              })),
-            ]}
-          />
-          <Select
-            label="Поддержка дефектолога"
-            value={getDeep(profile, 'services.health_support.defectologist_support')}
-            onChange={(value: string) =>
-              updateField('services.health_support.defectologist_support', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                SUPPORT_LEVEL_OPTIONS,
-                String(getDeep(profile, 'services.health_support.defectologist_support') || '')
-              ).map((item) => ({
-                value: item,
-                label: translateOption(item, contentLocale),
-              })),
-            ]}
+          <Toggle
+            label="Медкабинет"
+            checked={Boolean(getDeep(profile, 'services.medical_office'))}
+            onChange={(value: boolean) => updateField('services.medical_office', value)}
           />
         </FieldRow>
         <FieldRow>

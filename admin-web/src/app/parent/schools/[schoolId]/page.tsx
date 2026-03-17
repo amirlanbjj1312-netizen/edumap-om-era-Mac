@@ -1187,6 +1187,36 @@ export default function ParentSchoolDetailsPage() {
       ),
     },
   ].filter((item) => item.value);
+  const personnelRows = [
+    {
+      label: locale === 'en' ? 'Psychologist' : locale === 'kk' ? 'Психолог' : 'Психолог',
+      value: getIn(school, 'services.psychologists') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Speech therapist' : locale === 'kk' ? 'Логопед' : 'Логопед',
+      value: getIn(school, 'services.speech_therapists') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Defectologist' : locale === 'kk' ? 'Дефектолог' : 'Дефектолог',
+      value: getIn(school, 'services.defectologists') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Special educator' : locale === 'kk' ? 'Арнайы педагог' : 'Спецпедагог',
+      value: getIn(school, 'services.special_educators') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Tutor' : locale === 'kk' ? 'Тьютор' : 'Тьютор',
+      value: getIn(school, 'services.tutors') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Social worker' : locale === 'kk' ? 'Әлеуметтік қызметкер' : 'Социальный работник',
+      value: getIn(school, 'services.social_workers') ? ui.yes : '',
+    },
+    {
+      label: locale === 'en' ? 'Nurse' : locale === 'kk' ? 'Медбике' : 'Медсестра',
+      value: getIn(school, 'services.nurses') ? ui.yes : '',
+    },
+  ].filter((item) => item.value);
   const socialLinksRaw: Array<{ key: SocialKey; label: string; value: string; href: string }> = [
     {
       key: 'instagram',
@@ -1256,7 +1286,7 @@ export default function ParentSchoolDetailsPage() {
         photo_url: toText(item.photo_url),
       }))
     : [];
-  const hasTeamSection = teamRows.length > 0 || teachers.length > 0;
+  const hasTeamSection = teamRows.length > 0 || personnelRows.length > 0 || teachers.length > 0;
   const serviceRows = [
     { label: locale === 'en' ? 'After-school care' : locale === 'kk' ? 'Ұзартылған күн' : 'Продленка', value: getIn(school, 'services.after_school') ? ui.available : ui.unavailable },
     {
@@ -1868,6 +1898,16 @@ export default function ParentSchoolDetailsPage() {
                         {teamRows.length ? (
                           <div className="school-service-list" style={{ marginBottom: teachers.length ? 16 : 0 }}>
                             {teamRows.map((row, index) => (
+                              <div key={`${row.label}-${index}`} className="school-service-item">
+                                <p>{row.label}</p>
+                                <strong>{row.value}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {personnelRows.length ? (
+                          <div className="school-service-list" style={{ marginBottom: teachers.length ? 16 : 0 }}>
+                            {personnelRows.map((row, index) => (
                               <div key={`${row.label}-${index}`} className="school-service-item">
                                 <p>{row.label}</p>
                                 <strong>{row.value}</strong>
