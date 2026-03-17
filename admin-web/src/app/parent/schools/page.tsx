@@ -1281,13 +1281,9 @@ export default function ParentSchoolsPage() {
           <span aria-hidden="true">⇅</span>
           <span>{sortUi.button}</span>
         </button>
-        <Link href="/parent/schools/map" className="schools-mobile-action schools-mobile-action-map">
-          <span aria-hidden="true">⌘</span>
-          <span>{t('map')}</span>
-        </Link>
         <button
           type="button"
-          className={`schools-mobile-action schools-mobile-action-filter${mobileFiltersOpen ? ' active' : ''}`}
+          className={`schools-mobile-action schools-mobile-action-filter-inline${mobileFiltersOpen ? ' active' : ''}`}
           onClick={() => setMobileFiltersOpen((prev) => !prev)}
           aria-expanded={mobileFiltersOpen}
           aria-controls="schools-mobile-filters"
@@ -1296,6 +1292,21 @@ export default function ParentSchoolsPage() {
           <span>
             {ft('filters')}
             {activeFiltersCount ? ` (${activeFiltersCount})` : ''}
+          </span>
+        </button>
+        <Link href="/parent/schools/map" className="schools-mobile-action schools-mobile-action-map">
+          <span aria-hidden="true">⌘</span>
+          <span>{t('map')}</span>
+        </Link>
+        <button
+          type="button"
+          className={`schools-mobile-action schools-mobile-action-compare ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+          onClick={onCompareAction}
+        >
+          <span>
+            {(compareMode && compareIds.length === compareTargetCount) ? compareUi.showCompare : compareUi.compare}
+            {' '}
+            ({compareCount}/{compareTargetCount})
           </span>
         </button>
         <Link href="/parent/ai-match" className="schools-mobile-action schools-mobile-action-ai">
