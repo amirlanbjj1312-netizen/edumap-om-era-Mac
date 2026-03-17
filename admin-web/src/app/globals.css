@@ -1605,6 +1605,12 @@ a {
   background: #eef3fc;
 }
 
+.schools-map-filter-fab,
+.schools-map-mobile-filter-head,
+.schools-map-mobile-backdrop {
+  display: none;
+}
+
 .schools-map-filters-panel {
   position: fixed;
   left: 14px;
@@ -1728,11 +1734,64 @@ a {
     width: min(360px, calc(100vw - 20px));
     height: 100vh;
     max-height: 100vh;
+    transform: translateX(calc(-100% - 24px));
+    transition: transform 180ms ease;
+    z-index: 10020;
+  }
+
+  .schools-map-filters-panel.is-open {
+    transform: translateX(0);
   }
 
   .schools-map-fullscreen-page .leaflet-top.leaflet-left {
     right: 10px;
     top: 62px;
+  }
+
+  .schools-map-filter-fab {
+    position: fixed;
+    left: 12px;
+    top: 14px;
+    z-index: 10010;
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(16, 27, 59, 0.96);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    box-shadow: 0 8px 20px rgba(9, 18, 44, 0.36);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .schools-map-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: block;
+    background: rgba(10, 18, 40, 0.28);
+    border: none;
+  }
+
+  .schools-map-mobile-filter-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .schools-map-mobile-filter-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid #d7deef;
+    background: #fff;
+    color: #32415f;
+    font-size: 24px;
+    line-height: 1;
   }
 }
 

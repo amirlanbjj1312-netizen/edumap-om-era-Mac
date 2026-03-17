@@ -403,6 +403,7 @@ export default function ParentSchoolsMapPage() {
   const { locale } = useParentLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [rows, setRows] = useState<SchoolRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -755,6 +756,14 @@ export default function ParentSchoolsMapPage() {
 
   return (
     <div className="schools-map-fullscreen-page">
+      {mobileFiltersOpen ? (
+        <button
+          type="button"
+          className="schools-map-mobile-backdrop"
+          aria-label={ft('filters')}
+          onClick={() => setMobileFiltersOpen(false)}
+        />
+      ) : null}
       <button
         type="button"
         aria-label={ft('closeMap')}
@@ -783,9 +792,27 @@ export default function ParentSchoolsMapPage() {
         <span>{ft('closeMap')}</span>
       </button>
 
-      <aside className="schools-map-filters-panel">
+      <button
+        type="button"
+        className="schools-map-filter-fab"
+        onClick={() => setMobileFiltersOpen(true)}
+      >
+        {ft('filters')}
+      </button>
+
+      <aside className={`schools-map-filters-panel${mobileFiltersOpen ? ' is-open' : ''}`}>
         <div className="schools-filter-card">
-          <p className="schools-filter-title">{ft('filters')}</p>
+          <div className="schools-map-mobile-filter-head">
+            <p className="schools-filter-title">{ft('filters')}</p>
+            <button
+              type="button"
+              className="schools-map-mobile-filter-close"
+              aria-label={ft('closeMap')}
+              onClick={() => setMobileFiltersOpen(false)}
+            >
+              ×
+            </button>
+          </div>
           {!loading ? <p className="muted" style={{ marginTop: -4 }}>{ft('schoolsOnMap')}: {schools.length}</p> : null}
           <label className="field">
             <span>{ft('city')}</span>
