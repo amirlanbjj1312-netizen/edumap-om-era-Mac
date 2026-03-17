@@ -1108,67 +1108,6 @@ export default function SchoolsPage() {
         </div>
       ) : null}
 
-      {loading ? (
-        <p className="muted">{t('schoolsLoading')}</p>
-      ) : loadStatus ? (
-        <p className="muted" style={{ color: 'var(--danger)' }}>
-          {loadStatus}
-        </p>
-      ) : filtered.length ? (
-        <div className="schools-admin-list">
-          {filtered.map((item) => {
-            const isActive = item?.system?.is_active !== false;
-            const isHidden = item?.system?.hidden_from_users === true;
-            const displayName =
-              normalizeText(item?.basic_info?.display_name?.ru) ||
-              normalizeText(item?.basic_info?.name?.ru) ||
-              item?.school_id;
-            const auditLog = Array.isArray(item?.system?.audit_log)
-              ? item.system.audit_log
-              : [];
-            const promotionActive = isPromotionActive(item);
-            const currentStatus =
-              normalizeText(item?.monetization?.subscription_status || 'inactive') || 'inactive';
-            return (
-              <div key={item.school_id} className="schools-admin-card">
-                <div className="schools-admin-top">
-                  <div>
-                    <p className="request-title">{displayName}</p>
-                    <p className="muted">{item.school_id}</p>
-                    <p className="muted">{normalizeText(item?.basic_info?.email) || '—'}</p>
-                  </div>
-                  <div className="schools-admin-statuses">
-                    <span className={`schools-status ${isActive ? 'ok' : 'warn'}`}>
-                      {isActive ? t('schoolsStatusActive') : t('schoolsStatusInactive')}
-                    </span>
-                    <span className={`schools-status ${isHidden ? 'warn' : 'ok'}`}>
-                      {isHidden ? t('schoolsStatusHidden') : t('schoolsStatusVisible')}
-                    </span>
-                    <span className={`schools-status ${promotionActive ? 'ok' : 'warn'}`}>
-                      {promotionActive
-                        ? t('schoolsMonetizationTopActive')
-                        : `${t('schoolsMonetizationTopOff')} (${currentStatus})`}
-                    </span>
-                  </div>
-                </div>
-
-                {auditLog.length ? (
-                  <div className="schools-audit">
-                    <p className="muted">{t('schoolsAudit')}</p>
-                    {auditLog.slice(0, 5).map((entry: any) => (
-                      <p key={entry.id} className="muted">
-                        {new Date(entry.at).toLocaleString()} · {entry.actor} · {entry.action}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="muted">{t('schoolsEmpty')}</p>
-      )}
     </div>
   );
 }
