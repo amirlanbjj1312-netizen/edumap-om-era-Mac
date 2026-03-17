@@ -4228,8 +4228,8 @@ a {
   }
 
   .school-image-placeholder {
-    width: 76px;
-    height: 76px;
+    width: 92px;
+    height: 92px;
     border-radius: 14px;
     font-size: 24px;
   }
@@ -4271,9 +4271,18 @@ a {
   }
 
   .parent-school-name {
-    font-size: 17px;
-    line-height: 1.2;
+    font-size: 16px;
+    line-height: 1.15;
     overflow-wrap: anywhere;
+  }
+
+  .parent-school-badges {
+    margin-top: 6px;
+  }
+
+  .parent-school-badge {
+    min-height: 28px;
+    padding: 5px 12px;
   }
 
   .market-school-phone,
