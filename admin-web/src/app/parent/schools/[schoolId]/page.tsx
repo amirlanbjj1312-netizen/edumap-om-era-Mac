@@ -729,6 +729,12 @@ export default function ParentSchoolDetailsPage() {
       locale === 'en' ? 'School GPA' : locale === 'kk' ? 'Мектептегі орташа балл' : 'Средний балл в школе',
     achievements:
       locale === 'en' ? 'Achievements' : locale === 'kk' ? 'Жетістіктер' : 'Достижения',
+    classSizeCards:
+      locale === 'en' ? 'Class sizes' : locale === 'kk' ? 'Сынып көлемі' : 'Размер классов',
+    averageShort: locale === 'en' ? 'Average' : locale === 'kk' ? 'Орташа' : 'Средний',
+    primaryShort: locale === 'en' ? 'Primary' : locale === 'kk' ? 'Бастауыш' : 'Начальная',
+    middleShort: locale === 'en' ? 'Middle' : locale === 'kk' ? 'Орта буын' : 'Средняя',
+    highShort: locale === 'en' ? 'High' : locale === 'kk' ? 'Жоғары' : 'Старшая',
   };
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
@@ -1054,12 +1060,36 @@ export default function ParentSchoolDetailsPage() {
       value: digitalPlatforms,
     },
   ];
+  const classSizeRows = [
+    {
+      label: ui.averageShort,
+      value: pickFirstText(school, ['education.average_class_size'], ''),
+    },
+    {
+      label: ui.primaryShort,
+      value: classSizePrimary,
+    },
+    {
+      label: ui.middleShort,
+      value: classSizeMiddle,
+    },
+    {
+      label: ui.highShort,
+      value: classSizeHigh,
+    },
+  ].filter((item) => item.value && item.value.trim());
   const educationRows = educationItems.filter(
     (item) =>
       item.value &&
       item.value.trim() &&
       item.value !== ui.notSpecified &&
-      item.value !== '—'
+      item.value !== '—' &&
+      ![
+        locale === 'en' ? 'Average class size' : locale === 'kk' ? 'Сыныптың орташа көлемі' : 'Средний размер класса',
+        locale === 'en' ? 'Class size (primary)' : locale === 'kk' ? 'Бастауыш сынып көлемі' : 'Размер класса (начальная школа)',
+        locale === 'en' ? 'Class size (middle)' : locale === 'kk' ? 'Орта буын сынып көлемі' : 'Размер класса (средняя школа)',
+        locale === 'en' ? 'Class size (high)' : locale === 'kk' ? 'Жоғары сынып көлемі' : 'Размер класса (старшая школа)',
+      ].includes(item.label)
   );
   const studentSuccessStories: StudentSuccessStory[] = Array.isArray(
     getIn(school, 'education.results.student_success_stories')
@@ -1716,6 +1746,19 @@ export default function ParentSchoolDetailsPage() {
                             <strong>{row.value}</strong>
                           </div>
                         ))}
+                        {classSizeRows.length ? (
+                          <div className="school-class-size-block">
+                            <p className="school-programs-title">{ui.classSizeCards}</p>
+                            <div className="school-class-size-grid">
+                              {classSizeRows.map((row, index) => (
+                                <div key={`${row.label}-${index}`} className="school-class-size-card">
+                                  <span>{row.label}</span>
+                                  <strong>{row.value}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                         {educationPrograms.length ? (
                           <>
                             <p className="school-programs-title">{ui.schoolPrograms}</p>

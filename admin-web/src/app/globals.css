@@ -2727,6 +2727,40 @@ a {
   line-height: 1.35;
 }
 
+.school-class-size-block {
+  display: grid;
+  gap: 10px;
+}
+
+.school-class-size-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-class-size-card {
+  border: 1px solid #d8e2f3;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(104, 130, 196, 0.08);
+}
+
+.school-class-size-card span {
+  display: block;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.school-class-size-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #1f2a44;
+  font-size: 32px;
+  line-height: 1;
+}
+
 .success-stories-strip {
   display: flex;
   gap: 12px;
