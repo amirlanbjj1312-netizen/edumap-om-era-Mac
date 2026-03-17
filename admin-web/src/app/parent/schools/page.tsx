@@ -1238,68 +1238,16 @@ export default function ParentSchoolsPage() {
             {t('find')}
           </button>
         </div>
-        <div className="schools-desktop-actions">
-          <div className="schools-desktop-actions-row">
-            <div className="booking-sort-wrap schools-desktop-sort-wrap" ref={sortMenuRef}>
-              <button
-                type="button"
-                className="booking-sort-button schools-desktop-action-button"
-                onClick={() => setSortModalOpen((prev) => !prev)}
-                aria-expanded={sortModalOpen}
-                aria-haspopup="menu"
-              >
-                <span aria-hidden="true">⇅</span>
-                <span>{sortUi.button}</span>
-              </button>
-              {sortModalOpen ? (
-                <div className="booking-sort-menu" role="menu">
-                  {[
-                    { key: 'recommended', label: sortUi.recommended, disabled: false },
-                    { key: 'priceAsc', label: sortUi.priceAsc, disabled: false },
-                    { key: 'priceDesc', label: sortUi.priceDesc, disabled: false },
-                    { key: 'rating', label: sortUi.rating, disabled: false },
-                    { key: 'reviews', label: sortUi.reviews, disabled: false },
-                    { key: 'name', label: sortUi.name, disabled: false },
-                    { key: 'updated', label: sortUi.updated, disabled: false },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={sortMode === item.key}
-                      className={`booking-sort-item${sortMode === item.key ? ' active' : ''}${item.disabled ? ' disabled' : ''}`}
-                      disabled={item.disabled}
-                      onClick={() => {
-                        if (item.disabled) return;
-                        setSortMode(item.key as typeof sortMode);
-                        setSortModalOpen(false);
-                      }}
-                    >
-                      <span>{item.label}</span>
-                      {sortMode === item.key ? <span aria-hidden="true">✓</span> : null}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className={`schools-desktop-action-button schools-desktop-filter-button${mobileFiltersOpen ? ' active' : ''}`}
-              onClick={() => setMobileFiltersOpen((prev) => !prev)}
-              aria-expanded={mobileFiltersOpen}
-              aria-controls="schools-desktop-filters"
-            >
-              <span aria-hidden="true">⚙</span>
-              <span>{ft('filters')}</span>
-            </button>
-            <Link href="/parent/schools/map" className="schools-desktop-action-button schools-desktop-map-button">
-              <span aria-hidden="true">⌘</span>
-              <span>{t('map')}</span>
-            </Link>
-          </div>
+        <div className="market-chips">
+          <Link href="/parent/schools/map" className="market-chip market-chip-map">
+            {t('map')}
+          </Link>
+          <Link href="/parent/ai-match" className="market-chip accent action-chip market-chip-ai">
+            {compareUi.aiMatch}
+          </Link>
           <button
             type="button"
-            className={`schools-desktop-wide-button schools-desktop-compare-button ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+            className={`market-chip accent action-chip market-chip-compare ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
             onClick={onCompareAction}
           >
             {(compareMode && compareIds.length === compareTargetCount) ? compareUi.showCompare : compareUi.compare}
@@ -1309,27 +1257,17 @@ export default function ParentSchoolsPage() {
           {compareMode ? (
             <button
               type="button"
-              className="schools-desktop-cancel-button"
+              className="market-chip cancel-chip"
               onClick={cancelCompareMode}
               title={compareUi.cancelCompare}
               aria-label={compareUi.cancelCompare}
             >
-              {compareUi.cancelCompare}
+              × {compareUi.cancelCompare}
             </button>
           ) : null}
-          <Link href="/parent/ai-match" className="schools-desktop-wide-button schools-desktop-ai-button">
-            <span aria-hidden="true">✦</span>
-            <span>{compareUi.aiMatch}</span>
-          </Link>
+          <span className="schools-total market-schools-total">{sortedRows.length} {t('schools_word')}</span>
         </div>
       </section>
-      {mobileFiltersOpen ? (
-        <div id="schools-desktop-filters" className="schools-desktop-filter-panel">
-          <div className="schools-filter-card schools-desktop-filter-card">
-            {filtersContent}
-          </div>
-        </div>
-      ) : null}
       {compareError ? <p style={{ marginTop: 8, color: '#b91c1c' }}>{compareError}</p> : null}
 
       <div className="schools-mobile-actions">
@@ -1449,6 +1387,50 @@ export default function ParentSchoolsPage() {
         <section>
           {loading ? <p className="muted">{t('loading')}</p> : null}
           {!loading && !sortedRows.length ? <p className="muted">{t('schools_not_found')}</p> : null}
+          <div className="market-headline">
+            <div className="booking-sort-wrap" ref={sortMenuRef}>
+              <button
+                type="button"
+                className="booking-sort-button"
+                onClick={() => setSortModalOpen((prev) => !prev)}
+                aria-expanded={sortModalOpen}
+                aria-haspopup="menu"
+              >
+                <span aria-hidden="true">⇅</span>
+                <span>{sortUi.sortBy}: {currentSortLabel}</span>
+              </button>
+              {sortModalOpen ? (
+                <div className="booking-sort-menu" role="menu">
+                  {[
+                    { key: 'recommended', label: sortUi.recommended, disabled: false },
+                    { key: 'priceAsc', label: sortUi.priceAsc, disabled: false },
+                    { key: 'priceDesc', label: sortUi.priceDesc, disabled: false },
+                    { key: 'rating', label: sortUi.rating, disabled: false },
+                    { key: 'reviews', label: sortUi.reviews, disabled: false },
+                    { key: 'name', label: sortUi.name, disabled: false },
+                    { key: 'updated', label: sortUi.updated, disabled: false },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={sortMode === item.key}
+                      className={`booking-sort-item${sortMode === item.key ? ' active' : ''}${item.disabled ? ' disabled' : ''}`}
+                      disabled={item.disabled}
+                      onClick={() => {
+                        if (item.disabled) return;
+                        setSortMode(item.key as typeof sortMode);
+                        setSortModalOpen(false);
+                      }}
+                    >
+                      <span>{item.label}</span>
+                      {sortMode === item.key ? <span aria-hidden="true">✓</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
           <div className="schools-grid market-grid booking-cards-grid">
             {sortedRows.slice(0, 80).map((row, index) => {
               const schoolTitle =
