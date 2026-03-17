@@ -159,7 +159,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="page">
+    <div className="page parent-page">
       <div className="container parent-layout-shell">
         {!isMapFullscreen ? (
           <header className="topbar">
