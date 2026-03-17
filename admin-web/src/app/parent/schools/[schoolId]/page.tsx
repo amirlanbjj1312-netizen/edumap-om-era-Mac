@@ -999,16 +999,30 @@ export default function ParentSchoolDetailsPage() {
         ? entranceFormat || ui.yes
         : ui.no,
     },
-    { label: ui.admissionSubjects, value: admissionSubjects || ui.notSpecified },
     { label: ui.admissionDeadline, value: admissionDeadline || ui.notSpecified },
     { label: ui.admissionStages, value: admissionStages || ui.notSpecified },
   ];
   const educationItemLabels = new Set(
     educationItems.map((item) => item.label.toLowerCase().trim())
   );
+  const hiddenEducationLabels = new Set([
+    'programs',
+    'программы',
+    'бағдарламалар',
+    'national',
+    'international',
+    'additional',
+    'other',
+    'required',
+    'format',
+    'format other',
+    'subjects',
+    'subjects other',
+  ]);
   const educationExtraRows = flattenDetails(getIn(school, 'education')).filter((row) => {
     if (!row.value?.trim()) return false;
-    return !educationItemLabels.has(row.label.toLowerCase().trim());
+    const normalized = row.label.toLowerCase().trim();
+    return !educationItemLabels.has(normalized) && !hiddenEducationLabels.has(normalized);
   });
   const educationRows = mergeUniqueRows(educationItems, educationExtraRows);
   const studentSuccessStories: StudentSuccessStory[] = Array.isArray(
