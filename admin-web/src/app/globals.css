@@ -1892,6 +1892,10 @@ a {
   background: #ffffff;
 }
 
+.compare-page-card {
+  margin-bottom: 28px;
+}
+
 .compare-head {
   display: flex;
   align-items: center;

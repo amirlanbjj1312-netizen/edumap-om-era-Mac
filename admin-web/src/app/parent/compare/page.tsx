@@ -111,6 +111,13 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   Chinese: { ru: 'Китайский', en: 'Chinese', kk: 'Қытай тілі' },
   French: { ru: 'Французский', en: 'French', kk: 'Француз тілі' },
   German: { ru: 'Немецкий', en: 'German', kk: 'Неміс тілі' },
+  Mathematics: { ru: 'Математика', en: 'Mathematics', kk: 'Математика' },
+  Physics: { ru: 'Физика', en: 'Physics', kk: 'Физика' },
+  Engineering: { ru: 'Инженерия', en: 'Engineering', kk: 'Инженерия' },
+  'English language': { ru: 'Английский язык', en: 'English language', kk: 'Ағылшын тілі' },
+  Paid: { ru: 'Платное', en: 'Paid', kk: 'Ақылы' },
+  Free: { ru: 'Бесплатно', en: 'Free', kk: 'Тегін' },
+  Included: { ru: 'Включено', en: 'Included', kk: 'Қосылған' },
 };
 
 const OPTION_ALIASES: Record<string, string> = {
@@ -120,10 +127,21 @@ const OPTION_ALIASES: Record<string, string> = {
   англииский: 'English',
   english: 'English',
   'ағылшын тілі': 'English',
+  'английский язык': 'English language',
+  'english language': 'English language',
   казахский: 'Kazakh',
   казахскийй: 'Kazakh',
   қазақша: 'Kazakh',
   'қазақ тілі': 'Kazakh',
+  математика: 'Mathematics',
+  mathematics: 'Mathematics',
+  физика: 'Physics',
+  physics: 'Physics',
+  инженерия: 'Engineering',
+  engineering: 'Engineering',
+  paid: 'Paid',
+  free: 'Free',
+  included: 'Included',
   almaty: 'Almaty',
   алматы: 'Almaty',
   astana: 'Astana',
@@ -441,7 +459,7 @@ export default function ParentComparePage() {
           return items.length ? items.join(' · ') : '—';
         }
         case 'advancedSubjects':
-          return toText(getIn(school, 'education.advanced_subjects')).trim() || '—';
+          return localizeUniqueList(getIn(school, 'education.advanced_subjects'), locale).join(', ') || '—';
         case 'entranceExam':
           return asBoolText(getIn(school, 'education.entrance_exam.required'), locale);
         case 'avgClassSize':
@@ -451,7 +469,7 @@ export default function ParentComparePage() {
         case 'afterSchool':
           return asBoolText(getIn(school, 'services.after_school'), locale);
         case 'meals':
-          return toText(getIn(school, 'services.meals_status')).trim() || '—';
+          return localizeOption(toText(getIn(school, 'services.meals_status')).trim(), locale) || '—';
         case 'transport':
           return asBoolText(getIn(school, 'services.transport'), locale);
         case 'inclusive':
@@ -539,7 +557,7 @@ export default function ParentComparePage() {
   }, [locale, leftSchool, rightSchool]);
 
   return (
-    <div className="card">
+    <div className="card compare-page-card">
       <div className="compare-head">
         <h2 className="section-title" style={{ marginBottom: 0 }}>{text.title}</h2>
         <button
