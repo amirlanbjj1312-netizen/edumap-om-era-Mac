@@ -455,6 +455,7 @@ const OPTION_LABELS: Record<
   'Part-time': { ru: 'Частично', en: 'Part-time', kk: 'Жартылай' },
   'Full-time': { ru: 'Постоянно', en: 'Full-time', kk: 'Тұрақты' },
   Yes: { ru: 'Да', en: 'Yes', kk: 'Иә' },
+  No: { ru: 'Нет', en: 'No', kk: 'Жоқ' },
   'Messenger chat': { ru: 'Чат в мессенджере', en: 'Messenger chat', kk: 'Мессенджер чаты' },
   Calls: { ru: 'Звонки', en: 'Calls', kk: 'Қоңыраулар' },
   'Offline meetings': { ru: 'Офлайн встречи', en: 'Offline meetings', kk: 'Офлайн кездесулер' },
