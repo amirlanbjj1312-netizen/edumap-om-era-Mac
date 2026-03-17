@@ -787,8 +787,6 @@ export default function SchoolsPage() {
       return haystack.includes(q);
     });
   }, [actorEmail, isSuperadmin, items, query]);
-  const detailsLabel =
-    locale === 'en' ? 'Details' : locale === 'kk' ? 'Толығырақ' : 'Подробнее';
   const filledSchoolIds = useMemo(
     () =>
       new Set(
@@ -1152,16 +1150,6 @@ export default function SchoolsPage() {
                         : `${t('schoolsMonetizationTopOff')} (${currentStatus})`}
                     </span>
                   </div>
-                </div>
-
-                <div className="schools-admin-actions">
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => editSchool(item.school_id)}
-                  >
-                    {detailsLabel}
-                  </button>
                 </div>
 
                 {auditLog.length ? (
