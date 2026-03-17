@@ -4224,7 +4224,7 @@ a {
   .market-school-row {
     grid-template-columns: 76px minmax(0, 1fr);
     align-items: start;
-    gap: 18px;
+    gap: 20px;
   }
 
   .school-image-placeholder {
@@ -4243,7 +4243,7 @@ a {
 
   .market-school-main {
     min-width: 0;
-    padding-top: 8px;
+    padding-top: 10px;
   }
 
   .market-school-phone {
@@ -4292,7 +4292,7 @@ a {
   }
 
   .parent-school-meta {
-    margin-top: 8px;
+    margin-top: 4px;
   }
 
   .parent-school-expand-hint {
