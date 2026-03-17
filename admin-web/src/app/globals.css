@@ -1390,6 +1390,10 @@ a {
   margin: 12px 0 14px;
 }
 
+.schools-mobile-actions {
+  display: none;
+}
+
 .schools-mobile-filter-trigger {
   width: 100%;
   justify-content: center;
@@ -4207,8 +4211,72 @@ a {
     display: none;
   }
 
+  .schools-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 12px 0 14px;
+  }
+
+  .schools-mobile-action {
+    min-height: 68px;
+    border-radius: 26px;
+    border: 2px solid #d7ddf0;
+    background: #ffffff;
+    color: #33415c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 18px;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.15;
+    box-shadow: 0 2px 0 rgba(23, 35, 66, 0.08);
+  }
+
+  .schools-mobile-action span[aria-hidden='true'] {
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .schools-mobile-action-filter,
+  .schools-mobile-action-ai {
+    grid-column: 1 / -1;
+  }
+
+  .schools-mobile-action-filter {
+    min-height: 74px;
+    background: #f7a20b;
+    border-color: #e09100;
+    color: #21314f;
+  }
+
+  .schools-mobile-action-filter.active {
+    background: #f0a400;
+    border-color: #cf8500;
+  }
+
+  .schools-mobile-action-ai {
+    min-height: 68px;
+    background: #efc98b;
+    border-color: #e2b96f;
+    color: #8c95ad;
+  }
+
+  .market-chip-map,
+  .market-chip-ai {
+    display: none;
+  }
+
+  .market-chip-compare,
+  .market-schools-total {
+    grid-column: 1 / -1;
+  }
+
   .schools-mobile-filter-bar {
-    display: block;
+    display: none;
   }
 
   .parent-app-footer {

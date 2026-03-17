@@ -1239,15 +1239,15 @@ export default function ParentSchoolsPage() {
           </button>
         </div>
         <div className="market-chips">
-          <Link href="/parent/schools/map" className="market-chip">
+          <Link href="/parent/schools/map" className="market-chip market-chip-map">
             {t('map')}
           </Link>
-          <Link href="/parent/ai-match" className="market-chip accent action-chip">
+          <Link href="/parent/ai-match" className="market-chip accent action-chip market-chip-ai">
             {compareUi.aiMatch}
           </Link>
           <button
             type="button"
-            className={`market-chip accent action-chip ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+            className={`market-chip accent action-chip market-chip-compare ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
             onClick={onCompareAction}
           >
             {(compareMode && compareIds.length === compareTargetCount) ? compareUi.showCompare : compareUi.compare}
@@ -1265,10 +1265,44 @@ export default function ParentSchoolsPage() {
               × {compareUi.cancelCompare}
             </button>
           ) : null}
-          <span className="schools-total">{sortedRows.length} {t('schools_word')}</span>
+          <span className="schools-total market-schools-total">{sortedRows.length} {t('schools_word')}</span>
         </div>
       </section>
       {compareError ? <p style={{ marginTop: 8, color: '#b91c1c' }}>{compareError}</p> : null}
+
+      <div className="schools-mobile-actions">
+        <button
+          type="button"
+          className="schools-mobile-action schools-mobile-action-sort"
+          onClick={() => setSortModalOpen((prev) => !prev)}
+          aria-expanded={sortModalOpen}
+          aria-haspopup="menu"
+        >
+          <span aria-hidden="true">⇅</span>
+          <span>{sortUi.button}</span>
+        </button>
+        <Link href="/parent/schools/map" className="schools-mobile-action schools-mobile-action-map">
+          <span aria-hidden="true">⌘</span>
+          <span>{t('map')}</span>
+        </Link>
+        <button
+          type="button"
+          className={`schools-mobile-action schools-mobile-action-filter${mobileFiltersOpen ? ' active' : ''}`}
+          onClick={() => setMobileFiltersOpen((prev) => !prev)}
+          aria-expanded={mobileFiltersOpen}
+          aria-controls="schools-mobile-filters"
+        >
+          <span aria-hidden="true">⚙</span>
+          <span>
+            {ft('filters')}
+            {activeFiltersCount ? ` (${activeFiltersCount})` : ''}
+          </span>
+        </button>
+        <Link href="/parent/ai-match" className="schools-mobile-action schools-mobile-action-ai">
+          <span aria-hidden="true">✦</span>
+          <span>{compareUi.aiMatch}</span>
+        </Link>
+      </div>
 
       <div className="schools-mobile-filter-bar">
         <button
