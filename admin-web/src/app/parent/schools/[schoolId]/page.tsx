@@ -559,9 +559,51 @@ const localizeUniqueList = (value: unknown, locale: 'ru' | 'en' | 'kk') =>
       toList(value)
         .map((item) => localizeOption(item, locale).trim())
         .filter(Boolean)
-        .map((item) => [item.toLowerCase(), item] as const)
+      .map((item) => [item.toLowerCase(), item] as const)
     ).values()
   );
+
+const formatGradesSummary = (value: unknown) => {
+  const raw = toList(value)
+    .flatMap((item) => String(item).split(','))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const numeric = new Set<number>();
+  const special: string[] = [];
+
+  for (const item of raw) {
+    const normalized = item.replace(/\s+/g, '');
+    const rangeMatch = normalized.match(/^(\d+)-(\d+)$/);
+    if (rangeMatch) {
+      const start = Number(rangeMatch[1]);
+      const end = Number(rangeMatch[2]);
+      if (Number.isFinite(start) && Number.isFinite(end) && start <= end) {
+        for (let grade = start; grade <= end; grade += 1) numeric.add(grade);
+        continue;
+      }
+    }
+
+    const num = Number(normalized);
+    if (Number.isFinite(num)) {
+      numeric.add(num);
+      continue;
+    }
+
+    if (!special.includes(item)) special.push(item);
+  }
+
+  const sorted = Array.from(numeric).sort((a, b) => a - b);
+  let numericLabel = '';
+  if (sorted.length) {
+    const isContinuous = sorted.every((grade, index) => index === 0 || grade === sorted[index - 1] + 1);
+    numericLabel = isContinuous && sorted.length > 2
+      ? `${sorted[0]}-${sorted[sorted.length - 1]}`
+      : sorted.join(', ');
+  }
+
+  return [...special, numericLabel].filter(Boolean).join(', ');
+};
 
 const TYPE_KEY_ALIASES: Record<string, 'State' | 'Private'> = {
   state: 'State',
@@ -975,7 +1017,7 @@ export default function ParentSchoolDetailsPage() {
     locale
   );
   const educationGrades = localizeCsv(
-    pickFirstText(school, ['education.grades'], ''),
+    formatGradesSummary(pickFirstText(school, ['education.grades'], '')),
     locale
   );
   const shiftMode = localizeOption(
