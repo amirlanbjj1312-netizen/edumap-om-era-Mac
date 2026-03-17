@@ -787,6 +787,8 @@ export default function SchoolsPage() {
       return haystack.includes(q);
     });
   }, [actorEmail, isSuperadmin, items, query]);
+  const detailsLabel =
+    locale === 'en' ? 'Details' : locale === 'kk' ? 'Толығырақ' : 'Подробнее';
   const filledSchoolIds = useMemo(
     () =>
       new Set(
@@ -1158,28 +1160,7 @@ export default function SchoolsPage() {
                     className="button secondary"
                     onClick={() => editSchool(item.school_id)}
                   >
-                    {t('schoolsEdit')}
-                  </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => sendNotification(item)}
-                  >
-                    {t('schoolsNotify')}
-                  </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => toggleActive(item)}
-                  >
-                    {isActive ? t('schoolsDeactivate') : t('schoolsActivate')}
-                  </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => toggleVisibility(item)}
-                  >
-                    {isHidden ? `👁 ${t('schoolsShow')}` : `🙈 ${t('schoolsHide')}`}
+                    {detailsLabel}
                   </button>
                 </div>
 
