@@ -4120,6 +4120,50 @@ a {
 
   .market-school-row {
     grid-template-columns: 68px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .school-image-placeholder {
+    width: 68px;
+    height: 68px;
+    border-radius: 12px;
+    font-size: 22px;
+  }
+
+  .school-image-placeholder img {
+    inset: 4px;
+    width: calc(100% - 8px);
+    height: calc(100% - 8px);
+  }
+
+  .market-school-main {
+    min-width: 0;
+  }
+
+  .market-school-side-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    margin-top: 8px;
+    align-items: stretch;
+  }
+
+  .market-card-action-row {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .parent-school-name {
+    font-size: 24px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .market-school-city,
+  .market-school-phone,
+  .market-school-price {
+    overflow-wrap: anywhere;
   }
 
   .market-ad-box {
