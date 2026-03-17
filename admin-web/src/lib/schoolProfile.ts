@@ -41,6 +41,20 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       team: {
         principal: '',
         deputy_principal: '',
+        leadership: {
+          principal: {
+            full_name: '',
+            position: 'Директор',
+            photo_url: '',
+            bio: { ru: '', en: '', kk: '' },
+          },
+          deputy_principal: {
+            full_name: '',
+            position: 'Зам. директора',
+            photo_url: '',
+            bio: { ru: '', en: '', kk: '' },
+          },
+        },
         class_curators: '',
         class_curators_enabled: false,
         class_curators_format: '',

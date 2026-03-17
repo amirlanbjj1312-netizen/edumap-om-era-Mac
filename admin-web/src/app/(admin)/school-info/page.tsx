@@ -165,6 +165,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'По одному на класс': { en: 'One per class', kk: 'Әр сыныпқа бір куратор' },
   'По параллелям': { en: 'By grade level', kk: 'Параллельдер бойынша' },
   'Кураторская служба': { en: 'Curator service', kk: 'Кураторлық қызмет' },
+  'Руководство школы': { en: 'School leadership', kk: 'Мектеп басшылығы' },
+  'ФИО': { en: 'Full name', kk: 'Аты-жөні' },
+  'Короткое описание': { en: 'Short description', kk: 'Қысқаша сипаттама' },
+  'Фото руководителя (файл)': { en: 'Leadership photo (file)', kk: 'Басшылық фотосы (файл)' },
   Телефон: { en: 'Phone', kk: 'Телефон' },
   WhatsApp: { en: 'WhatsApp', kk: 'WhatsApp' },
   Email: { en: 'Email', kk: 'Email' },
@@ -1231,6 +1235,7 @@ export default function SchoolInfoPage() {
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'finance' | 'media'
   >('basic');
   const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
+  const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | 'deputy_principal' | null>(null);
   const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -1328,6 +1333,12 @@ export default function SchoolInfoPage() {
     category: '',
     teaching_languages: '',
     exam_prep: '',
+    photo_url: '',
+    bio: { ru: '', en: '', kk: '' },
+  });
+  const createLeadershipMember = (role: 'principal' | 'deputy_principal') => ({
+    full_name: '',
+    position: role === 'principal' ? 'Директор' : 'Зам. директора',
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
@@ -1464,6 +1475,65 @@ export default function SchoolInfoPage() {
       return prev;
     });
   }, [teachingStaffMembers.length]);
+
+  const getLeadershipMember = (role: 'principal' | 'deputy_principal') => {
+    const current = getDeep(profile, `basic_info.team.leadership.${role}`, {});
+    const fallbackName = String(
+      getDeep(profile, role === 'principal' ? 'basic_info.team.principal' : 'basic_info.team.deputy_principal', '') || ''
+    );
+    return {
+      ...createLeadershipMember(role),
+      ...(current && typeof current === 'object' ? current : {}),
+      full_name: String(
+        getDeep(profile, `basic_info.team.leadership.${role}.full_name`, '') || fallbackName || ''
+      ),
+      position: String(
+        getDeep(profile, `basic_info.team.leadership.${role}.position`, '') ||
+          (role === 'principal' ? 'Директор' : 'Зам. директора')
+      ),
+      photo_url: String(getDeep(profile, `basic_info.team.leadership.${role}.photo_url`, '') || ''),
+      bio: {
+        ru: String(getDeep(profile, `basic_info.team.leadership.${role}.bio.ru`, '') || ''),
+        en: String(getDeep(profile, `basic_info.team.leadership.${role}.bio.en`, '') || ''),
+        kk: String(getDeep(profile, `basic_info.team.leadership.${role}.bio.kk`, '') || ''),
+      },
+    };
+  };
+
+  const updateLeadershipMember = (
+    role: 'principal' | 'deputy_principal',
+    patch: Record<string, any>,
+    shouldSave = false
+  ) => {
+    if (!profile) return;
+    const current = getLeadershipMember(role);
+    let nextProfile = setDeep(
+      profile,
+      `basic_info.team.leadership.${role}`,
+      { ...current, ...patch }
+    );
+    if (patch.full_name !== undefined) {
+      nextProfile = setDeep(
+        nextProfile,
+        role === 'principal' ? 'basic_info.team.principal' : 'basic_info.team.deputy_principal',
+        String(patch.full_name || '')
+      );
+    }
+    setProfile(nextProfile);
+    if (shouldSave) save(nextProfile);
+  };
+
+  const leadershipMembers = useMemo(
+    () => [
+      { key: 'principal' as const, title: 'Директор', member: getLeadershipMember('principal') },
+      {
+        key: 'deputy_principal' as const,
+        title: 'Зам. директора',
+        member: getLeadershipMember('deputy_principal'),
+      },
+    ],
+    [profile]
+  );
 
   const getClubsCatalog = () => {
     const legacySource = getDeep(profile, 'services.clubs_catalog', []);
@@ -2289,22 +2359,6 @@ export default function SchoolInfoPage() {
                     value={getDeep(profile, localePath('basic_info.description'))}
                     onChange={(value: string) =>
                       updateField(localePath('basic_info.description'), value)
-                    }
-                  />
-                </FieldRow>
-                <FieldRow>
-                  <Input
-                    label="Директор"
-                    value={getDeep(profile, 'basic_info.team.principal')}
-                    onChange={(value: string) =>
-                      updateField('basic_info.team.principal', value)
-                    }
-                  />
-                  <Input
-                    label="Зам. директора"
-                    value={getDeep(profile, 'basic_info.team.deputy_principal')}
-                    onChange={(value: string) =>
-                      updateField('basic_info.team.deputy_principal', value)
                     }
                   />
                 </FieldRow>
@@ -3367,6 +3421,121 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <Section title="Наш преподавательский состав">
+          <Section title="Руководство школы">
+            <div className="teacher-list">
+              {leadershipMembers.map(({ key, title, member }) => {
+                const isExpanded = expandedLeadershipKey === key;
+                const summaryParts = [
+                  String(member?.full_name || '').trim(),
+                  String(member?.position || '').trim(),
+                  String(member?.bio?.[contentLocale] || '').trim(),
+                ].filter(Boolean);
+                return (
+                  <div key={key} className="teacher-card">
+                    <div className="teacher-card-head">
+                      <h3>{t(title)}</h3>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() =>
+                            setExpandedLeadershipKey((prev) => (prev === key ? null : key))
+                          }
+                        >
+                          {isExpanded ? t('Свернуть') : t('Развернуть')}
+                        </button>
+                      </div>
+                    </div>
+                    {!isExpanded ? (
+                      <p className="muted" style={{ marginTop: 8 }}>
+                        {summaryParts.join(' • ') || t('Не выбрано')}
+                      </p>
+                    ) : null}
+                    {isExpanded ? (
+                      <>
+                        <FieldRow>
+                          <Input
+                            label="ФИО"
+                            value={member?.full_name || ''}
+                            onChange={(value: string) =>
+                              updateLeadershipMember(key, { full_name: value })
+                            }
+                          />
+                          <Input
+                            label="Должность"
+                            value={member?.position || ''}
+                            onChange={(value: string) =>
+                              updateLeadershipMember(key, { position: value })
+                            }
+                          />
+                        </FieldRow>
+                        <FieldRow>
+                          <label className="field">
+                            <span>{t('Фото руководителя (файл)')}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (event) => {
+                                const input = event.currentTarget;
+                                const file = input.files?.[0];
+                                if (!file) return;
+                                try {
+                                  setMediaMessage('');
+                                  const preparedFiles = await prepareImageFiles([file], {
+                                    title: t('Фото руководителя (файл)'),
+                                    aspect: 1,
+                                  });
+                                  if (!preparedFiles?.length) return;
+                                  const urls = await uploadMediaFiles(preparedFiles, 'leadership');
+                                  if (urls[0]) {
+                                    updateLeadershipMember(key, { photo_url: urls[0] }, true);
+                                  }
+                                } catch (error: any) {
+                                  setMediaMessage(
+                                    error?.message ||
+                                      'Не удалось загрузить фото руководителя. Проверьте bucket в Supabase.'
+                                  );
+                                } finally {
+                                  input.value = '';
+                                }
+                              }}
+                            />
+                            {member?.photo_url ? (
+                              <div className="teacher-photo-preview">
+                                <img src={member.photo_url} alt={member.full_name || title} />
+                                <button
+                                  type="button"
+                                  className="button secondary"
+                                  onClick={() => updateLeadershipMember(key, { photo_url: '' }, true)}
+                                >
+                                  {t('Удалить фото')}
+                                </button>
+                              </div>
+                            ) : null}
+                          </label>
+                        </FieldRow>
+                        <FieldRow>
+                          <TextArea
+                            label="Короткое описание"
+                            rows={3}
+                            value={member?.bio?.[contentLocale] || ''}
+                            onChange={(value: string) =>
+                              updateLeadershipMember(key, {
+                                bio: {
+                                  ...(member?.bio || { ru: '', en: '', kk: '' }),
+                                  [contentLocale]: value,
+                                },
+                              })
+                            }
+                          />
+                        </FieldRow>
+                      </>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
           <div className="teacher-actions">
             <button
               type="button"
