@@ -960,8 +960,69 @@ export default function ParentSchoolDetailsPage() {
     ['education.admission_details.admission_stages_detail'],
     ''
   );
+  const educationGrades = localizeCsv(
+    pickFirstText(school, ['education.grades'], ''),
+    locale
+  );
+  const enrollmentPeriod = localizeOption(
+    pickFirstText(school, ['education.admission_details.enrollment_period'], ''),
+    locale
+  );
+  const competitionPerSeat = localizeOption(
+    pickFirstText(school, ['education.admission_details.competition_per_seat'], ''),
+    locale
+  );
+  const shiftMode = localizeOption(
+    pickFirstText(school, ['education.learning_conditions.shift_mode'], ''),
+    locale
+  );
+  const homeworkFormat = pickFirstText(
+    school,
+    ['education.learning_conditions.homework_format'],
+    ''
+  );
+  const assessmentFormat = pickFirstText(
+    school,
+    ['education.learning_conditions.assessment_format'],
+    ''
+  );
+  const digitalPlatforms = localizeCsv(
+    pickFirstText(school, ['education.learning_conditions.digital_platforms'], ''),
+    locale
+  );
+  const averageExamScore = pickFirstText(school, ['education.results.average_exam_score'], '');
+  const universityAdmissionRate = pickFirstText(
+    school,
+    ['education.results.university_admission_rate'],
+    ''
+  );
+  const topUniversities = pickFirstText(school, ['education.results.top_universities'], '');
+  const olympiadAchievements = pickFirstText(
+    school,
+    ['education.results.olympiad_achievements'],
+    ''
+  );
+  const classSizePrimary = pickFirstText(
+    school,
+    ['education.learning_conditions.class_size_primary'],
+    ''
+  );
+  const classSizeMiddle = pickFirstText(
+    school,
+    ['education.learning_conditions.class_size_middle'],
+    ''
+  );
+  const classSizeHigh = pickFirstText(
+    school,
+    ['education.learning_conditions.class_size_high'],
+    ''
+  );
   const educationItems = [
     { label: locale === 'en' ? 'Languages' : locale === 'kk' ? 'Тілдер' : 'Языки', value: educationLanguages.join(', ') || pickFirstText(school, ['education.languages'], ui.notSpecified) },
+    {
+      label: locale === 'en' ? 'Grades' : locale === 'kk' ? 'Сыныптар' : 'Классы',
+      value: educationGrades,
+    },
     {
       label: locale === 'en' ? 'Advanced subjects' : locale === 'kk' ? 'Тереңдетілген пәндер' : 'Углубленные предметы',
       value: localizeCsv(
@@ -971,37 +1032,73 @@ export default function ParentSchoolDetailsPage() {
     },
     { label: locale === 'en' ? 'Average class size' : locale === 'kk' ? 'Сыныптың орташа көлемі' : 'Средний размер класса', value: pickFirstText(school, ['education.average_class_size'], '—') },
     {
+      label: locale === 'en' ? 'Class size (primary)' : locale === 'kk' ? 'Бастауыш сынып көлемі' : 'Размер класса (начальная школа)',
+      value: classSizePrimary,
+    },
+    {
+      label: locale === 'en' ? 'Class size (middle)' : locale === 'kk' ? 'Орта буын сынып көлемі' : 'Размер класса (средняя школа)',
+      value: classSizeMiddle,
+    },
+    {
+      label: locale === 'en' ? 'Class size (high)' : locale === 'kk' ? 'Жоғары сынып көлемі' : 'Размер класса (старшая школа)',
+      value: classSizeHigh,
+    },
+    {
       label: ui.entranceExam,
       value: entranceRequired
         ? entranceFormat || ui.yes
         : ui.no,
     },
+    {
+      label: locale === 'en' ? 'Enrollment period' : locale === 'kk' ? 'Қабылдау кезеңі' : 'Период набора',
+      value: enrollmentPeriod,
+    },
     { label: ui.admissionDeadline, value: admissionDeadline || ui.notSpecified },
     { label: ui.admissionStages, value: admissionStages || ui.notSpecified },
+    {
+      label: locale === 'en' ? 'Competition per seat' : locale === 'kk' ? 'Бір орынға конкурс' : 'Конкурс на место',
+      value: competitionPerSeat,
+    },
+    {
+      label: locale === 'en' ? 'Shift mode' : locale === 'kk' ? 'Оқу ауысымы' : 'Сменность обучения',
+      value: shiftMode,
+    },
+    {
+      label: locale === 'en' ? 'Homework format' : locale === 'kk' ? 'Үй жұмысының форматы' : 'Формат домашней работы',
+      value: homeworkFormat,
+    },
+    {
+      label: locale === 'en' ? 'Assessment format' : locale === 'kk' ? 'Бағалау форматы' : 'Формат оценивания',
+      value: assessmentFormat,
+    },
+    {
+      label: locale === 'en' ? 'Digital platforms' : locale === 'kk' ? 'Цифрлық платформалар' : 'Цифровые платформы',
+      value: digitalPlatforms,
+    },
+    {
+      label: locale === 'en' ? 'Average exam score' : locale === 'kk' ? 'Емтиханның орташа балы' : 'Средний балл экзаменов',
+      value: averageExamScore,
+    },
+    {
+      label: locale === 'en' ? 'University admission rate' : locale === 'kk' ? 'ЖОО-ға түсу үлесі' : 'Поступление выпускников в вузы',
+      value: universityAdmissionRate,
+    },
+    {
+      label: locale === 'en' ? 'Top universities' : locale === 'kk' ? 'Түлектер түсетін ЖОО' : 'Куда поступают выпускники',
+      value: topUniversities,
+    },
+    {
+      label: locale === 'en' ? 'Olympiad achievements' : locale === 'kk' ? 'Олимпиада жетістіктері' : 'Олимпиадные достижения',
+      value: olympiadAchievements,
+    },
   ];
-  const educationItemLabels = new Set(
-    educationItems.map((item) => item.label.toLowerCase().trim())
+  const educationRows = educationItems.filter(
+    (item) =>
+      item.value &&
+      item.value.trim() &&
+      item.value !== ui.notSpecified &&
+      item.value !== '—'
   );
-  const hiddenEducationLabels = new Set([
-    'programs',
-    'программы',
-    'бағдарламалар',
-    'national',
-    'international',
-    'additional',
-    'other',
-    'required',
-    'format',
-    'format other',
-    'subjects',
-    'subjects other',
-  ]);
-  const educationExtraRows = flattenDetails(getIn(school, 'education')).filter((row) => {
-    if (!row.value?.trim()) return false;
-    const normalized = row.label.toLowerCase().trim();
-    return !educationItemLabels.has(normalized) && !hiddenEducationLabels.has(normalized);
-  });
-  const educationRows = mergeUniqueRows(educationItems, educationExtraRows);
   const studentSuccessStories: StudentSuccessStory[] = Array.isArray(
     getIn(school, 'education.results.student_success_stories')
   )
@@ -1696,10 +1793,16 @@ export default function ParentSchoolDetailsPage() {
                                         src={story.student_photo}
                                         alt={story.student_name || `student-${index + 1}`}
                                         className="school-media-thumb"
-                                        style={{ flexShrink: 0 }}
+                                        style={{
+                                          flexShrink: 0,
+                                          width: 112,
+                                          height: 112,
+                                          borderRadius: 12,
+                                          objectFit: 'cover',
+                                        }}
                                       />
                                     ) : null}
-                                    <div style={{ display: 'grid', gap: 4 }}>
+                                    <div style={{ display: 'grid', gap: 4, minWidth: 0, flex: 1 }}>
                                       <strong>{story.student_name || `${ui.successStories} #${index + 1}`}</strong>
                                       {story.admitted_to ? <span>{`${ui.admittedTo}: ${story.admitted_to}`}</span> : null}
                                       {story.school_average_score ? (
