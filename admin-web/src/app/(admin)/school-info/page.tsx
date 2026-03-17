@@ -360,6 +360,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Проводим оплату...': { en: 'Processing payment...', kk: 'Төлем өңделуде...' },
   'Продлить по текущему тарифу': { en: 'Renew current tariff', kk: 'Ағымдағы тарифпен ұзарту' },
   'Текущий статус подписки': { en: 'Current subscription status', kk: 'Ағымдағы жазылым күйі' },
+  'Скрыть из ЛК родителя': { en: 'Hide from parent cabinet', kk: 'Ата-ана кабинетінде жасыру' },
   'Тарифы недоступны': { en: 'No tariffs available', kk: 'Тарифтер қолжетімсіз' },
   'Нет предыдущего тарифа для продления': {
     en: 'No previous tariff to renew',
@@ -2096,6 +2097,13 @@ export default function SchoolInfoPage() {
       </div>
       <section className="card" style={{ marginBottom: 16 }}>
         <h2 style={{ marginTop: 0 }}>{summaryUi.title}</h2>
+        <div style={{ marginBottom: 12 }}>
+          <Toggle
+            label="Скрыть из ЛК родителя"
+            checked={Boolean(getDeep(profile, 'system.hidden_from_users'))}
+            onChange={(value: boolean) => updateField('system.hidden_from_users', value)}
+          />
+        </div>
         <div className="form-row">
           <label className="field">
             <span>{summaryUi.tariff}</span>
