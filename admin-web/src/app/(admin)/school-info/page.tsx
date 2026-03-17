@@ -306,6 +306,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Транспорт: { en: 'Transport', kk: 'Көлік' },
   Инклюзив: { en: 'Inclusive', kk: 'Инклюзивті' },
   Продленка: { en: 'After-school', kk: 'Ұзартылған топ' },
+  'До скольки': { en: 'Until what time', kk: 'Қай уақытқа дейін' },
   'Гос финансирование': { en: 'State funding', kk: 'Мемлекеттік қаржыландыру' },
   Самоокупаемость: { en: 'Self-funded', kk: 'Өзін-өзі қаржыландыру' },
   'Бесплатные места': { en: 'Free places', kk: 'Тегін орындар' },
@@ -3249,44 +3250,6 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.foreign_teachers', value)}
           />
         </FieldRow>
-        <FieldRow>
-          <TextArea
-            label="Маршруты автобуса"
-            rows={2}
-            value={getDeep(profile, localePath('services.transport_details.routes'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.transport_details.routes'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <TextArea
-            label="Стоимость транспорта по районам"
-            rows={2}
-            value={getDeep(profile, localePath('services.transport_details.cost_by_district'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.transport_details.cost_by_district'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <Input
-            label="Время подачи автобуса"
-            type="time"
-            value={getDeep(profile, localePath('services.transport_details.pickup_schedule'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.transport_details.pickup_schedule'), value)
-            }
-          />
-          <Input
-            label="Время развоза автобуса"
-            type="time"
-            value={getDeep(profile, localePath('services.transport_details.dropoff_schedule'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.transport_details.dropoff_schedule'), value)
-            }
-          />
-        </FieldRow>
         <CheckboxGroup
           label="Члены персонала"
           options={PERSONNEL_MEMBER_OPTIONS}
@@ -4187,6 +4150,16 @@ export default function SchoolInfoPage() {
             onChange={(value: boolean) => updateField('services.after_school', value)}
           />
         </FieldRow>
+        {Boolean(getDeep(profile, 'services.after_school')) ? (
+          <FieldRow>
+            <Input
+              label="До скольки"
+              type="time"
+              value={getDeep(profile, 'services.after_school_until')}
+              onChange={(value: string) => updateField('services.after_school_until', value)}
+            />
+          </FieldRow>
+        ) : null}
         {mediaMessage ? <p className="muted">{mediaMessage}</p> : null}
             </Section>
           )}

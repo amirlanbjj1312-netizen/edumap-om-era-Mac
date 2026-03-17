@@ -115,6 +115,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
     },
     services: {
       after_school: false,
+      after_school_until: '',
       meals: '',
       meals_status: '',
       meals_times_per_day: '',

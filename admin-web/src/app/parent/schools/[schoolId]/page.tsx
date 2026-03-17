@@ -701,6 +701,23 @@ const formatMealsValue = (
   return parts.length ? parts.join(' • ') : fallback;
 };
 
+const formatAfterSchoolValue = (
+  school: unknown,
+  locale: 'ru' | 'en' | 'kk',
+  availableLabel: string,
+  unavailableLabel: string
+) => {
+  const enabled = Boolean(getIn(school, 'services.after_school'));
+  if (!enabled) return unavailableLabel;
+  const until = toText(getIn(school, 'services.after_school_until')).trim();
+  if (!until) return availableLabel;
+  return locale === 'en'
+    ? `${availableLabel} until ${until}`
+    : locale === 'kk'
+      ? `${availableLabel} ${until}-ге дейін`
+      : `${availableLabel} до ${until}`;
+};
+
 export default function ParentSchoolDetailsPage() {
   const { locale } = useParentLocale();
   const ui = {
@@ -1288,7 +1305,10 @@ export default function ParentSchoolDetailsPage() {
     : [];
   const hasTeamSection = teamRows.length > 0 || personnelRows.length > 0 || teachers.length > 0;
   const serviceRows = [
-    { label: locale === 'en' ? 'After-school care' : locale === 'kk' ? 'Ұзартылған күн' : 'Продленка', value: getIn(school, 'services.after_school') ? ui.available : ui.unavailable },
+    {
+      label: locale === 'en' ? 'After-school care' : locale === 'kk' ? 'Ұзартылған күн' : 'Продленка',
+      value: formatAfterSchoolValue(school, locale, ui.available, ui.unavailable),
+    },
     {
       label: locale === 'en' ? 'Meals' : locale === 'kk' ? 'Тамақтану' : 'Питание',
       value: formatMealsValue(school, locale, ui.notSpecified),
