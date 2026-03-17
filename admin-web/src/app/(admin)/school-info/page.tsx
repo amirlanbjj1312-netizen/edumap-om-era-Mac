@@ -3272,34 +3272,6 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <TextArea
-            label="Работа с аллергиями/особыми диетами"
-            rows={2}
-            value={getDeep(profile, localePath('services.health_support.allergy_support'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.health_support.allergy_support'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
-          <TextArea
-            label="Протоколы безопасности"
-            rows={2}
-            value={getDeep(profile, localePath('services.safety.security_protocols'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.safety.security_protocols'), value)
-            }
-          />
-          <TextArea
-            label="Политика доступа на территорию"
-            rows={2}
-            value={getDeep(profile, localePath('services.safety.access_policy'))}
-            onChange={(value: string) =>
-              updateField(localePath('services.safety.access_policy'), value)
-            }
-          />
-        </FieldRow>
-        <FieldRow>
           <Select
             label="Формат обратной связи с родителями"
             value={getDeep(profile, localePath('services.parent_engagement.feedback_format'))}
@@ -3331,42 +3303,6 @@ export default function SchoolInfoPage() {
               ).map((item) => ({
                 value: item,
                 label: translateOption(item, contentLocale),
-              })),
-            ]}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Select
-            label="Родительский комитет"
-            value={getDeep(profile, 'services.parent_engagement.parent_committee')}
-            onChange={(value: string) =>
-              updateField('services.parent_engagement.parent_committee', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                PARENT_COMMITTEE_OPTIONS,
-                String(getDeep(profile, 'services.parent_engagement.parent_committee') || '')
-              ).map((item) => ({
-                value: item,
-                label: translateOption(item, contentLocale),
-              })),
-            ]}
-          />
-          <Select
-            label="SLA ответа школе (часы)"
-            value={getDeep(profile, 'services.parent_engagement.response_sla_hours')}
-            onChange={(value: string) =>
-              updateField('services.parent_engagement.response_sla_hours', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                RESPONSE_SLA_OPTIONS,
-                String(getDeep(profile, 'services.parent_engagement.response_sla_hours') || '')
-              ).map((item) => ({
-                value: item,
-                label: item,
               })),
             ]}
           />
