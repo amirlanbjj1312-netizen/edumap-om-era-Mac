@@ -1256,6 +1256,7 @@ export default function SchoolInfoPage() {
   const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
   const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | 'deputy_principal' | null>(null);
   const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
+  const [expandedSuccessStoryIndex, setExpandedSuccessStoryIndex] = useState<number | null>(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const schoolId = useMemo(() => {
@@ -2938,6 +2939,7 @@ export default function SchoolInfoPage() {
             onClick={() => {
               const nextStories = [...studentSuccessStories, createStudentSuccessStoryEntry()];
               setStudentSuccessStories(nextStories);
+              setExpandedSuccessStoryIndex(nextStories.length - 1);
             }}
           >
             {t('Добавить кейс выпускника')}
@@ -2946,24 +2948,56 @@ export default function SchoolInfoPage() {
         {studentSuccessStories.length ? (
           <div className="teacher-list">
             {studentSuccessStories.map((story: any, index: number) => {
-              const subjectsValues = normalizeListValue(story?.admission_subjects || '');
+              const isExpanded = expandedSuccessStoryIndex === index;
+              const summaryParts = [
+                String(story?.student_name || '').trim(),
+                String(story?.admitted_to || '').trim(),
+                String(story?.school_average_score || '').trim()
+                  ? `${t('Средний балл в школе')}: ${String(story?.school_average_score || '').trim()}`
+                  : '',
+              ].filter(Boolean);
               return (
                 <div key={String(story.id || `student-story-${index}`)} className="teacher-card">
                   <div className="teacher-card-head">
                     <h3>{`${t('Кейс выпускника')} #${index + 1}`}</h3>
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => {
-                        const nextStories = studentSuccessStories.filter(
-                          (_item, storyIndex) => storyIndex !== index
-                        );
-                        setStudentSuccessStories(nextStories);
-                      }}
-                    >
-                      {t('Удалить кейс')}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() =>
+                          setExpandedSuccessStoryIndex((prev) => (prev === index ? null : index))
+                        }
+                      >
+                        {isExpanded ? t('Свернуть') : t('Развернуть')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => {
+                          const nextStories = studentSuccessStories.filter(
+                            (_item, storyIndex) => storyIndex !== index
+                          );
+                          setStudentSuccessStories(nextStories);
+                          setExpandedSuccessStoryIndex((prev) => {
+                            if (!nextStories.length) return null;
+                            if (prev === null) return null;
+                            if (prev === index) return Math.min(index, nextStories.length - 1);
+                            if (prev > index) return prev - 1;
+                            return prev;
+                          });
+                        }}
+                      >
+                        {t('Удалить кейс')}
+                      </button>
+                    </div>
                   </div>
+                  {!isExpanded ? (
+                    <p className="muted" style={{ marginTop: 8 }}>
+                      {summaryParts.join(' • ') || t('Не выбрано')}
+                    </p>
+                  ) : null}
+                  {isExpanded ? (
+                    <>
                   <FieldRow>
                     <Input
                       label="Имя ученика"
@@ -3076,6 +3110,8 @@ export default function SchoolInfoPage() {
                       }
                     />
                   </FieldRow>
+                    </>
+                  ) : null}
                 </div>
               );
             })}
