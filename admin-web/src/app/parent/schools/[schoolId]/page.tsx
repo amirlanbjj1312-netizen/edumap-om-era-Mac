@@ -958,26 +958,8 @@ export default function ParentSchoolDetailsPage() {
     ),
     locale
   );
-  const admissionDeadline = pickFirstText(
-    school,
-    ['education.admission_details.document_deadlines'],
-    ''
-  );
-  const admissionStages = pickFirstText(
-    school,
-    ['education.admission_details.admission_stages_detail'],
-    ''
-  );
   const educationGrades = localizeCsv(
     pickFirstText(school, ['education.grades'], ''),
-    locale
-  );
-  const enrollmentPeriod = localizeOption(
-    pickFirstText(school, ['education.admission_details.enrollment_period'], ''),
-    locale
-  );
-  const competitionPerSeat = localizeOption(
-    pickFirstText(school, ['education.admission_details.competition_per_seat'], ''),
     locale
   );
   const shiftMode = localizeOption(
@@ -997,18 +979,6 @@ export default function ParentSchoolDetailsPage() {
   const digitalPlatforms = localizeCsv(
     pickFirstText(school, ['education.learning_conditions.digital_platforms'], ''),
     locale
-  );
-  const averageExamScore = pickFirstText(school, ['education.results.average_exam_score'], '');
-  const universityAdmissionRate = pickFirstText(
-    school,
-    ['education.results.university_admission_rate'],
-    ''
-  );
-  const topUniversities = pickFirstText(school, ['education.results.top_universities'], '');
-  const olympiadAchievements = pickFirstText(
-    school,
-    ['education.results.olympiad_achievements'],
-    ''
   );
   const classSizePrimary = pickFirstText(
     school,
@@ -1058,16 +1028,6 @@ export default function ParentSchoolDetailsPage() {
         : ui.no,
     },
     {
-      label: locale === 'en' ? 'Enrollment period' : locale === 'kk' ? 'Қабылдау кезеңі' : 'Период набора',
-      value: enrollmentPeriod,
-    },
-    { label: ui.admissionDeadline, value: admissionDeadline || ui.notSpecified },
-    { label: ui.admissionStages, value: admissionStages || ui.notSpecified },
-    {
-      label: locale === 'en' ? 'Competition per seat' : locale === 'kk' ? 'Бір орынға конкурс' : 'Конкурс на место',
-      value: competitionPerSeat,
-    },
-    {
       label: locale === 'en' ? 'Shift mode' : locale === 'kk' ? 'Оқу ауысымы' : 'Сменность обучения',
       value: shiftMode,
     },
@@ -1082,22 +1042,6 @@ export default function ParentSchoolDetailsPage() {
     {
       label: locale === 'en' ? 'Digital platforms' : locale === 'kk' ? 'Цифрлық платформалар' : 'Цифровые платформы',
       value: digitalPlatforms,
-    },
-    {
-      label: locale === 'en' ? 'Average exam score' : locale === 'kk' ? 'Емтиханның орташа балы' : 'Средний балл экзаменов',
-      value: averageExamScore,
-    },
-    {
-      label: locale === 'en' ? 'University admission rate' : locale === 'kk' ? 'ЖОО-ға түсу үлесі' : 'Поступление выпускников в вузы',
-      value: universityAdmissionRate,
-    },
-    {
-      label: locale === 'en' ? 'Top universities' : locale === 'kk' ? 'Түлектер түсетін ЖОО' : 'Куда поступают выпускники',
-      value: topUniversities,
-    },
-    {
-      label: locale === 'en' ? 'Olympiad achievements' : locale === 'kk' ? 'Олимпиада жетістіктері' : 'Олимпиадные достижения',
-      value: olympiadAchievements,
     },
   ];
   const educationRows = educationItems.filter(
@@ -1792,75 +1736,6 @@ export default function ParentSchoolDetailsPage() {
                               </div>
                             ) : null}
                           </>
-                        ) : null}
-                        {studentSuccessStories.length ? (
-                          <div className="school-media-assets-block" style={{ marginTop: 12 }}>
-                            <p className="school-media-assets-title">
-                              {`${ui.successStories} (${studentSuccessStories.length})`}
-                            </p>
-                            <div
-                              style={{
-                                display: 'grid',
-                                gap: 10,
-                              }}
-                            >
-                              {studentSuccessStories.map((story, index) => (
-                                <div
-                                  key={`${story.student_name || 'story'}-${index}`}
-                                  style={{
-                                    border: '1px solid rgba(85, 102, 157, 0.2)',
-                                    borderRadius: 12,
-                                    padding: 10,
-                                    background: '#fff',
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                    {story.student_photo ? (
-                                      <img
-                                        src={story.student_photo}
-                                        alt={story.student_name || `student-${index + 1}`}
-                                        className="school-media-thumb"
-                                        style={{
-                                          flexShrink: 0,
-                                          width: 112,
-                                          height: 112,
-                                          borderRadius: 12,
-                                          objectFit: 'cover',
-                                        }}
-                                      />
-                                    ) : null}
-                                    <div style={{ display: 'grid', gap: 4, minWidth: 0, flex: 1 }}>
-                                      <strong>{story.student_name || `${ui.successStories} #${index + 1}`}</strong>
-                                      {story.admitted_to ? <span>{`${ui.admittedTo}: ${story.admitted_to}`}</span> : null}
-                                      {story.school_average_score ? (
-                                        <span>{`${ui.schoolGpa}: ${story.school_average_score}`}</span>
-                                      ) : null}
-                                      {(story.ent_score || story.ielts_score || story.sat_score) ? (
-                                        <span>
-                                          {[
-                                            story.ent_score ? `ЕНТ: ${story.ent_score}` : '',
-                                            story.ielts_score ? `IELTS: ${story.ielts_score}` : '',
-                                            story.sat_score ? `SAT: ${story.sat_score}` : '',
-                                          ]
-                                            .filter(Boolean)
-                                            .join(' • ')}
-                                        </span>
-                                      ) : null}
-                                      {story.admission_subjects ? (
-                                        <span>{`${ui.admissionSubjects}: ${story.admission_subjects}`}</span>
-                                      ) : null}
-                                      {story.application_deadline ? (
-                                        <span>{`${ui.admissionDeadline}: ${story.application_deadline}`}</span>
-                                      ) : null}
-                                      {story.achievements ? (
-                                        <span>{`${ui.achievements}: ${story.achievements}`}</span>
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
                         ) : null}
                       </div>
                     ) : section.key === 'basic_info' ? (
