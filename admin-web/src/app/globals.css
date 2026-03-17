@@ -3395,6 +3395,154 @@ a {
   font-size: 20px;
 }
 
+.school-admission-hero {
+  border-radius: 24px;
+  border: 1px solid #dbe4f5;
+  background:
+    radial-gradient(circle at top left, rgba(72, 112, 255, 0.16), transparent 38%),
+    linear-gradient(135deg, #ffffff 0%, #f5f8ff 100%);
+  padding: 18px;
+}
+
+.school-admission-hero-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.school-admission-hero-copy {
+  min-width: 0;
+}
+
+.school-admission-eyebrow {
+  margin: 0 0 8px;
+  color: #5f6d8a;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.school-admission-title {
+  margin: 0;
+  color: #1d2943;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.school-admission-subtitle {
+  margin: 10px 0 0;
+  color: #5f6d8a;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.school-admission-logo-shell {
+  flex-shrink: 0;
+  width: 108px;
+  height: 108px;
+  border-radius: 24px;
+  border: 1px solid #dbe4f5;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(68, 94, 151, 0.08);
+}
+
+.school-admission-logo {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.school-admission-chip-row {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.school-admission-chip {
+  min-width: 160px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid #dbe4f5;
+}
+
+.school-admission-chip span {
+  display: block;
+  color: #6b7893;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.school-admission-chip strong {
+  color: #1d2943;
+  font-size: 16px;
+}
+
+.school-admission-card {
+  margin-top: 16px;
+}
+
+.school-admission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-admission-stat {
+  border-radius: 18px;
+  border: 1px solid #dbe4f5;
+  background: #f8fbff;
+  padding: 16px;
+}
+
+.school-admission-stat p {
+  margin: 0 0 6px;
+  color: #6b7893;
+}
+
+.school-admission-stat strong {
+  color: #1d2943;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.school-admission-stage-box {
+  margin-top: 14px;
+  border-radius: 20px;
+  border: 1px solid #dbe4f5;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 16px;
+}
+
+.school-admission-stage-label {
+  margin: 0 0 8px;
+  color: #4870ff;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.school-admission-stage-content {
+  color: #1d2943;
+  font-size: 20px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.school-admission-actions {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .school-mobile-photo-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4635,6 +4783,37 @@ a {
 
   .school-consult-btn {
     font-size: 16px;
+  }
+
+  .school-admission-title {
+    font-size: 26px;
+  }
+
+  .school-admission-subtitle {
+    font-size: 15px;
+  }
+
+  .school-admission-logo-shell {
+    width: 82px;
+    height: 82px;
+    border-radius: 20px;
+  }
+
+  .school-admission-logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .school-admission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .school-admission-stage-content {
+    font-size: 18px;
+  }
+
+  .school-admission-actions {
+    grid-template-columns: 1fr;
   }
 
   .school-staff-name {

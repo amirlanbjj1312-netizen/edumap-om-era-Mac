@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadSchools } from '@/lib/api';
@@ -40,6 +41,11 @@ const pickFirstText = (source: unknown, paths: string[], fallback = '') => {
     if (value) return value;
   }
   return fallback;
+};
+
+const pickImage = (school: SchoolRow | null) => {
+  if (!school) return '';
+  return pickFirstText(school, ['media.logo', 'media.photos', 'basic_info.logo'], '');
 };
 
 const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
@@ -115,6 +121,19 @@ export default function ParentSchoolAdmissionPage() {
     competition: locale === 'en' ? 'Competition per seat' : locale === 'kk' ? 'Бір орынға конкурс' : 'Конкурс на место',
     yes: locale === 'en' ? 'Yes' : locale === 'kk' ? 'Иә' : 'Да',
     no: locale === 'en' ? 'No' : locale === 'kk' ? 'Жоқ' : 'Нет',
+    heroText:
+      locale === 'en'
+        ? 'Exam, deadlines and admission stages'
+        : locale === 'kk'
+          ? 'Емтихан, мерзімдер және қабылдау кезеңдері'
+          : 'Экзамен, сроки и этапы набора',
+    stageHint:
+      locale === 'en'
+        ? 'How admission works'
+        : locale === 'kk'
+          ? 'Қабылдау қалай өтеді'
+          : 'Как проходит поступление',
+    consult: locale === 'en' ? 'Request consultation' : locale === 'kk' ? 'Кеңес сұрау' : 'Запросить консультацию',
   };
 
   const examRequired = Boolean(getIn(school, 'education.entrance_exam.required'));
@@ -135,12 +154,18 @@ export default function ParentSchoolAdmissionPage() {
     pickFirstText(school, ['education.admission_details.competition_per_seat']),
     locale
   );
+  const schoolName = pickFirstText(school, ['basic_info.display_name', 'basic_info.name'], '');
+  const logo = pickImage(school);
 
-  const items = [
+  const chips = [
     { label: ui.exam, value: examRequired ? ui.yes : ui.no },
+    { label: ui.period, value: period },
+    { label: ui.competition, value: competition || ui.no },
+  ].filter((item) => item.value);
+
+  const statCards = [
     { label: ui.format, value: examRequired ? examFormat : '' },
     { label: ui.deadline, value: deadline },
-    { label: ui.stages, value: stages },
     { label: ui.period, value: period },
     { label: ui.competition, value: competition },
   ].filter((item) => item.value);
@@ -152,18 +177,57 @@ export default function ParentSchoolAdmissionPage() {
           ‹ {ui.back}
         </Link>
       </div>
-      <section className="school-mobile-photo-card">
-        <h3 className="school-mobile-photo-title">{ui.title}</h3>
+      <section className="school-admission-hero">
+        <div className="school-admission-hero-main">
+          <div className="school-admission-hero-copy">
+            <p className="school-admission-eyebrow">{schoolName || ui.title}</p>
+            <h1 className="school-admission-title">{ui.title}</h1>
+            <p className="school-admission-subtitle">{ui.heroText}</p>
+          </div>
+          {logo ? (
+            <div className="school-admission-logo-shell">
+              <Image src={logo} alt={schoolName || ui.title} width={96} height={96} className="school-admission-logo" unoptimized />
+            </div>
+          ) : null}
+        </div>
+        {chips.length ? (
+          <div className="school-admission-chip-row">
+            {chips.map((item) => (
+              <div key={`${item.label}-${item.value}`} className="school-admission-chip">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
+      <section className="school-mobile-photo-card school-admission-card">
         {loading ? <p className="muted">{ui.loading}</p> : null}
-        {!loading && !items.length ? <p className="muted">{ui.empty}</p> : null}
-        {!loading && items.length ? (
-          <div className="school-service-list">
-            {items.map((item, index) => (
-              <div key={`${item.label}-${index}`} className="school-service-item">
+        {!loading && !statCards.length && !stages ? <p className="muted">{ui.empty}</p> : null}
+        {!loading && statCards.length ? (
+          <div className="school-admission-grid">
+            {statCards.map((item, index) => (
+              <div key={`${item.label}-${index}`} className="school-admission-stat">
                 <p>{item.label}</p>
                 <strong>{item.value}</strong>
               </div>
             ))}
+          </div>
+        ) : null}
+        {!loading && stages ? (
+          <div className="school-admission-stage-box">
+            <p className="school-admission-stage-label">{ui.stageHint}</p>
+            <div className="school-admission-stage-content">{stages}</div>
+          </div>
+        ) : null}
+        {!loading ? (
+          <div className="school-admission-actions">
+            <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-consult-btn">
+              {ui.back}
+            </Link>
+            <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-consult-btn">
+              {ui.consult}
+            </Link>
           </div>
         ) : null}
       </section>
