@@ -1155,9 +1155,44 @@ export default function ParentSchoolDetailsPage() {
   const serviceRowLabels = new Set(
     serviceRows.map((item) => item.label.toLowerCase().trim())
   );
+  const hiddenServiceLabels = new Set([
+    'meals',
+    'meals status',
+    'meals times per day',
+    'meals free until grade',
+    'meals price',
+    'meals currency',
+    'medical office',
+    'security',
+    'cameras',
+    'access control',
+    'foreign teachers',
+    'psychologists',
+    'speech therapists',
+    'defectologists',
+    'special educators',
+    'social workers',
+    'tutors',
+    'nurses',
+    'photo',
+    'description',
+    'members',
+    'routes',
+    'cost by district',
+    'pickup schedule',
+    'dropoff schedule',
+    'medical staff',
+    'medical hours',
+    'allergy support',
+    'security protocols',
+    'access policy',
+    'feedback format',
+    'meeting frequency',
+  ]);
   const serviceExtraRows = flattenDetails(getIn(school, 'services')).filter((row) => {
     if (!row.value?.trim()) return false;
-    return !serviceRowLabels.has(row.label.toLowerCase().trim());
+    const normalized = row.label.toLowerCase().trim();
+    return !serviceRowLabels.has(normalized) && !hiddenServiceLabels.has(normalized);
   });
   const servicesAllRows = mergeUniqueRows(serviceRows, serviceExtraRows);
 
