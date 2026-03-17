@@ -172,11 +172,6 @@ export default function ParentSchoolAdmissionPage() {
 
   return (
     <div className="school-mobile-page">
-      <div className="school-mobile-backrow">
-        <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-mobile-back">
-          ‹ {ui.back}
-        </Link>
-      </div>
       <section className="school-admission-hero">
         <div className="school-admission-hero-main">
           <div className="school-admission-hero-copy">
@@ -186,7 +181,7 @@ export default function ParentSchoolAdmissionPage() {
           </div>
           {logo ? (
             <div className="school-admission-logo-shell">
-              <Image src={logo} alt={schoolName || ui.title} width={96} height={96} className="school-admission-logo" unoptimized />
+              <Image src={logo} alt={schoolName || ui.title} width={112} height={112} className="school-admission-logo" unoptimized />
             </div>
           ) : null}
         </div>
