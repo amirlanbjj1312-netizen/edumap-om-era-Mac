@@ -1038,12 +1038,6 @@ export default function ParentSchoolDetailsPage() {
       value: classSizeHigh,
     },
     {
-      label: ui.entranceExam,
-      value: entranceRequired
-        ? entranceFormat || ui.yes
-        : ui.no,
-    },
-    {
       label: locale === 'en' ? 'Shift mode' : locale === 'kk' ? 'Оқу ауысымы' : 'Сменность обучения',
       value: shiftMode,
     },
@@ -1089,6 +1083,7 @@ export default function ParentSchoolDetailsPage() {
         locale === 'en' ? 'Class size (primary)' : locale === 'kk' ? 'Бастауыш сынып көлемі' : 'Размер класса (начальная школа)',
         locale === 'en' ? 'Class size (middle)' : locale === 'kk' ? 'Орта буын сынып көлемі' : 'Размер класса (средняя школа)',
         locale === 'en' ? 'Class size (high)' : locale === 'kk' ? 'Жоғары сынып көлемі' : 'Размер класса (старшая школа)',
+        ui.entranceExam,
       ].includes(item.label)
   );
   const studentSuccessStories: StudentSuccessStory[] = Array.isArray(
