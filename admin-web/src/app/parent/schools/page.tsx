@@ -1215,9 +1215,11 @@ export default function ParentSchoolsPage() {
           <button type="button" onClick={() => setMinClubs((v) => Math.min(30, v + 1))}>+</button>
         </div>
       </div>
-      <button type="button" className="button secondary schools-filter-reset" onClick={resetFilters}>
-        {ft('reset')}
-      </button>
+      {!mobileFiltersOpen ? (
+        <button type="button" className="button secondary schools-filter-reset" onClick={resetFilters}>
+          {ft('reset')}
+        </button>
+      ) : null}
     </>
   );
 
