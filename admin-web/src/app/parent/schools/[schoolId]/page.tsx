@@ -447,6 +447,11 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   },
   'Updated content': { ru: 'Обновленное содержание', en: 'Updated content', kk: 'Жаңартылған мазмұн' },
   'Integrated NIS program': { ru: 'Интегрированная программа НИШ', en: 'Integrated NIS program', kk: 'НЗМ кіріктірілген бағдарламасы' },
+  Test: { ru: 'Тест', en: 'Test', kk: 'Тест' },
+  Exam: { ru: 'Экзамен', en: 'Exam', kk: 'Емтихан' },
+  Interview: { ru: 'Собеседование', en: 'Interview', kk: 'Сұхбат' },
+  'Single shift': { ru: 'Одна смена', en: 'Single shift', kk: 'Бір ауысым' },
+  'Two shifts': { ru: 'Две смены', en: 'Two shifts', kk: 'Екі ауысым' },
   Included: { ru: 'Включено', en: 'Included', kk: 'Қамтылған' },
   Available: { ru: 'Доступно', en: 'Available', kk: 'Қолжетімді' },
   Unavailable: { ru: 'Недоступно', en: 'Unavailable', kk: 'Қолжетімсіз' },
@@ -491,6 +496,11 @@ const OPTION_ALIASES: Record<string, string> = {
   'жаңартылған мазмұн': 'Updated content',
   'интегрированная программа ниш': 'Integrated NIS program',
   'нзм кіріктірілген бағдарламасы': 'Integrated NIS program',
+  test: 'Test',
+  exam: 'Exam',
+  interview: 'Interview',
+  'single shift': 'Single shift',
+  'two shifts': 'Two shifts',
 };
 
 const normalizeOptionKey = (value: string) => value.replace(/\s+/g, ' ').trim();
