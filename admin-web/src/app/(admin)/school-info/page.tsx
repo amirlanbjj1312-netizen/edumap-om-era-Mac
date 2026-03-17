@@ -2036,6 +2036,49 @@ export default function SchoolInfoPage() {
     return <div className="card">{t('Загрузка...')}</div>;
   }
 
+  const subscriptionStatus = String(getDeep(profile, 'monetization.subscription_status') || 'inactive');
+  const subscriptionPlan = String(getDeep(profile, 'monetization.plan_name') || '').trim() || '—';
+  const ratingValue = String(getDeep(profile, 'system.rating') || '0');
+  const reviewsCountValue = String(getDeep(profile, 'system.reviews_count') || '0');
+  const viewsCountValue = String(getDeep(profile, 'system.views_count') || '0');
+  const popularityScoreValue = String(getDeep(profile, 'system.popularity_score') || '0');
+  const summaryUi =
+    contentLocale === 'en'
+      ? {
+          title: 'School summary',
+          subscription: 'Subscription',
+          tariff: 'Tariff',
+          status: 'Status',
+          analytics: 'Analytics',
+          rating: 'Rating',
+          reviews: 'Reviews',
+          views: 'Views',
+          popularity: 'Popularity score',
+        }
+      : contentLocale === 'kk'
+        ? {
+            title: 'Мектеп сводкасы',
+            subscription: 'Жазылым',
+            tariff: 'Тариф',
+            status: 'Күйі',
+            analytics: 'Аналитика',
+            rating: 'Рейтинг',
+            reviews: 'Пікірлер',
+            views: 'Қаралымдар',
+            popularity: 'Танымалдық ұпайы',
+          }
+        : {
+            title: 'Сводка школы',
+            subscription: 'Подписка',
+            tariff: 'Тариф',
+            status: 'Статус',
+            analytics: 'Аналитика',
+            rating: 'Рейтинг',
+            reviews: 'Отзывы',
+            views: 'Просмотры',
+            popularity: 'Popularity score',
+          };
+
   return (
     <LocaleContext.Provider value={contentLocale}>
     <div className="page">
@@ -2051,6 +2094,39 @@ export default function SchoolInfoPage() {
           </button>
         ))}
       </div>
+      <section className="card" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0 }}>{summaryUi.title}</h2>
+        <div className="form-row">
+          <label className="field">
+            <span>{summaryUi.tariff}</span>
+            <input value={subscriptionPlan} readOnly />
+          </label>
+          <label className="field">
+            <span>{summaryUi.status}</span>
+            <input value={subscriptionStatus} readOnly />
+          </label>
+        </div>
+        <div className="form-row">
+          <label className="field">
+            <span>{summaryUi.rating}</span>
+            <input value={ratingValue} readOnly />
+          </label>
+          <label className="field">
+            <span>{summaryUi.reviews}</span>
+            <input value={reviewsCountValue} readOnly />
+          </label>
+        </div>
+        <div className="form-row">
+          <label className="field">
+            <span>{summaryUi.views}</span>
+            <input value={viewsCountValue} readOnly />
+          </label>
+          <label className="field">
+            <span>{summaryUi.popularity}</span>
+            <input value={popularityScoreValue} readOnly />
+          </label>
+        </div>
+      </section>
       <div className="tabs-layout">
         <aside className="side-tabs">
           <button

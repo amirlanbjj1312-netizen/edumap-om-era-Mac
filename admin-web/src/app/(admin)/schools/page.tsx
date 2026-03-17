@@ -77,10 +77,9 @@ const isSchoolProfileFilled = (profile: any) => {
   const district = normalizeText(profile?.basic_info?.district);
   const address = normalizeLocalizedText(profile?.basic_info?.address);
   const type = normalizeText(profile?.basic_info?.type);
-  const subtype = normalizeText(profile?.basic_info?.school_subtype);
   const languages = normalizeText(profile?.education?.languages);
   const isPrivate = String(type).toLowerCase().includes('private') || String(type).toLowerCase().includes('част') || String(type).toLowerCase().includes('жеке');
-  if (!logo || !brandName || !latitude || !longitude || !city || !district || !address || !type || !subtype || !languages) {
+  if (!logo || !brandName || !latitude || !longitude || !city || !district || !address || !type || !languages) {
     return false;
   }
   if (isPrivate && !hasPrivatePrice(profile)) return false;
