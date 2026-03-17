@@ -176,6 +176,7 @@ export default function ParentAiMatchPage() {
         ? {
             title: 'AI match',
             subtitle: 'Describe your request in plain language. AI will return schools and explain why.',
+            back: 'Back',
             promptLabel: 'Your request',
             promptPlaceholder:
               'Example: I need a private school in Astana with English and monthly budget up to 500 000 KZT',
@@ -213,6 +214,7 @@ export default function ParentAiMatchPage() {
           ? {
               title: 'AI іріктеу',
               subtitle: 'Сұранысты еркін түрде жазыңыз. AI мектептерді ұсынып, неге ұсынғанын түсіндіреді.',
+              back: 'Артқа',
               promptLabel: 'Сұранысыңыз',
               promptPlaceholder:
                 'Мысалы: Астанада ағылшын тілді, айына 500 000 KZT-ге дейінгі жеке мектеп керек',
@@ -249,6 +251,7 @@ export default function ParentAiMatchPage() {
           : {
               title: 'AI подбор',
               subtitle: 'Опишите запрос обычным языком. AI подберет школы и объяснит, почему именно они.',
+              back: 'Назад',
               promptLabel: 'Ваш запрос',
               promptPlaceholder:
                 'Например: нужна частная школа в Астане с английским и бюджетом до 500 000 ₸ в месяц',
@@ -428,6 +431,21 @@ export default function ParentAiMatchPage() {
 
   return (
     <div className="card">
+      <div style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
+              return;
+            }
+            router.push('/parent/schools');
+          }}
+        >
+          ← {ui.back}
+        </button>
+      </div>
       <h2 className="section-title">{ui.title}</h2>
       <p className="muted">{ui.subtitle}</p>
       {guest ? (
