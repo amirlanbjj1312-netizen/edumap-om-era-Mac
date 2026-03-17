@@ -36,6 +36,45 @@ const parseArrayValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const ADMISSION_SEAT_GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+
+const parseSeatGradesValue = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+
+  const result = new Set<string>();
+  raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => {
+      const rangeMatch = item.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+      if (rangeMatch) {
+        const start = Number(rangeMatch[1]);
+        const end = Number(rangeMatch[2]);
+        const from = Math.min(start, end);
+        const to = Math.max(start, end);
+        for (let grade = from; grade <= to; grade += 1) {
+          const gradeValue = String(grade);
+          if (ADMISSION_SEAT_GRADE_OPTIONS.includes(gradeValue)) {
+            result.add(gradeValue);
+          }
+        }
+        return;
+      }
+
+      const normalized = item.replace(/[^\d]/g, '');
+      if (ADMISSION_SEAT_GRADE_OPTIONS.includes(normalized)) {
+        result.add(normalized);
+      }
+    });
+
+  return ADMISSION_SEAT_GRADE_OPTIONS.filter((grade) => result.has(grade));
+};
+
+const formatSeatGradesValue = (grades: string[]) =>
+  ADMISSION_SEAT_GRADE_OPTIONS.filter((grade) => grades.includes(grade)).join(', ');
+
 const WEEKDAY_OPTIONS = [
   'Monday',
   'Tuesday',
@@ -203,6 +242,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Предметы (доп.)': { en: 'Subjects (other)', kk: 'Пәндер (басқа)' },
   Этапы: { en: 'Stages', kk: 'Кезеңдер' },
   'Свободные места по классам': { en: 'Available seats by grade', kk: 'Сыныптар бойынша бос орындар' },
+  'Есть свободные места': { en: 'Available seats', kk: 'Бос орындар бар' },
   'Период набора': { en: 'Enrollment period', kk: 'Қабылдау кезеңі' },
   'Сроки подачи документов': { en: 'Document submission deadlines', kk: 'Құжат тапсыру мерзімі' },
   'Детализация этапов набора': { en: 'Admission stages details', kk: 'Қабылдау кезеңдерінің сипаттамасы' },
@@ -1693,6 +1733,10 @@ export default function SchoolInfoPage() {
   };
 
   const clubsCatalog = useMemo(() => getClubsCatalog(), [profile]);
+  const seatGradesValue = useMemo(
+    () => parseSeatGradesValue(getDeep(profile, 'education.admission_details.seats_by_grade')),
+    [profile]
+  );
   const getStudentSuccessStories = () => {
     const raw = getDeep(profile, 'education.results.student_success_stories', []);
     if (!Array.isArray(raw)) return [];
@@ -3161,11 +3205,14 @@ export default function SchoolInfoPage() {
           />
         </FieldRow>
         <FieldRow>
-          <Input
-            label="Свободные места по классам"
-            value={getDeep(profile, 'education.admission_details.seats_by_grade')}
-            onChange={(value: string) =>
-              updateField('education.admission_details.seats_by_grade', value)
+          <Toggle
+            label="Есть свободные места"
+            checked={seatGradesValue.length > 0}
+            onChange={(value: boolean) =>
+              updateField(
+                'education.admission_details.seats_by_grade',
+                value ? formatSeatGradesValue(seatGradesValue) : ''
+              )
             }
           />
           <Select
@@ -3186,6 +3233,16 @@ export default function SchoolInfoPage() {
             ]}
           />
         </FieldRow>
+        {seatGradesValue.length > 0 ? (
+          <CheckboxGroup
+            label="Свободные места по классам"
+            options={ADMISSION_SEAT_GRADE_OPTIONS}
+            values={seatGradesValue}
+            onChange={(next: string[]) =>
+              updateField('education.admission_details.seats_by_grade', formatSeatGradesValue(next))
+            }
+          />
+        ) : null}
         <FieldRow>
           <Input
             label="Сроки подачи документов"
