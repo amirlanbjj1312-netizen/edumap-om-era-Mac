@@ -2702,19 +2702,20 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
+  margin-bottom: 16px;
 }
 
 .school-link-card {
   display: grid;
-  align-content: space-between;
-  gap: 4px;
-  padding: 22px 26px;
+  align-content: center;
+  gap: 8px;
+  padding: 18px 22px;
   border: 1px solid #d8e2f3;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
   text-decoration: none;
   box-shadow: 0 10px 24px rgba(104, 130, 196, 0.08);
-  min-height: 118px;
+  min-height: 92px;
 }
 
 .school-link-card-title {
