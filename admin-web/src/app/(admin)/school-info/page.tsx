@@ -161,6 +161,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Директор: { en: 'Principal', kk: 'Директор' },
   'Зам. директора': { en: 'Deputy principal', kk: 'Директор орынбасары' },
   'Кураторы классов': { en: 'Class curators', kk: 'Сынып кураторлары' },
+  'Есть кураторы классов': { en: 'Class curators available', kk: 'Сынып кураторлары бар' },
+  'По одному на класс': { en: 'One per class', kk: 'Әр сыныпқа бір куратор' },
+  'По параллелям': { en: 'By grade level', kk: 'Параллельдер бойынша' },
+  'Кураторская служба': { en: 'Curator service', kk: 'Кураторлық қызмет' },
   Телефон: { en: 'Phone', kk: 'Телефон' },
   WhatsApp: { en: 'WhatsApp', kk: 'WhatsApp' },
   Email: { en: 'Email', kk: 'Email' },
@@ -1282,6 +1286,25 @@ export default function SchoolInfoPage() {
     () => normalizeListValue(getDeep(profile, 'education.learning_conditions.digital_platforms', '')),
     [profile]
   );
+  const legacyCuratorsValue = useMemo(
+    () => String(getDeep(profile, 'basic_info.team.class_curators', '') || '').trim(),
+    [profile]
+  );
+  const classCuratorsEnabled = useMemo(
+    () =>
+      Boolean(getDeep(profile, 'basic_info.team.class_curators_enabled')) ||
+      Boolean(legacyCuratorsValue),
+    [profile, legacyCuratorsValue]
+  );
+  const classCuratorsComment = useMemo(
+    () =>
+      String(
+        getDeep(profile, localePath('basic_info.team.class_curators_comment')) ||
+          legacyCuratorsValue ||
+          ''
+      ),
+    [profile, legacyCuratorsValue]
+  );
 
   const updateListField = (path: string, list: string[]) => {
     updateField(path, list.join(', '));
@@ -2285,15 +2308,41 @@ export default function SchoolInfoPage() {
                   />
                 </FieldRow>
                 <FieldRow>
-                  <TextArea
-                    label="Кураторы классов"
-                    rows={3}
-                    value={getDeep(profile, 'basic_info.team.class_curators')}
-                    onChange={(value: string) =>
-                      updateField('basic_info.team.class_curators', value)
-                    }
-                  />
+                  <div className="field">
+                    <span>{t('Кураторы классов')}</span>
+                    <Toggle
+                      label="Есть кураторы классов"
+                      checked={classCuratorsEnabled}
+                      onChange={(value: boolean) =>
+                        updateField('basic_info.team.class_curators_enabled', value)
+                      }
+                    />
+                  </div>
                 </FieldRow>
+                {classCuratorsEnabled ? (
+                  <FieldRow>
+                    <Select
+                      label="Формат"
+                      value={getDeep(profile, 'basic_info.team.class_curators_format')}
+                      onChange={(value: string) =>
+                        updateField('basic_info.team.class_curators_format', value)
+                      }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        { value: 'per_class', label: t('По одному на класс') },
+                        { value: 'by_parallel', label: t('По параллелям') },
+                        { value: 'curator_service', label: t('Кураторская служба') },
+                      ]}
+                    />
+                    <Input
+                      label="Комментарий"
+                      value={classCuratorsComment}
+                      onChange={(value: string) =>
+                        updateField(localePath('basic_info.team.class_curators_comment'), value)
+                      }
+                    />
+                  </FieldRow>
+                ) : null}
                 <FieldRow>
                   <Input
                     label="Широта"

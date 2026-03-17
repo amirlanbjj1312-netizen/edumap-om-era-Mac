@@ -42,6 +42,9 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         principal: '',
         deputy_principal: '',
         class_curators: '',
+        class_curators_enabled: false,
+        class_curators_format: '',
+        class_curators_comment: { ru: '', en: '', kk: '' },
       },
       license_details: {
         number: '',
