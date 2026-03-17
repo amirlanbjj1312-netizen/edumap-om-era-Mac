@@ -2697,6 +2697,126 @@ a {
   color: #1f4fc2;
 }
 
+.school-link-cards-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-link-card {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid #d8e2f3;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(104, 130, 196, 0.08);
+}
+
+.school-link-card-title {
+  color: #1f2a44;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.school-link-card-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.success-stories-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 16px;
+}
+
+.success-story-chip {
+  appearance: none;
+  border: 1px solid #d8e2f3;
+  background: #fff;
+  border-radius: 18px;
+  padding: 10px;
+  min-width: 138px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(104, 130, 196, 0.08);
+}
+
+.success-story-chip.active {
+  border-color: #9bb8ff;
+  background: #f6f9ff;
+}
+
+.success-story-chip-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.success-story-chip-empty {
+  display: grid;
+  place-items: center;
+  background: #dfe8ff;
+  color: #3656c8;
+  font-weight: 800;
+}
+
+.success-story-chip-name {
+  color: #1f2a44;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.success-story-detail {
+  border: 1px solid #d8e2f3;
+  border-radius: 18px;
+  background: #fff;
+  padding: 14px;
+}
+
+.success-story-detail-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.success-story-detail-photo {
+  width: 112px;
+  height: 112px;
+  border-radius: 18px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.success-story-detail-meta {
+  min-width: 0;
+}
+
+.success-story-detail-meta h4 {
+  margin: 0 0 6px;
+  color: #1f2a44;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.success-story-detail-meta p {
+  margin: 0;
+  color: #546179;
+  line-height: 1.45;
+}
+
 .school-reviews-box {
   display: grid;
   gap: 8px;

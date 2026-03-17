@@ -706,6 +706,14 @@ export default function ParentSchoolDetailsPage() {
       locale === 'en' ? 'Admission stages' : locale === 'kk' ? 'Қабылдау кезеңдері' : 'Этапы набора',
     successStories:
       locale === 'en' ? 'Graduate success stories' : locale === 'kk' ? 'Түлектердің жетістік тарихы' : 'Истории выпускников',
+    admissionPage:
+      locale === 'en' ? 'Admission' : locale === 'kk' ? 'Қабылдау' : 'Поступление',
+    admissionHint:
+      locale === 'en' ? 'Exam, dates, stages' : locale === 'kk' ? 'Емтихан, мерзім, кезеңдер' : 'Экзамен, сроки, этапы',
+    pridePage:
+      locale === 'en' ? 'Our pride' : locale === 'kk' ? 'Біздің мақтанышымыз' : 'Наша гордость',
+    prideHint:
+      locale === 'en' ? 'Graduates and achievements' : locale === 'kk' ? 'Түлектер мен жетістіктер' : 'Выпускники и достижения',
     admittedTo: locale === 'en' ? 'Admitted to' : locale === 'kk' ? 'Түскен орны' : 'Поступил(а) в',
     schoolGpa:
       locale === 'en' ? 'School GPA' : locale === 'kk' ? 'Мектептегі орташа балл' : 'Средний балл в школе',
@@ -1665,25 +1673,44 @@ export default function ParentSchoolDetailsPage() {
             if (!items.length) return null;
             const isOpen = Boolean(opened[section.key]);
             return (
-              <section key={section.key} className="school-accordion-item">
-                <button
-                  type="button"
-                  className="school-accordion-trigger"
-                  onClick={() =>
-                    setOpened((prev) => ({
-                      ...prev,
-                      [section.key]: !prev[section.key],
-                    }))
-                  }
-                >
-                  <span className="school-accordion-title">
-                    <span className="school-accordion-icon"><SchoolIcon kind={section.icon} /></span>
-                    {SECTION_TITLES[section.key]?.[locale] || section.key}
-                  </span>
-                  <span className={`school-accordion-arrow ${isOpen ? 'open' : ''}`}>▾</span>
-                </button>
-                {isOpen ? (
-                  <div className="school-accordion-content">
+              <div key={section.key}>
+                {section.key === 'media' ? (
+                  <section className="school-link-cards-row">
+                    <Link
+                      href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/admission`}
+                      className="school-link-card"
+                    >
+                      <span className="school-link-card-title">{ui.admissionPage}</span>
+                      <span className="school-link-card-subtitle">{ui.admissionHint}</span>
+                    </Link>
+                    <Link
+                      href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/success-stories`}
+                      className="school-link-card"
+                    >
+                      <span className="school-link-card-title">{ui.pridePage}</span>
+                      <span className="school-link-card-subtitle">{ui.prideHint}</span>
+                    </Link>
+                  </section>
+                ) : null}
+                <section key={section.key} className="school-accordion-item">
+                  <button
+                    type="button"
+                    className="school-accordion-trigger"
+                    onClick={() =>
+                      setOpened((prev) => ({
+                        ...prev,
+                        [section.key]: !prev[section.key],
+                      }))
+                    }
+                  >
+                    <span className="school-accordion-title">
+                      <span className="school-accordion-icon"><SchoolIcon kind={section.icon} /></span>
+                      {SECTION_TITLES[section.key]?.[locale] || section.key}
+                    </span>
+                    <span className={`school-accordion-arrow ${isOpen ? 'open' : ''}`}>▾</span>
+                  </button>
+                  {isOpen ? (
+                    <div className="school-accordion-content">
                     {section.key === 'media' ? (
                       <div className="school-media-section">
                         {socialLinks.length ? (
@@ -1918,9 +1945,10 @@ export default function ParentSchoolDetailsPage() {
                         ))}
                       </dl>
                     )}
-                  </div>
-                ) : null}
-              </section>
+                    </div>
+                  ) : null}
+                </section>
+              </div>
             );
           })}
 
