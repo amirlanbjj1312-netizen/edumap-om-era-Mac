@@ -52,6 +52,40 @@ type MonetizationDraft = {
 
 const normalizeText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
+const normalizeLocalizedText = (value: unknown) => {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return String(record.ru || record.kk || record.en || '').trim();
+  }
+  return '';
+};
+const hasPrivatePrice = (profile: any) =>
+  Boolean(
+    normalizeText(profile?.finance?.monthly_fee) ||
+      normalizeText(profile?.finance?.tuition_monthly) ||
+      normalizeText(profile?.finance?.price_monthly)
+  );
+const isSchoolProfileFilled = (profile: any) => {
+  const logo = normalizeText(profile?.media?.logo);
+  const brandName =
+    normalizeLocalizedText(profile?.basic_info?.display_name) ||
+    normalizeLocalizedText(profile?.basic_info?.brand_name);
+  const latitude = normalizeText(profile?.basic_info?.coordinates?.latitude);
+  const longitude = normalizeText(profile?.basic_info?.coordinates?.longitude);
+  const city = normalizeText(profile?.basic_info?.city);
+  const district = normalizeText(profile?.basic_info?.district);
+  const address = normalizeLocalizedText(profile?.basic_info?.address);
+  const type = normalizeText(profile?.basic_info?.type);
+  const subtype = normalizeText(profile?.basic_info?.school_subtype);
+  const languages = normalizeText(profile?.education?.languages);
+  const isPrivate = String(type).toLowerCase().includes('private') || String(type).toLowerCase().includes('част') || String(type).toLowerCase().includes('жеке');
+  if (!logo || !brandName || !latitude || !longitude || !city || !district || !address || !type || !subtype || !languages) {
+    return false;
+  }
+  if (isPrivate && !hasPrivatePrice(profile)) return false;
+  return true;
+};
 const toLocalSchoolIdFromEmail = (email: string) => {
   const normalized = String(email || '')
     .trim()
@@ -145,6 +179,7 @@ export default function SchoolsPage() {
           statusIssued: 'issued',
           statusFilled: 'completed',
           delete: 'Delete',
+          details: 'Details',
           deleteConfirm: 'Delete fully: school admin account, school profile and log entry?',
           deleteError: 'Failed to delete entry',
           dateLocale: 'en-US',
@@ -161,6 +196,7 @@ export default function SchoolsPage() {
             statusIssued: 'берілді',
             statusFilled: 'толтырылды',
             delete: 'Жою',
+            details: 'Толығырақ',
             deleteConfirm: 'Толық жою керек пе: мектеп admin аккаунты, мектеп профилі және журнал жазбасы?',
             deleteError: 'Жазбаны жою мүмкін болмады',
             dateLocale: 'kk-KZ',
@@ -176,6 +212,7 @@ export default function SchoolsPage() {
             statusIssued: 'выдан',
             statusFilled: 'заполнен',
             delete: 'Удалить',
+            details: 'Подробнее',
             deleteConfirm: 'Удалить полностью: аккаунт школы, профиль школы и запись журнала?',
             deleteError: 'Не удалось удалить запись',
             dateLocale: 'ru-RU',
@@ -750,6 +787,52 @@ export default function SchoolsPage() {
       return haystack.includes(q);
     });
   }, [actorEmail, isSuperadmin, items, query]);
+  const filledSchoolIds = useMemo(
+    () =>
+      new Set(
+        items
+          .filter((item) => isSchoolProfileFilled(item))
+          .map((item) => normalizeText(item?.school_id))
+          .filter(Boolean)
+      ),
+    [items]
+  );
+  const hasSchoolDetails = useCallback(
+    (schoolId: string) =>
+      items.some((item) => normalizeText(item?.school_id) === normalizeText(schoolId)),
+    [items]
+  );
+  const getEffectiveLogStatus = useCallback(
+    (row: SchoolAccessLogItem): SchoolAccessLogItem['status'] =>
+      filledSchoolIds.has(normalizeText(row.schoolId)) ? 'заполнен' : row.status,
+    [filledSchoolIds]
+  );
+
+  useEffect(() => {
+    if (!sessionToken || !schoolAccessLog.length) return;
+    const rowsToPromote = schoolAccessLog.filter(
+      (row) =>
+        filledSchoolIds.has(normalizeText(row.schoolId)) &&
+        row.status !== 'заполнен' &&
+        !String(row.id || '').startsWith('legacy-')
+    );
+    if (!rowsToPromote.length) return;
+    rowsToPromote.forEach((row) => {
+      void upsertSchoolAccessLogEntry(sessionToken, {
+        id: row.id,
+        email: row.email,
+        password: row.password === '—' ? '' : row.password,
+        schoolId: row.schoolId,
+        createdAt: row.createdAt,
+        status: 'заполнен',
+      }).catch(() => undefined);
+    });
+    setSchoolAccessLog((prev) =>
+      prev.map((row) =>
+        filledSchoolIds.has(normalizeText(row.schoolId)) ? { ...row, status: 'заполнен' } : row
+      )
+    );
+  }, [filledSchoolIds, schoolAccessLog, sessionToken]);
 
   if (!['moderator', 'superadmin'].includes(actorRole)) {
     return <div className="card">{t('schoolsForbidden')}</div>;
@@ -921,75 +1004,100 @@ export default function SchoolsPage() {
                         {row.schoolId || '—'}
                       </td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
-                        <select
-                          value={row.status}
-                          disabled={updatingLogStatusId === row.id}
-                          style={
-                            row.status === 'заполнен'
-                              ? {
-                                  background: '#dcfce7',
-                                  color: '#166534',
-                                  borderColor: '#86efac',
-                                  fontWeight: 700,
-                                }
-                              : undefined
-                          }
-                          onChange={(event) =>
-                            onChangeSchoolAccessStatus(
-                              row.id,
-                              event.target.value as SchoolAccessLogItem['status']
-                            )
-                          }
-                        >
-                          <option value="создан">{accessLogUi.statusCreated}</option>
-                          <option value="выдан">{accessLogUi.statusIssued}</option>
-                          <option value="заполнен">{accessLogUi.statusFilled}</option>
-                        </select>
+                        {(() => {
+                          const effectiveStatus = getEffectiveLogStatus(row);
+                          const isAutoFilled = effectiveStatus === 'заполнен';
+                          return (
+                            <select
+                              value={effectiveStatus}
+                              disabled={updatingLogStatusId === row.id || isAutoFilled}
+                              style={
+                                isAutoFilled
+                                  ? {
+                                      background: '#dcfce7',
+                                      color: '#166534',
+                                      borderColor: '#86efac',
+                                      fontWeight: 700,
+                                    }
+                                  : undefined
+                              }
+                              onChange={(event) =>
+                                onChangeSchoolAccessStatus(
+                                  row.id,
+                                  event.target.value as SchoolAccessLogItem['status']
+                                )
+                              }
+                            >
+                              <option value="создан">{accessLogUi.statusCreated}</option>
+                              <option value="выдан">{accessLogUi.statusIssued}</option>
+                              <option value="заполнен">{accessLogUi.statusFilled}</option>
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
-                        <button
-                          type="button"
-                          className="button secondary"
-                          disabled={deletingLogId === row.id}
-                          onClick={async () => {
-                            if (!sessionToken) return;
-                            if (!window.confirm(accessLogUi.deleteConfirm)) return;
-                            setDeletingLogId(row.id);
-                            const deletedEmail = normalizeText(row.email).toLowerCase();
-                            const deletedSchoolId = normalizeText(row.schoolId);
-                            const previousLog = schoolAccessLog;
-                            setSchoolAccessLog((prev) =>
-                              prev.filter((item) => {
-                                const sameId = item.id === row.id;
-                                const sameEmail =
-                                  deletedEmail &&
-                                  normalizeText(item.email).toLowerCase() === deletedEmail;
-                                const sameSchool =
-                                  deletedSchoolId &&
-                                  normalizeText(item.schoolId) === deletedSchoolId;
-                                return !(sameId || sameEmail || sameSchool);
-                              })
-                            );
-                            try {
-                              await deleteSchoolAccessLogEntryFull(sessionToken, {
-                                id: row.id,
-                                email: row.email,
-                                schoolId: row.schoolId,
-                              });
-                            } catch (error) {
-                              setSchoolAccessLog(previousLog);
-                              const message =
-                                error instanceof Error && error.message
-                                  ? error.message
-                                  : accessLogUi.deleteError;
-                              setSchoolAccessLogError(message);
-                            } finally {
-                              setDeletingLogId('');
-                            }
-                          }}
-                        >
-                          {accessLogUi.delete}
-                        </button>
+                        {(() => {
+                          const effectiveStatus = getEffectiveLogStatus(row);
+                          const detailsEnabled =
+                            effectiveStatus === 'заполнен' &&
+                            normalizeText(row.schoolId) &&
+                            hasSchoolDetails(row.schoolId);
+                          return (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                disabled={!detailsEnabled}
+                                onClick={() => editSchool(row.schoolId)}
+                              >
+                                {accessLogUi.details}
+                              </button>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                disabled={deletingLogId === row.id}
+                                onClick={async () => {
+                                  if (!sessionToken) return;
+                                  if (!window.confirm(accessLogUi.deleteConfirm)) return;
+                                  setDeletingLogId(row.id);
+                                  const deletedEmail = normalizeText(row.email).toLowerCase();
+                                  const deletedSchoolId = normalizeText(row.schoolId);
+                                  const previousLog = schoolAccessLog;
+                                  setSchoolAccessLog((prev) =>
+                                    prev.filter((item) => {
+                                      const sameId = item.id === row.id;
+                                      const sameEmail =
+                                        deletedEmail &&
+                                        normalizeText(item.email).toLowerCase() === deletedEmail;
+                                      const sameSchool =
+                                        deletedSchoolId &&
+                                        normalizeText(item.schoolId) === deletedSchoolId;
+                                      return !(sameId || sameEmail || sameSchool);
+                                    })
+                                  );
+                                  try {
+                                    await deleteSchoolAccessLogEntryFull(sessionToken, {
+                                      id: row.id,
+                                      email: row.email,
+                                      schoolId: row.schoolId,
+                                    });
+                                  } catch (error) {
+                                    setSchoolAccessLog(previousLog);
+                                    const message =
+                                      error instanceof Error && error.message
+                                        ? error.message
+                                        : accessLogUi.deleteError;
+                                    setSchoolAccessLogError(message);
+                                  } finally {
+                                    setDeletingLogId('');
+                                  }
+                                }}
+                              >
+                                {accessLogUi.delete}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
@@ -1019,10 +1127,8 @@ export default function SchoolsPage() {
               ? item.system.audit_log
               : [];
             const promotionActive = isPromotionActive(item);
-            const monetization = item?.monetization || {};
-            const currentStatus = normalizeText(monetization.subscription_status || 'inactive') || 'inactive';
-            const draft = getDraft(item);
-            const payments = getPaymentHistory(item);
+            const currentStatus =
+              normalizeText(item?.monetization?.subscription_status || 'inactive') || 'inactive';
             return (
               <div key={item.school_id} className="schools-admin-card">
                 <div className="schools-admin-top">
@@ -1075,172 +1181,6 @@ export default function SchoolsPage() {
                   >
                     {isHidden ? `👁 ${t('schoolsShow')}` : `🙈 ${t('schoolsHide')}`}
                   </button>
-                </div>
-
-                <div className="schools-monetization">
-                  <p className="muted">{t('schoolsMonetizationTitle')}</p>
-                  <div className="form-row">
-                    <label className="field">
-                      <span>{t('schoolsMonetizationStatus')}</span>
-                      <select
-                        value={draft.status}
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'status', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      >
-                        {['inactive', 'active', 'paused', 'expired'].map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>{t('schoolsMonetizationPlan')}</span>
-                      <input
-                        className="input"
-                        value={draft.planName}
-                        placeholder="Top placement"
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'planName', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t('schoolsMonetizationTariff')}</span>
-                      <select
-                        value={draft.tariffId || tariffs[0]?.id || ''}
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'tariffId', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      >
-                        {tariffs.length ? (
-                          tariffs.map((tariff) => (
-                            <option key={tariff.id} value={tariff.id}>
-                              {`${tariff.name} · ${Number(tariff.price_kzt || 0).toLocaleString('ru-RU')} ₸ · ${tariff.duration_days} дн`}
-                            </option>
-                          ))
-                        ) : (
-                          <option value="">{t('schoolsTestPaymentNoTariff')}</option>
-                        )}
-                      </select>
-                    </label>
-                  </div>
-                  {draft.tariffId ? (
-                    <p className="muted">
-                      {(() => {
-                        const selected = tariffs.find((item) => item.id === draft.tariffId);
-                        return selected?.description || '';
-                      })()}
-                    </p>
-                  ) : null}
-                  <div className="form-row">
-                    <label className="field">
-                      <span>{t('schoolsMonetizationPriority')}</span>
-                      <input
-                        className="input"
-                        type="number"
-                        min={0}
-                        value={draft.priorityWeight}
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'priorityWeight', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t('schoolsMonetizationStartsAt')}</span>
-                      <input
-                        className="input"
-                        type="date"
-                        value={draft.startsAt}
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'startsAt', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t('schoolsMonetizationEndsAt')}</span>
-                      <input
-                        className="input"
-                        type="date"
-                        value={draft.endsAt}
-                        onChange={(event) =>
-                          setDraftField(item.school_id, 'endsAt', event.target.value)
-                        }
-                        disabled={!isSuperadmin}
-                      />
-                    </label>
-                  </div>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={draft.isPromoted}
-                      onChange={(event) =>
-                        setDraftField(item.school_id, 'isPromoted', event.target.checked)
-                      }
-                      disabled={!isSuperadmin}
-                    />
-                    <span>{t('schoolsMonetizationIsPromoted')}</span>
-                  </label>
-                  {isSuperadmin ? (
-                    <div className="schools-admin-actions">
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={() => payTestTariff(item)}
-                        disabled={payingSchoolId === item.school_id || !tariffs.length}
-                      >
-                        {payingSchoolId === item.school_id
-                          ? t('schoolsTestPaymentProcessing')
-                          : t('schoolsTestPaymentAction')}
-                      </button>
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={() => renewCurrentTariff(item)}
-                        disabled={
-                          payingSchoolId === item.school_id ||
-                          !normalizeText(item?.monetization?.last_tariff_id)
-                        }
-                      >
-                        {t('schoolsTestPaymentRenew')}
-                      </button>
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={() => saveMonetization(item)}
-                      >
-                        {t('schoolsMonetizationSave')}
-                      </button>
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={() => resetMonetizationDraft(item)}
-                      >
-                        {t('schoolsMonetizationReset')}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="muted">{t('schoolsMonetizationSuperadminOnly')}</p>
-                  )}
-                  <div className="schools-payments">
-                    <p className="muted">{t('schoolsPaymentsHistory')}</p>
-                    {payments.length ? (
-                      payments.slice(0, 5).map((payment) => (
-                        <p key={payment.id} className="muted">
-                          {new Date(payment.paid_at || 0).toLocaleString()} · {payment.tariff_name} ·{' '}
-                          {Number(payment.amount_kzt || 0).toLocaleString('ru-RU')} ₸ · {payment.status}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="muted">{t('schoolsPaymentsEmpty')}</p>
-                    )}
-                  </div>
                 </div>
 
                 {auditLog.length ? (
