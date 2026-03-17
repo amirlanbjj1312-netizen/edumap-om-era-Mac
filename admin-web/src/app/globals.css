@@ -4161,6 +4161,36 @@ a {
     align-items: flex-start;
   }
 
+  .market-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .market-chip {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .market-chip.action-chip {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    flex: initial;
+  }
+
+  .schools-total {
+    grid-column: 1 / -1;
+    justify-self: start;
+    width: auto;
+  }
+
   .market-search-row {
     grid-template-columns: 1fr;
   }
