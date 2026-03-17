@@ -951,6 +951,15 @@ export default function ParentSchoolDetailsPage() {
   };
   const typeInfoText = subtypeRaw ? (subtypeInfoMap[subtypeRaw]?.[locale] || '') : '';
   const cityLabel = localizeOption(pickFirstText(school, ['basic_info.city'], city), locale);
+  const districtLabel = localizeOption(
+    pickFirstText(school, ['basic_info.district'], ''),
+    locale
+  );
+  const addressLabel = pickFirstText(
+    school,
+    ['basic_info.address', `basic_info.address.${locale}`, 'basic_info.address.ru'],
+    ''
+  );
   const price = formatSchoolFee(
     {
       finance: {
@@ -1626,6 +1635,8 @@ export default function ParentSchoolDetailsPage() {
               </ExpandableFactRow>
             ) : null}
             <FactRow icon="city" label={ui.city} value={cityLabel} />
+            {districtLabel ? <FactRow icon="district" label={ui.district} value={districtLabel} /> : null}
+            {addressLabel ? <FactRow icon="address" label={ui.address} value={addressLabel} /> : null}
           </section>
 
           <button type="button" className="school-consult-btn" onClick={() => setConsultOpen((prev) => !prev)}>
