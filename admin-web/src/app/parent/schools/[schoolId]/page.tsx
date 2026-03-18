@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchools, requestJson } from '@/lib/api';
+import { loadSchoolById, requestJson } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { supabase } from '@/lib/supabaseClient';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
@@ -803,7 +803,7 @@ export default function ParentSchoolDetailsPage() {
   };
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
-  const [rows, setRows] = useState<SchoolRow[]>([]);
+  const [school, setSchool] = useState<SchoolRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [priceExpanded, setPriceExpanded] = useState(false);
   const [opened, setOpened] = useState<Record<string, boolean>>({
@@ -832,10 +832,14 @@ export default function ParentSchoolDetailsPage() {
 
   useEffect(() => {
     let mounted = true;
-    loadSchools()
+    loadSchoolById(schoolId)
       .then((payload) => {
         if (!mounted) return;
-        setRows(Array.isArray(payload?.data) ? payload.data : []);
+        setSchool((payload?.data as SchoolRow) || null);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setSchool(null);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -870,11 +874,6 @@ export default function ParentSchoolDetailsPage() {
       mounted = false;
     };
   }, []);
-
-  const school = useMemo(
-    () => rows.find((item) => String(item.school_id || '') === schoolId),
-    [rows, schoolId]
-  );
 
   const name = pickFirstText(
     school,
