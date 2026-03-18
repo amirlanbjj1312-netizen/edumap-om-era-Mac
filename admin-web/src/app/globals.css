@@ -555,16 +555,17 @@ a {
 }
 
 .parent-layout-shell {
+  min-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
 }
 
 .parent-layout-main {
-  flex: 0 0 auto;
+  flex: 1 0 auto;
 }
 
 .parent-app-footer {
-  margin-top: 28px;
+  margin-top: 0;
   width: 100%;
   margin-left: 0;
   margin-right: 0;
@@ -3163,7 +3164,6 @@ a {
 }
 
 .school-mobile-page {
-  min-height: calc(100vh - 140px);
   width: 100%;
   max-width: none;
   margin: 0;
