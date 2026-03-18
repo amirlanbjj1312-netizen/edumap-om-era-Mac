@@ -59,6 +59,11 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'Pricing',
     kk: 'Тарифтер',
   },
+  navSiteSettings: {
+    ru: 'Настройки сайта',
+    en: 'Site settings',
+    kk: 'Сайт баптаулары',
+  },
   logout: {
     ru: 'Выйти',
     en: 'Sign out',

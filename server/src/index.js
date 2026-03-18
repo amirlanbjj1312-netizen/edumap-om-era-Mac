@@ -11,6 +11,7 @@ const { buildNewsRouter } = require('./routes/news');
 const { buildCoursesRouter } = require('./routes/courses');
 const { buildChatRouter } = require('./routes/chat');
 const { buildRatingSurveysRouter } = require('./routes/ratingSurveys');
+const { buildSiteSettingsRouter } = require('./routes/siteSettings');
 const { buildRequestTimeoutMiddleware } = require('./middleware/requestTimeout');
 const { buildRateLimitMiddleware } = require('./middleware/rateLimit');
 
@@ -57,6 +58,7 @@ app.use('/api/news', buildNewsRouter(config));
 app.use('/api/courses', buildCoursesRouter(config));
 app.use('/api/chat', buildChatRouter(config));
 app.use('/api/schools/rating-surveys', buildRatingSurveysRouter());
+app.use('/api/site-settings', buildSiteSettingsRouter(config));
 
 app.use((err, req, res, next) => {
   console.error(err);

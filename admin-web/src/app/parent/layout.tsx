@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { isGuestMode, setGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
+import { loadParentFooterSettings } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/parent/news', labelKey: 'nav_news' },
@@ -20,6 +21,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [guest, setGuest] = useState(false);
+  const [footerSettings, setFooterSettings] = useState<any>(null);
   const { t, locale } = useParentLocale();
   const isMapFullscreen = pathname === '/parent/schools/map' || pathname.startsWith('/parent/schools/map/');
   const footerUi =
@@ -91,6 +93,12 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
             terms: 'Правила пользования',
             rights: 'Все права защищены.',
           };
+
+  useEffect(() => {
+    loadParentFooterSettings()
+      .then((payload) => setFooterSettings(payload?.data || null))
+      .catch(() => setFooterSettings(null));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -200,38 +208,70 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                   <Link href="/parent/schools">{footerUi.schools}</Link>
                   <Link href="/parent/profile">{footerUi.profile}</Link>
                 </div>
-                <div className="app-footer-col">
-                  <p className="app-footer-title">{footerUi.socialsTitle}</p>
-                  <a href="#" aria-disabled="true">
-                    {footerUi.instagram}
-                  </a>
-                  <a href="#" aria-disabled="true">
-                    {footerUi.telegram}
-                  </a>
-                  <a href="#" aria-disabled="true">
-                    {footerUi.whatsapp}
-                  </a>
-                </div>
-                <div className="app-footer-col">
-                  <p className="app-footer-title">{footerUi.contactsTitle}</p>
-                  <a href={`tel:${footerUi.phonePrimary.replace(/\s+/g, '')}`}>
-                    {footerUi.phonePrimary}
-                  </a>
-                  <a href={`tel:${footerUi.phoneSecondary.replace(/\s+/g, '')}`}>
-                    {footerUi.phoneSecondary}
-                  </a>
-                  <a href={`mailto:${footerUi.email}`}>{footerUi.email}</a>
-                </div>
-                <div className="app-footer-col">
-                  <p className="app-footer-title">{footerUi.legalTitle}</p>
-                  <a href="#" aria-disabled="true">
-                    {footerUi.privacy}
-                  </a>
-                  <a href="#" aria-disabled="true">
-                    {footerUi.terms}
-                  </a>
-                  <Link href="/parent/faq">{footerUi.faq}</Link>
-                </div>
+                {(footerSettings?.socials?.instagram_url ||
+                  footerSettings?.socials?.telegram_url ||
+                  footerSettings?.socials?.whatsapp_url) ? (
+                  <div className="app-footer-col">
+                    <p className="app-footer-title">{footerUi.socialsTitle}</p>
+                    {footerSettings?.socials?.instagram_url ? (
+                      <a href={footerSettings.socials.instagram_url} target="_blank" rel="noreferrer">
+                        {footerUi.instagram}
+                      </a>
+                    ) : null}
+                    {footerSettings?.socials?.telegram_url ? (
+                      <a href={footerSettings.socials.telegram_url} target="_blank" rel="noreferrer">
+                        {footerUi.telegram}
+                      </a>
+                    ) : null}
+                    {footerSettings?.socials?.whatsapp_url ? (
+                      <a href={footerSettings.socials.whatsapp_url} target="_blank" rel="noreferrer">
+                        {footerUi.whatsapp}
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
+                {(footerSettings?.contacts?.phone_primary ||
+                  footerSettings?.contacts?.phone_secondary ||
+                  footerSettings?.contacts?.email) ? (
+                  <div className="app-footer-col">
+                    <p className="app-footer-title">{footerUi.contactsTitle}</p>
+                    {footerSettings?.contacts?.phone_primary ? (
+                      <a href={`tel:${String(footerSettings.contacts.phone_primary).replace(/\s+/g, '')}`}>
+                        {footerSettings.contacts.phone_primary}
+                      </a>
+                    ) : null}
+                    {footerSettings?.contacts?.phone_secondary ? (
+                      <a href={`tel:${String(footerSettings.contacts.phone_secondary).replace(/\s+/g, '')}`}>
+                        {footerSettings.contacts.phone_secondary}
+                      </a>
+                    ) : null}
+                    {footerSettings?.contacts?.email ? (
+                      <a href={`mailto:${footerSettings.contacts.email}`}>{footerSettings.contacts.email}</a>
+                    ) : null}
+                  </div>
+                ) : null}
+                {(footerSettings?.legal?.privacy_url ||
+                  footerSettings?.legal?.terms_url ||
+                  footerSettings?.legal?.faq_url) ? (
+                  <div className="app-footer-col">
+                    <p className="app-footer-title">{footerUi.legalTitle}</p>
+                    {footerSettings?.legal?.privacy_url ? (
+                      <a href={footerSettings.legal.privacy_url} target="_blank" rel="noreferrer">
+                        {footerUi.privacy}
+                      </a>
+                    ) : null}
+                    {footerSettings?.legal?.terms_url ? (
+                      <a href={footerSettings.legal.terms_url} target="_blank" rel="noreferrer">
+                        {footerUi.terms}
+                      </a>
+                    ) : null}
+                    {footerSettings?.legal?.faq_url ? (
+                      <a href={footerSettings.legal.faq_url} target="_blank" rel="noreferrer">
+                        {footerUi.faq}
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="app-footer-bottom">
                 © {new Date().getFullYear()} EDUMAP. {footerUi.rights}

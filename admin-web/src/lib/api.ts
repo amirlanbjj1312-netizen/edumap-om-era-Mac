@@ -244,6 +244,40 @@ export async function loadSchoolAccessLog(token: string) {
   }>('/auth/school-access-log', { token });
 }
 
+export async function loadParentFooterSettings() {
+  return requestJson<{
+    data: {
+      socials?: {
+        instagram_url?: string;
+        telegram_url?: string;
+        whatsapp_url?: string;
+      };
+      contacts?: {
+        phone_primary?: string;
+        phone_secondary?: string;
+        email?: string;
+      };
+      legal?: {
+        privacy_url?: string;
+        privacy_name?: string;
+        terms_url?: string;
+        terms_name?: string;
+        faq_url?: string;
+      };
+      updated_at?: string;
+      updated_by?: string;
+    };
+  }>('/site-settings/parent-footer');
+}
+
+export async function updateParentFooterSettings(token: string, payload: any) {
+  return authRequestJson<{ data: any }>('/site-settings/parent-footer', {
+    token,
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function clearSchoolAccessLog(token: string) {
   return authRequestJson<{ data: Array<any> }>('/auth/school-access-log', {
     token,
