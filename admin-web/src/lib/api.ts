@@ -32,6 +32,12 @@ export async function loadSchools() {
   return requestJson<{ data: any[] }>('/schools?include_inactive=1&include_hidden=1');
 }
 
+export async function loadSchoolById(schoolId: string) {
+  return requestJson<{ data: any }>(
+    `/schools/${encodeURIComponent(schoolId)}?include_inactive=1&include_hidden=1`
+  );
+}
+
 export async function upsertSchool(profile: any) {
   const token = await getAccessToken();
   if (!token) throw new Error('Authorization token is required');

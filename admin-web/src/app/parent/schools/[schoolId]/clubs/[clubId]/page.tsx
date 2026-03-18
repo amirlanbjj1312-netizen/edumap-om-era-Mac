@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchools } from '@/lib/api';
+import { loadSchoolById } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolClubs, buildSchoolTeachers } from '@/lib/clubViews';
 
@@ -34,7 +34,7 @@ export default function ParentSchoolClubDetailsPage() {
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
   const clubId = decodeURIComponent(String(params?.clubId || ''));
 
-  const [rows, setRows] = useState<unknown[]>([]);
+  const [school, setSchool] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTrainerCardOpen, setIsTrainerCardOpen] = useState(false);
   const [activeSectionPhoto, setActiveSectionPhoto] = useState('');
@@ -44,9 +44,12 @@ export default function ParentSchoolClubDetailsPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const result = await loadSchools();
+        const result = await loadSchoolById(schoolId);
         if (!active) return;
-        setRows(Array.isArray(result.data) ? result.data : []);
+        setSchool(result?.data || null);
+      } catch {
+        if (!active) return;
+        setSchool(null);
       } finally {
         if (active) setLoading(false);
       }
@@ -57,10 +60,6 @@ export default function ParentSchoolClubDetailsPage() {
     };
   }, []);
 
-  const school = useMemo(
-    () => rows.find((item) => getSchoolId(item) === schoolId) || null,
-    [rows, schoolId]
-  );
   const schoolName = useMemo(() => getName(school, locale), [school, locale]);
   const clubs = useMemo(() => buildSchoolClubs(school, locale), [school, locale]);
   const club = useMemo(

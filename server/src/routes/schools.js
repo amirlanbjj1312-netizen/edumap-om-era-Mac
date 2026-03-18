@@ -2,6 +2,8 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const {
   readStore,
+  listSchools,
+  getSchoolById,
   upsertSchool,
   deleteSchool,
 } = require('../services/schoolsStore');
@@ -211,17 +213,30 @@ const buildSchoolsRouter = () => {
 
   router.get('/', async (req, res, next) => {
     try {
-      const data = await readStore();
-      const includeInactive = isTrue(req.query.include_inactive);
-      const includeHidden = isTrue(req.query.include_hidden);
-      const filtered = data.filter((item) => {
-        const isActive = item?.system?.is_active !== false;
-        const isVisible = item?.system?.hidden_from_users !== true;
-        if (!includeInactive && !isActive) return false;
-        if (!includeHidden && !isVisible) return false;
-        return true;
+      const includeInactive = isTrue(req.query.include_inactive || req.query.includeInactive);
+      const includeHidden = isTrue(req.query.include_hidden || req.query.includeHidden);
+      const limit = Number.parseInt(String(req.query?.limit || '0'), 10);
+      const offset = Number.parseInt(String(req.query?.offset || '0'), 10);
+      const result = await listSchools({
+        includeInactive,
+        includeHidden,
+        city: req.query?.city,
+        district: req.query?.district,
+        type: req.query?.type,
+        subtype: req.query?.subtype,
+        q: req.query?.q,
+        limit: Number.isFinite(limit) ? limit : 0,
+        offset: Number.isFinite(offset) ? offset : 0,
       });
-      res.json({ data: filtered });
+      res.json({
+        data: result.data,
+        meta: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.limit ? result.offset + result.data.length < result.total : false,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -229,8 +244,10 @@ const buildSchoolsRouter = () => {
 
   router.get('/:id', async (req, res, next) => {
     try {
-      const data = await readStore();
-      const school = data.find((item) => item.school_id === req.params.id);
+      const school = await getSchoolById(req.params.id, {
+        includeInactive: isTrue(req.query.include_inactive || req.query.includeInactive),
+        includeHidden: isTrue(req.query.include_hidden || req.query.includeHidden),
+      });
       if (!school) {
         return res.status(404).json({ error: 'School not found' });
       }

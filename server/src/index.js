@@ -11,6 +11,8 @@ const { buildNewsRouter } = require('./routes/news');
 const { buildCoursesRouter } = require('./routes/courses');
 const { buildChatRouter } = require('./routes/chat');
 const { buildRatingSurveysRouter } = require('./routes/ratingSurveys');
+const { buildRequestTimeoutMiddleware } = require('./middleware/requestTimeout');
+const { buildRateLimitMiddleware } = require('./middleware/rateLimit');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -30,6 +32,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false }));
+app.use(buildRequestTimeoutMiddleware(Number(process.env.REQUEST_TIMEOUT_MS) || 15000));
+app.use(
+  buildRateLimitMiddleware({
+    windowMs: Number(process.env.API_RATE_LIMIT_WINDOW_MS) || 60 * 1000,
+    max: Number(process.env.API_RATE_LIMIT_MAX) || 300,
+    keyPrefix: 'api',
+  })
+);
 
 app.get('/api/health', (req, res) => {
   res.json({

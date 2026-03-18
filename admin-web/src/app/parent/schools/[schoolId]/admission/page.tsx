@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { loadSchools } from '@/lib/api';
+import { loadSchoolById } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 
 type SchoolRow = {
@@ -79,15 +79,19 @@ export default function ParentSchoolAdmissionPage() {
   const { locale } = useParentLocale();
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
-  const [rows, setRows] = useState<SchoolRow[]>([]);
+  const [school, setSchool] = useState<SchoolRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    loadSchools()
+    loadSchoolById(schoolId)
       .then((payload) => {
         if (!active) return;
-        setRows(Array.isArray(payload?.data) ? payload.data : []);
+        setSchool((payload?.data as SchoolRow) || null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSchool(null);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -96,11 +100,6 @@ export default function ParentSchoolAdmissionPage() {
       active = false;
     };
   }, []);
-
-  const school = useMemo(
-    () => rows.find((item) => String(item.school_id || '') === schoolId) || null,
-    [rows, schoolId]
-  );
 
   const ui = {
     back: locale === 'en' ? 'Back to school' : locale === 'kk' ? 'Мектепке оралу' : 'Назад к школе',

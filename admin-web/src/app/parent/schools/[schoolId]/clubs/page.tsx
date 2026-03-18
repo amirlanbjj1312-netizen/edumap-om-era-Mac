@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { loadSchools } from '@/lib/api';
+import { loadSchoolById } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolClubs } from '@/lib/clubViews';
 
@@ -107,7 +107,7 @@ export default function ParentSchoolClubsPage() {
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
 
-  const [rows, setRows] = useState<unknown[]>([]);
+  const [school, setSchool] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -115,9 +115,12 @@ export default function ParentSchoolClubsPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const result = await loadSchools();
+        const result = await loadSchoolById(schoolId);
         if (!active) return;
-        setRows(Array.isArray(result.data) ? result.data : []);
+        setSchool(result?.data || null);
+      } catch {
+        if (!active) return;
+        setSchool(null);
       } finally {
         if (active) setLoading(false);
       }
@@ -128,10 +131,6 @@ export default function ParentSchoolClubsPage() {
     };
   }, []);
 
-  const school = useMemo(
-    () => rows.find((item) => getSchoolId(item) === schoolId) || null,
-    [rows, schoolId]
-  );
   const schoolName = useMemo(() => getName(school, locale), [school, locale]);
   const clubs = useMemo(() => buildSchoolClubs(school, locale), [school, locale]);
   const groupedByWeekday = useMemo(() => {

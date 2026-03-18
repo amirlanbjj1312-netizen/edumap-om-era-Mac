@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchools } from '@/lib/api';
+import { loadSchoolById } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolTeachers } from '@/lib/clubViews';
 
@@ -20,7 +20,7 @@ export default function ParentSchoolTeacherPage() {
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
   const teacherId = decodeURIComponent(String(params?.teacherId || ''));
 
-  const [rows, setRows] = useState<unknown[]>([]);
+  const [school, setSchool] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,9 +28,12 @@ export default function ParentSchoolTeacherPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const result = await loadSchools();
+        const result = await loadSchoolById(schoolId);
         if (!active) return;
-        setRows(Array.isArray(result.data) ? result.data : []);
+        setSchool(result?.data || null);
+      } catch {
+        if (!active) return;
+        setSchool(null);
       } finally {
         if (active) setLoading(false);
       }
@@ -41,10 +44,6 @@ export default function ParentSchoolTeacherPage() {
     };
   }, []);
 
-  const school = useMemo(
-    () => rows.find((item) => getSchoolId(item) === schoolId) || null,
-    [rows, schoolId]
-  );
   const teachers = useMemo(() => buildSchoolTeachers(school, locale), [school, locale]);
   const teacher = useMemo(
     () => teachers.find((item) => item.id === teacherId) || null,

@@ -31,6 +31,34 @@ const ensureSchoolsTable = async () => {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_updated_at
+    ON schools (updated_at DESC);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_city
+    ON schools ((profile->'basic_info'->>'city'));
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_district
+    ON schools ((profile->'basic_info'->>'district'));
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_type
+    ON schools ((profile->'basic_info'->>'type'));
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_subtype
+    ON schools ((profile->'basic_info'->>'school_subtype'));
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_is_active
+    ON schools (((COALESCE(profile->'system'->>'is_active', 'true'))));
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_schools_hidden_from_users
+    ON schools (((COALESCE(profile->'system'->>'hidden_from_users', 'false'))));
+  `);
 };
 
 const ensureProgramAnalyticsTable = async () => {
