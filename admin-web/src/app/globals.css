@@ -563,9 +563,9 @@ a {
 
 .parent-app-footer {
   margin-top: auto;
-  width: calc(100% + 48px);
-  margin-left: -24px;
-  margin-right: -24px;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .tabs-layout {
