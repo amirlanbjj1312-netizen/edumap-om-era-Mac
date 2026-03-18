@@ -194,10 +194,8 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
           </header>
         ) : null}
         <main className="parent-layout-main">{children}</main>
-      </div>
-      {!isMapFullscreen ? (
-        <footer className="app-footer parent-app-footer">
-          <div className="container app-footer-container">
+        {!isMapFullscreen ? (
+          <footer className="app-footer parent-app-footer">
             <div className="app-footer-main">
               <div className="app-footer-grid">
                 <div className="app-footer-col app-footer-brand-col">
@@ -279,9 +277,9 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 © {new Date().getFullYear()} EDUMAP. {footerUi.rights}
               </div>
             </div>
-          </div>
-        </footer>
-      ) : null}
+          </footer>
+        ) : null}
+      </div>
     </div>
   );
 }

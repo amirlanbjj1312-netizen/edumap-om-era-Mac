@@ -1,5 +1,7 @@
 :root {
   color-scheme: light;
+  --page-gutter: 16px;
+  --container-gutter: 24px;
   --bg-start: #e9eef6;
   --bg-end: #e9eef6;
   --card-bg: #ffffff;
@@ -40,7 +42,7 @@ a {
 
 .page {
   min-height: 100vh;
-  padding: 32px 16px 80px;
+  padding: 32px var(--page-gutter) 80px;
   display: grid;
   gap: 18px;
 }
@@ -49,11 +51,12 @@ a {
   width: 100%;
   max-width: none;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--container-gutter);
 }
 
 .parent-page {
   padding-bottom: 0;
+  display: block;
 }
 
 .card {
@@ -552,13 +555,12 @@ a {
 }
 
 .parent-layout-shell {
-  min-height: calc(100vh - 112px);
   display: flex;
   flex-direction: column;
 }
 
 .parent-layout-main {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
 }
 
 .parent-app-footer {
@@ -567,10 +569,24 @@ a {
   margin-left: 0;
   margin-right: 0;
   box-shadow: none;
+  border-radius: 24px;
 }
 
-.app-footer-container {
-  width: 100%;
+.parent-app-footer .app-footer-main {
+  padding: 32px 36px 24px;
+}
+
+.parent-app-footer .app-footer-grid {
+  grid-template-columns: minmax(240px, 1.2fr) repeat(auto-fit, minmax(160px, 1fr));
+  align-items: start;
+}
+
+.parent-app-footer .app-footer-brand {
+  font-size: clamp(38px, 4vw, 54px);
+}
+
+.parent-app-footer .app-footer-text {
+  font-size: clamp(24px, 2.4vw, 36px);
 }
 
 .tabs-layout {
@@ -4924,5 +4940,21 @@ a {
 
   .app-footer-col a {
     font-size: 16px;
+  }
+
+  .parent-app-footer {
+    border-radius: 20px;
+  }
+
+  .parent-app-footer .app-footer-main {
+    padding: 24px 18px 20px;
+  }
+
+  .parent-app-footer .app-footer-brand {
+    font-size: 32px;
+  }
+
+  .parent-app-footer .app-footer-text {
+    font-size: 18px;
   }
 }
