@@ -194,92 +194,96 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
           </header>
         ) : null}
         <main className="parent-layout-main">{children}</main>
-        {!isMapFullscreen ? (
-          <footer className="app-footer parent-app-footer">
-            <div className="app-footer-main">
-              <div className="app-footer-grid">
-                <div className="app-footer-col app-footer-brand-col">
-                  <p className="app-footer-brand">EDUMAP Parent</p>
-                  <p className="app-footer-text">{footerUi.roleTag}</p>
-                </div>
-                <div className="app-footer-col">
-                  <p className="app-footer-title">{footerUi.navTitle}</p>
-                  <Link href="/parent/news">{footerUi.news}</Link>
-                  <Link href="/parent/schools">{footerUi.schools}</Link>
-                  <Link href="/parent/profile">{footerUi.profile}</Link>
-                </div>
-                {(footerSettings?.socials?.instagram_url ||
-                  footerSettings?.socials?.telegram_url ||
-                  footerSettings?.socials?.whatsapp_url) ? (
-                  <div className="app-footer-col">
-                    <p className="app-footer-title">{footerUi.socialsTitle}</p>
-                    {footerSettings?.socials?.instagram_url ? (
-                      <a href={footerSettings.socials.instagram_url} target="_blank" rel="noreferrer">
-                        {footerUi.instagram}
-                      </a>
-                    ) : null}
-                    {footerSettings?.socials?.telegram_url ? (
-                      <a href={footerSettings.socials.telegram_url} target="_blank" rel="noreferrer">
-                        {footerUi.telegram}
-                      </a>
-                    ) : null}
-                    {footerSettings?.socials?.whatsapp_url ? (
-                      <a href={footerSettings.socials.whatsapp_url} target="_blank" rel="noreferrer">
-                        {footerUi.whatsapp}
-                      </a>
-                    ) : null}
-                  </div>
-                ) : null}
-                {(footerSettings?.contacts?.phone_primary ||
-                  footerSettings?.contacts?.phone_secondary ||
-                  footerSettings?.contacts?.email) ? (
-                  <div className="app-footer-col">
-                    <p className="app-footer-title">{footerUi.contactsTitle}</p>
-                    {footerSettings?.contacts?.phone_primary ? (
-                      <a href={`tel:${String(footerSettings.contacts.phone_primary).replace(/\s+/g, '')}`}>
-                        {footerSettings.contacts.phone_primary}
-                      </a>
-                    ) : null}
-                    {footerSettings?.contacts?.phone_secondary ? (
-                      <a href={`tel:${String(footerSettings.contacts.phone_secondary).replace(/\s+/g, '')}`}>
-                        {footerSettings.contacts.phone_secondary}
-                      </a>
-                    ) : null}
-                    {footerSettings?.contacts?.email ? (
-                      <a href={`mailto:${footerSettings.contacts.email}`}>{footerSettings.contacts.email}</a>
-                    ) : null}
-                  </div>
-                ) : null}
-                {(footerSettings?.legal?.privacy_url ||
-                  footerSettings?.legal?.terms_url ||
-                  footerSettings?.legal?.faq_url) ? (
-                  <div className="app-footer-col">
-                    <p className="app-footer-title">{footerUi.legalTitle}</p>
-                    {footerSettings?.legal?.privacy_url ? (
-                      <a href={footerSettings.legal.privacy_url} target="_blank" rel="noreferrer">
-                        {footerUi.privacy}
-                      </a>
-                    ) : null}
-                    {footerSettings?.legal?.terms_url ? (
-                      <a href={footerSettings.legal.terms_url} target="_blank" rel="noreferrer">
-                        {footerUi.terms}
-                      </a>
-                    ) : null}
-                    {footerSettings?.legal?.faq_url ? (
-                      <a href={footerSettings.legal.faq_url} target="_blank" rel="noreferrer">
-                        {footerUi.faq}
-                      </a>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-              <div className="app-footer-bottom">
-                © {new Date().getFullYear()} EDUMAP. {footerUi.rights}
-              </div>
-            </div>
-          </footer>
-        ) : null}
       </div>
+      {!isMapFullscreen ? (
+        <div className="parent-footer-band">
+          <div className="container">
+            <footer className="app-footer parent-app-footer">
+              <div className="app-footer-main">
+                <div className="app-footer-grid">
+                  <div className="app-footer-col app-footer-brand-col">
+                    <p className="app-footer-brand">EDUMAP Parent</p>
+                    <p className="app-footer-text">{footerUi.roleTag}</p>
+                  </div>
+                  <div className="app-footer-col">
+                    <p className="app-footer-title">{footerUi.navTitle}</p>
+                    <Link href="/parent/news">{footerUi.news}</Link>
+                    <Link href="/parent/schools">{footerUi.schools}</Link>
+                    <Link href="/parent/profile">{footerUi.profile}</Link>
+                  </div>
+                  {(footerSettings?.socials?.instagram_url ||
+                    footerSettings?.socials?.telegram_url ||
+                    footerSettings?.socials?.whatsapp_url) ? (
+                    <div className="app-footer-col">
+                      <p className="app-footer-title">{footerUi.socialsTitle}</p>
+                      {footerSettings?.socials?.instagram_url ? (
+                        <a href={footerSettings.socials.instagram_url} target="_blank" rel="noreferrer">
+                          {footerUi.instagram}
+                        </a>
+                      ) : null}
+                      {footerSettings?.socials?.telegram_url ? (
+                        <a href={footerSettings.socials.telegram_url} target="_blank" rel="noreferrer">
+                          {footerUi.telegram}
+                        </a>
+                      ) : null}
+                      {footerSettings?.socials?.whatsapp_url ? (
+                        <a href={footerSettings.socials.whatsapp_url} target="_blank" rel="noreferrer">
+                          {footerUi.whatsapp}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {(footerSettings?.contacts?.phone_primary ||
+                    footerSettings?.contacts?.phone_secondary ||
+                    footerSettings?.contacts?.email) ? (
+                    <div className="app-footer-col">
+                      <p className="app-footer-title">{footerUi.contactsTitle}</p>
+                      {footerSettings?.contacts?.phone_primary ? (
+                        <a href={`tel:${String(footerSettings.contacts.phone_primary).replace(/\s+/g, '')}`}>
+                          {footerSettings.contacts.phone_primary}
+                        </a>
+                      ) : null}
+                      {footerSettings?.contacts?.phone_secondary ? (
+                        <a href={`tel:${String(footerSettings.contacts.phone_secondary).replace(/\s+/g, '')}`}>
+                          {footerSettings.contacts.phone_secondary}
+                        </a>
+                      ) : null}
+                      {footerSettings?.contacts?.email ? (
+                        <a href={`mailto:${footerSettings.contacts.email}`}>{footerSettings.contacts.email}</a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {(footerSettings?.legal?.privacy_url ||
+                    footerSettings?.legal?.terms_url ||
+                    footerSettings?.legal?.faq_url) ? (
+                    <div className="app-footer-col">
+                      <p className="app-footer-title">{footerUi.legalTitle}</p>
+                      {footerSettings?.legal?.privacy_url ? (
+                        <a href={footerSettings.legal.privacy_url} target="_blank" rel="noreferrer">
+                          {footerUi.privacy}
+                        </a>
+                      ) : null}
+                      {footerSettings?.legal?.terms_url ? (
+                        <a href={footerSettings.legal.terms_url} target="_blank" rel="noreferrer">
+                          {footerUi.terms}
+                        </a>
+                      ) : null}
+                      {footerSettings?.legal?.faq_url ? (
+                        <a href={footerSettings.legal.faq_url} target="_blank" rel="noreferrer">
+                          {footerUi.faq}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="app-footer-bottom">
+                  © {new Date().getFullYear()} EDUMAP. {footerUi.rights}
+                </div>
+              </div>
+            </footer>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

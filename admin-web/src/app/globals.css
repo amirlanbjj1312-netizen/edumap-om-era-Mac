@@ -47,9 +47,8 @@ a {
 
 .container {
   width: 100%;
-  max-width: none;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 24px;
 }
 
 .parent-page {
@@ -552,20 +551,30 @@ a {
 }
 
 .parent-layout-shell {
-  min-height: calc(100vh - 112px);
   display: flex;
   flex-direction: column;
 }
 
 .parent-layout-main {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
+}
+
+.parent-footer-band {
+  width: calc(100% + 32px);
+  margin-top: 22px;
+  margin-left: -16px;
+  margin-right: -16px;
+  background: linear-gradient(180deg, #5667fd 0%, #3f57dd 100%);
 }
 
 .parent-app-footer {
-  margin-top: auto;
+  margin-top: 0;
   width: 100%;
   margin-left: 0;
   margin-right: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tabs-layout {
@@ -4558,14 +4567,39 @@ a {
     font-size: 24px;
   }
 
+  .container {
+    padding: 0 16px;
+  }
+
   .topbar {
-    flex-direction: row;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: stretch;
     gap: 10px;
+  }
+
+  .topbar-brand-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .brand {
     font-size: 31px;
+  }
+
+  .topnav {
+    width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 0;
+  }
+
+  .parent-news-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .parent-news-tab {
+    flex: 0 0 auto;
   }
 
   .topbar-role-tag {
@@ -4634,13 +4668,14 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 0 18px;
+    gap: 8px;
+    padding: 0 12px;
     text-align: center;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 800;
     line-height: 1.15;
     box-shadow: 0 2px 0 rgba(23, 35, 66, 0.08);
+    min-width: 0;
   }
 
   .schools-mobile-action span[aria-hidden='true'] {
@@ -4697,12 +4732,6 @@ a {
 
   .market-headline {
     display: none;
-  }
-
-  .parent-app-footer {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
   }
 
   .booking-cards-grid {
@@ -4899,9 +4928,7 @@ a {
     overflow-x: auto;
   }
 
-  .app-footer-main {
-    padding: 24px 20px 20px;
-  }
+  
 
   .app-footer-grid {
     grid-template-columns: 1fr;
