@@ -1288,6 +1288,7 @@ export default function SchoolInfoPage() {
   const router = useRouter();
   const { locale: contentLocale, setLocale: setContentLocale } = useAdminLocale();
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
+  const [viewerRole, setViewerRole] = useState('');
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<
@@ -1926,6 +1927,13 @@ export default function SchoolInfoPage() {
         router.replace('/login');
         return;
       }
+      const rawRole =
+        session.user?.user_metadata?.role ||
+        session.user?.app_metadata?.role ||
+        '';
+      if (!ignore) {
+        setViewerRole(String(rawRole).trim().toLowerCase());
+      }
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
@@ -2227,6 +2235,7 @@ export default function SchoolInfoPage() {
   const reviewsCountValue = String(getDeep(profile, 'system.reviews_count') || '0');
   const viewsCountValue = String(getDeep(profile, 'system.views_count') || '0');
   const popularityScoreValue = String(getDeep(profile, 'system.popularity_score') || '0');
+  const canViewSchoolSummary = viewerRole === 'moderator' || viewerRole === 'superadmin';
   const summaryUi =
     contentLocale === 'en'
       ? {
@@ -2279,46 +2288,48 @@ export default function SchoolInfoPage() {
           </button>
         ))}
       </div>
-      <section className="card" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>{summaryUi.title}</h2>
-        <div style={{ marginBottom: 12 }}>
-          <Toggle
-            label="Скрыть из ЛК родителя"
-            checked={Boolean(getDeep(profile, 'system.hidden_from_users'))}
-            onChange={(value: boolean) => updateField('system.hidden_from_users', value)}
-          />
-        </div>
-        <div className="form-row">
-          <label className="field">
-            <span>{summaryUi.tariff}</span>
-            <input value={subscriptionPlan} readOnly />
-          </label>
-          <label className="field">
-            <span>{summaryUi.status}</span>
-            <input value={subscriptionStatus} readOnly />
-          </label>
-        </div>
-        <div className="form-row">
-          <label className="field">
-            <span>{summaryUi.rating}</span>
-            <input value={ratingValue} readOnly />
-          </label>
-          <label className="field">
-            <span>{summaryUi.reviews}</span>
-            <input value={reviewsCountValue} readOnly />
-          </label>
-        </div>
-        <div className="form-row">
-          <label className="field">
-            <span>{summaryUi.views}</span>
-            <input value={viewsCountValue} readOnly />
-          </label>
-          <label className="field">
-            <span>{summaryUi.popularity}</span>
-            <input value={popularityScoreValue} readOnly />
-          </label>
-        </div>
-      </section>
+      {canViewSchoolSummary ? (
+        <section className="card" style={{ marginBottom: 16 }}>
+          <h2 style={{ marginTop: 0 }}>{summaryUi.title}</h2>
+          <div style={{ marginBottom: 12 }}>
+            <Toggle
+              label="Скрыть из ЛК родителя"
+              checked={Boolean(getDeep(profile, 'system.hidden_from_users'))}
+              onChange={(value: boolean) => updateField('system.hidden_from_users', value)}
+            />
+          </div>
+          <div className="form-row">
+            <label className="field">
+              <span>{summaryUi.tariff}</span>
+              <input value={subscriptionPlan} readOnly />
+            </label>
+            <label className="field">
+              <span>{summaryUi.status}</span>
+              <input value={subscriptionStatus} readOnly />
+            </label>
+          </div>
+          <div className="form-row">
+            <label className="field">
+              <span>{summaryUi.rating}</span>
+              <input value={ratingValue} readOnly />
+            </label>
+            <label className="field">
+              <span>{summaryUi.reviews}</span>
+              <input value={reviewsCountValue} readOnly />
+            </label>
+          </div>
+          <div className="form-row">
+            <label className="field">
+              <span>{summaryUi.views}</span>
+              <input value={viewsCountValue} readOnly />
+            </label>
+            <label className="field">
+              <span>{summaryUi.popularity}</span>
+              <input value={popularityScoreValue} readOnly />
+            </label>
+          </div>
+        </section>
+      ) : null}
       <div className="tabs-layout">
         <aside className="side-tabs">
           <button
