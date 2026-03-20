@@ -361,6 +361,46 @@ const hasRequiredParentFields = (row: SchoolRow, locale: 'ru' | 'en' | 'kk'): bo
   return Boolean(name && type && city && district && languages.length && hasLogo(row));
 };
 
+const getSchoolProgramsCount = (row: SchoolRow): number =>
+  [
+    ...toList(row.education?.curricula?.national),
+    ...toList(row.education?.curricula?.international),
+    ...toList(row.education?.curricula?.additional),
+    ...toList(row.education?.curricula?.other),
+  ].length;
+
+const getSchoolPhotoCount = (row: SchoolRow): number => extractMediaUrls(row.media?.photos).length;
+
+const getSchoolUpdatedAt = (row: SchoolRow): number => Date.parse(toText(row.updated_at) || '') || 0;
+
+const getSchoolQualityScore = (row: SchoolRow): number => {
+  const monthlyFee = getComparableMonthlyFee(row);
+  const programsCount = getSchoolProgramsCount(row);
+  const photosCount = getSchoolPhotoCount(row);
+  const clubsCount = Math.max(countClubsInServices(row.services), toNumber(row.services?.clubs_count));
+  const hasPhone = Boolean(toText(row.basic_info?.phone).trim());
+  const hasAccreditation = Boolean(
+    toList(row.media?.accreditation).length ||
+      toList(row.media?.certificates).length ||
+      toText(row.basic_info?.license_details?.number).trim()
+  );
+  const rating = Math.max(0, Number(row.system?.rating ?? 0));
+  const reviewsCount = Math.max(0, Number(row.system?.reviews_count ?? 0));
+
+  let score = 0;
+  if (monthlyFee > 0) score += 3;
+  if (photosCount > 0) score += 2;
+  if (programsCount > 0) score += 2;
+  if (clubsCount > 0) score += 2;
+  if (hasPhone) score += 1;
+  if (hasAccreditation) score += 1;
+
+  score += Math.min(rating, 5);
+  score += Math.min(reviewsCount, 20) * 0.2;
+
+  return score;
+};
+
 export default function ParentSchoolsPage() {
   const router = useRouter();
   const { t, locale } = useParentLocale();
@@ -939,12 +979,30 @@ export default function ParentSchoolsPage() {
     }
     if (sortMode === 'updated') {
       next.sort((a, b) => {
-        const aTs = Date.parse(toText(a.updated_at) || '') || 0;
-        const bTs = Date.parse(toText(b.updated_at) || '') || 0;
+        const aTs = getSchoolUpdatedAt(a);
+        const bTs = getSchoolUpdatedAt(b);
         return bTs - aTs;
       });
       return next;
     }
+    next.sort((a, b) => {
+      const qualityDiff = getSchoolQualityScore(b) - getSchoolQualityScore(a);
+      if (qualityDiff !== 0) return qualityDiff;
+
+      const ratingDiff = Number(b.system?.rating ?? 0) - Number(a.system?.rating ?? 0);
+      if (ratingDiff !== 0) return ratingDiff;
+
+      const reviewsDiff =
+        Number(b.system?.reviews_count ?? 0) - Number(a.system?.reviews_count ?? 0);
+      if (reviewsDiff !== 0) return reviewsDiff;
+
+      const updatedDiff = getSchoolUpdatedAt(b) - getSchoolUpdatedAt(a);
+      if (updatedDiff !== 0) return updatedDiff;
+
+      return getBrandTitle(a, locale).localeCompare(getBrandTitle(b, locale), undefined, {
+        sensitivity: 'base',
+      });
+    });
     return next;
   }, [filtered, sortMode, locale]);
 
