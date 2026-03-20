@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loadSchools } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
-import { countClubsInServices } from '@/lib/clubsSchedule';
 
 type SchoolRow = {
   school_id?: string;
@@ -24,6 +23,7 @@ type SchoolRow = {
   };
   education?: {
     languages?: unknown;
+    grades?: unknown;
     curricula?: {
       national?: unknown;
       international?: unknown;
@@ -112,6 +112,14 @@ type LeafletApi = {
     point: [number, number],
     options: { radius: number; color: string; weight: number; fillColor: string; fillOpacity: number }
   ) => LeafletMarker;
+  icon?: (options: {
+    iconUrl: string;
+    shadowUrl?: string;
+    iconSize?: [number, number];
+    iconAnchor?: [number, number];
+    popupAnchor?: [number, number];
+    shadowSize?: [number, number];
+  }) => unknown;
 };
 
 const toText = (value: unknown): string => {
@@ -172,6 +180,28 @@ const normalize = (value: string) => value.toLowerCase().trim();
 
 const toggleValue = (arr: string[], value: string) =>
   arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
+
+const parseGrades = (value: unknown): number[] => {
+  const text = toText(value);
+  if (!text) return [];
+  const matches = text.match(/\d{1,2}/g) || [];
+  const numbers = matches
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item >= 0 && item <= 12);
+  return Array.from(new Set(numbers)).sort((a, b) => a - b);
+};
+
+const matchesGradeRange = (gradesValue: unknown, filter: string): boolean => {
+  if (!filter) return true;
+  const grades = parseGrades(gradesValue);
+  if (!grades.length) return false;
+  if (filter === '0') return grades.includes(0);
+  if (filter === '1-4') return [1, 2, 3, 4].some((grade) => grades.includes(grade));
+  if (filter === '5-9') return [5, 6, 7, 8, 9].some((grade) => grades.includes(grade));
+  if (filter === '10-12') return [10, 11, 12].some((grade) => grades.includes(grade));
+  if (filter === '1-12') return grades.includes(1) && grades.includes(12);
+  return false;
+};
 
 const toFloat = (value: unknown): number | null => {
   const raw = typeof value === 'string' ? value.replace(',', '.').trim() : value;
@@ -422,18 +452,9 @@ export default function ParentSchoolsMapPage() {
   const [cityFilter, setCityFilter] = useState('');
   const [districtFilter, setDistrictFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [minRating, setMinRating] = useState(0);
   const [privatePriceLimit, setPrivatePriceLimit] = useState<number | null>(null);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedAccreditation, setSelectedAccreditation] = useState<string[]>([]);
-  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
-  const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([]);
-  const [entranceExam, setEntranceExam] = useState<'all' | 'yes' | 'no'>('all');
-  const [selectedAdvanced, setSelectedAdvanced] = useState<string[]>([]);
-  const [minClassSize, setMinClassSize] = useState(0);
-  const [minClubs, setMinClubs] = useState(0);
+  const [gradeRangeFilter, setGradeRangeFilter] = useState('');
 
   const FILTER_TEXT: Record<string, { ru: string; en: string; kk: string }> = {
     closeMap: { ru: 'Закрыть карту', en: 'Close map', kk: 'Картаны жабу' },
@@ -446,20 +467,9 @@ export default function ParentSchoolsMapPage() {
     schoolType: { ru: 'Тип школы', en: 'School type', kk: 'Мектеп түрі' },
     anyType: { ru: 'Любой тип', en: 'Any type', kk: 'Кез келген түр' },
     languageOfInstruction: { ru: 'Язык обучения', en: 'Language of instruction', kk: 'Оқыту тілі' },
-    ratingFrom: { ru: 'Рейтинг от', en: 'Rating from', kk: 'Рейтинг кемінде' },
     privatePriceTo: { ru: 'Цена до (₸)', en: 'Price up to (₸)', kk: 'Баға дейін (₸)' },
-    accreditation: { ru: 'Аккредитация', en: 'Accreditation', kk: 'Аккредитация' },
-    programs: { ru: 'Программы', en: 'Programs', kk: 'Бағдарламалар' },
-    services: { ru: 'Услуги', en: 'Services', kk: 'Қызметтер' },
-    meals: { ru: 'Питание', en: 'Meals', kk: 'Тамақтану' },
-    specialists: { ru: 'Специалисты', en: 'Specialists', kk: 'Мамандар' },
-    entranceExam: { ru: 'Вступительный экзамен', en: 'Entrance exam', kk: 'Қабылдау емтиханы' },
-    yes: { ru: 'Да', en: 'Yes', kk: 'Иә' },
-    no: { ru: 'Нет', en: 'No', kk: 'Жоқ' },
-    any: { ru: 'Любой', en: 'Any', kk: 'Кез келгені' },
-    advancedSubjects: { ru: 'Углубленные предметы', en: 'Advanced subjects', kk: 'Тереңдетілген пәндер' },
-    minClassSize: { ru: 'Средний размер класса (мин.)', en: 'Average class size (min.)', kk: 'Орташа сынып көлемі (мин.)' },
-    minClubs: { ru: 'Количество кружков (мин.)', en: 'Number of clubs (min.)', kk: 'Үйірмелер саны (мин.)' },
+    gradesRange: { ru: 'Количество классов', en: 'Grades', kk: 'Сыныптар' },
+    allGrades: { ru: 'Любые классы', en: 'Any grades', kk: 'Кез келген сыныптар' },
     reset: { ru: 'Сбросить', en: 'Reset', kk: 'Тазарту' },
     noCity: { ru: 'Без города', en: 'No city', kk: 'Қаласы жоқ' },
     mapLoadError: { ru: 'Не удалось загрузить карту.', en: 'Failed to load map.', kk: 'Картаны жүктеу сәтсіз болды.' },
@@ -546,108 +556,26 @@ export default function ParentSchoolsMapPage() {
       const city = toText(row.basic_info?.city);
       const district = toText(row.basic_info?.district);
       const schoolTypeValues = getSchoolTypes(row.basic_info?.type);
-      const rating = Number(row.system?.rating ?? 0);
       const monthlyFee = getMonthlyFee(row);
 
       const cityOk = !cityFilter || city === cityFilter;
       const districtOk = !districtFilter || district === districtFilter;
       const typeOk = !typeFilter || schoolTypeValues.includes(typeFilter);
-      const ratingOk = rating >= minRating;
       const privatePriceOk = !isPrivateType(typeFilter) || monthlyFee <= maxPrivatePrice || monthlyFee <= 0;
+      const gradesOk = matchesGradeRange(row.education?.grades, gradeRangeFilter);
 
       const schoolLanguages = toList(row.education?.languages).map(normalize);
       const languagesOk =
         !selectedLanguages.length ||
         selectedLanguages.some((lang) => schoolLanguages.some((schoolLang) => schoolLang.includes(normalize(lang))));
 
-      const licenseNumber = toText(row.basic_info?.license_details?.number);
-      const hasLicense = Boolean(licenseNumber);
-      const certificates = toList(row.media?.accreditation).length || toList(row.media?.certificates).length;
-      const hasCertificates = certificates > 0;
-      const accreditationOk =
-        !selectedAccreditation.length ||
-        selectedAccreditation.every((key) => {
-          if (key === 'license') return hasLicense;
-          if (key === 'certificates') return hasCertificates;
-          return true;
-        });
-
-      const schoolPrograms = [
-        ...toList(row.education?.curricula?.national),
-        ...toList(row.education?.curricula?.international),
-        ...toList(row.education?.curricula?.additional),
-        ...toList(row.education?.curricula?.other),
-      ].map(normalize);
-      const programsOk =
-        !selectedPrograms.length ||
-        selectedPrograms.some((program) =>
-          schoolPrograms.some((schoolProgram) => schoolProgram.includes(normalize(program)))
-        );
-
-      const services = row.services || {};
-      const serviceChecks: Record<string, boolean> = {
-        after_school: Boolean(services.after_school),
-        transport: Boolean(services.transport),
-        inclusive_education: Boolean(services.inclusive_education),
-        security: Boolean(services.safety?.security),
-        cameras: Boolean(services.safety?.cameras),
-        access_control: Boolean(services.safety?.access_control),
-        medical_office: Boolean(services.medical_office),
-      };
-      const servicesOk =
-        !selectedServices.length || selectedServices.every((serviceKey) => serviceChecks[serviceKey]);
-
-      const mealsStatus = normalize(toText(services.meals_status));
-      const mealsOk =
-        !selectedMeals.length ||
-        selectedMeals.some((meal) => {
-          if (meal === 'Бесплатное') return mealsStatus.includes('free') || mealsStatus.includes('бесплат');
-          if (meal === 'Платное') return mealsStatus.includes('paid') || mealsStatus.includes('плат');
-          if (meal === 'Без питания') return mealsStatus.includes('no meals') || mealsStatus.includes('без');
-          return true;
-        });
-
-      const specialistsSource = `${toText(services.specialists)} ${toText(services.specialists_other)}`.toLowerCase();
-      const specialistsOk =
-        !selectedSpecialists.length ||
-        selectedSpecialists.some((specialist) => specialistsSource.includes(normalize(specialist)));
-
-      const hasEntranceExam = Boolean(row.education?.entrance_exam?.required);
-      const entranceExamOk =
-        entranceExam === 'all' ||
-        (entranceExam === 'yes' && hasEntranceExam) ||
-        (entranceExam === 'no' && !hasEntranceExam);
-
-      const advancedSubjects = `${toText(row.education?.advanced_subjects)} ${toText(row.education?.advanced_subjects_other)}`.toLowerCase();
-      const advancedOk =
-        !selectedAdvanced.length ||
-        selectedAdvanced.some((subject) => advancedSubjects.includes(normalize(subject)));
-
-      const classSize = toNumber(row.education?.average_class_size);
-      const classSizeOk = classSize >= minClassSize;
-
-      const clubsCount = Math.max(
-        countClubsInServices(row.services),
-        toNumber(row.services?.clubs_count)
-      );
-      const clubsOk = clubsCount >= minClubs;
-
       return (
         cityOk &&
         districtOk &&
         typeOk &&
-        ratingOk &&
         privatePriceOk &&
         languagesOk &&
-        accreditationOk &&
-        programsOk &&
-        servicesOk &&
-        mealsOk &&
-        specialistsOk &&
-        entranceExamOk &&
-        advancedOk &&
-        classSizeOk &&
-        clubsOk
+        gradesOk
       );
     });
   }, [
@@ -655,18 +583,9 @@ export default function ParentSchoolsMapPage() {
     cityFilter,
     districtFilter,
     typeFilter,
-    minRating,
     maxPrivatePrice,
     selectedLanguages,
-    selectedAccreditation,
-    selectedPrograms,
-    selectedServices,
-    selectedMeals,
-    selectedSpecialists,
-    entranceExam,
-    selectedAdvanced,
-    minClassSize,
-    minClubs,
+    gradeRangeFilter,
   ]);
 
   const schools = useMemo(() => {
@@ -721,6 +640,14 @@ export default function ParentSchoolsMapPage() {
   useEffect(() => {
     if (!ready || !window.L || !mapRef.current) return;
     const L = window.L as LeafletApi;
+    const orangeIcon = L.icon?.({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
 
     if (markersLayerRef.current) {
       markersLayerRef.current.remove();
@@ -732,14 +659,11 @@ export default function ParentSchoolsMapPage() {
 
     schools.forEach((school) => {
       const isFocused = focusedSchoolId && school.id === focusedSchoolId;
-      const marker = isFocused
-        ? L.circleMarker([school.lat, school.lng], {
-            radius: 11,
-            color: '#0f172a',
-            weight: 3,
-            fillColor: '#f59e0b',
-            fillOpacity: 0.95,
-          })
+      const marker = orangeIcon
+        ? (L.marker as unknown as (point: [number, number], options?: { icon?: unknown }) => LeafletMarker)(
+            [school.lat, school.lng],
+            { icon: orangeIcon }
+          )
         : L.marker([school.lat, school.lng]);
       marker.bindPopup(
         `<strong>${escapeHtml(school.name)}</strong><br/>${escapeHtml(school.city || noCityText)}`
@@ -871,17 +795,6 @@ export default function ParentSchoolsMapPage() {
               ))}
             </div>
           </div>
-          <label className="field">
-            <span>{ft('ratingFrom')}: {minRating.toFixed(1)}</span>
-            <input
-              type="range"
-              min={0}
-              max={5}
-              step={0.1}
-              value={minRating}
-              onChange={(e) => setMinRating(Number(e.target.value))}
-            />
-          </label>
           {isPrivateType(typeFilter) ? (
             <label className="field">
               <span>{ft('privatePriceTo')}: {maxPrivatePrice.toLocaleString('ru-RU')}</span>
@@ -895,129 +808,17 @@ export default function ParentSchoolsMapPage() {
               />
             </label>
           ) : null}
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('accreditation')}</p>
-            <div className="schools-filter-chip-list">
-              {accreditationOptions.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={`schools-filter-chip${selectedAccreditation.includes(item.key) ? ' active' : ''}`}
-                  onClick={() => setSelectedAccreditation((prev) => toggleValue(prev, item.key))}
-                >
-                  {localizeOption(item.label, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('programs')}</p>
-            <div className="schools-filter-chip-list">
-              {programOptions.map((program, index) => (
-                <button
-                  key={`${program}-${index}`}
-                  type="button"
-                  className={`schools-filter-chip${selectedPrograms.includes(program) ? ' active' : ''}`}
-                  onClick={() => setSelectedPrograms((prev) => toggleValue(prev, program))}
-                >
-                  {localizeOption(program, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('services')}</p>
-            <div className="schools-filter-chip-list">
-              {serviceOptions.map((service) => (
-                <button
-                  key={service.key}
-                  type="button"
-                  className={`schools-filter-chip${selectedServices.includes(service.key) ? ' active' : ''}`}
-                  onClick={() => setSelectedServices((prev) => toggleValue(prev, service.key))}
-                >
-                  {localizeOption(service.label, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('meals')}</p>
-            <div className="schools-filter-chip-list">
-              {mealsOptions.map((meal) => (
-                <button
-                  key={meal}
-                  type="button"
-                  className={`schools-filter-chip${selectedMeals.includes(meal) ? ' active' : ''}`}
-                  onClick={() => setSelectedMeals((prev) => toggleValue(prev, meal))}
-                >
-                  {localizeOption(meal, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('specialists')}</p>
-            <div className="schools-filter-chip-list">
-              {specialistOptions.map((specialist) => (
-                <button
-                  key={specialist}
-                  type="button"
-                  className={`schools-filter-chip${selectedSpecialists.includes(specialist) ? ' active' : ''}`}
-                  onClick={() => setSelectedSpecialists((prev) => toggleValue(prev, specialist))}
-                >
-                  {localizeOption(specialist, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('entranceExam')}</p>
-            <div className="schools-filter-chip-list">
-              <button type="button" className={`schools-filter-chip${entranceExam === 'yes' ? ' active' : ''}`} onClick={() => setEntranceExam('yes')}>{ft('yes')}</button>
-              <button type="button" className={`schools-filter-chip${entranceExam === 'no' ? ' active' : ''}`} onClick={() => setEntranceExam('no')}>{ft('no')}</button>
-              <button type="button" className={`schools-filter-chip${entranceExam === 'all' ? ' active' : ''}`} onClick={() => setEntranceExam('all')}>{ft('any')}</button>
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('advancedSubjects')}</p>
-            <div className="schools-filter-chip-list">
-              {advancedOptions.map((subject) => (
-                <button
-                  key={subject}
-                  type="button"
-                  className={`schools-filter-chip${selectedAdvanced.includes(subject) ? ' active' : ''}`}
-                  onClick={() => setSelectedAdvanced((prev) => toggleValue(prev, subject))}
-                >
-                  {localizeOption(subject, locale)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('minClassSize')}</p>
-            <div className="schools-stepper">
-              <button type="button" onClick={() => setMinClassSize((v) => Math.max(0, v - 1))}>-</button>
-              <strong>{minClassSize}</strong>
-              <button type="button" onClick={() => setMinClassSize((v) => Math.min(50, v + 1))}>+</button>
-            </div>
-          </div>
-
-          <div className="schools-filter-section">
-            <p className="schools-filter-label">{ft('minClubs')}</p>
-            <div className="schools-stepper">
-              <button type="button" onClick={() => setMinClubs((v) => Math.max(0, v - 1))}>-</button>
-              <strong>{minClubs}</strong>
-              <button type="button" onClick={() => setMinClubs((v) => Math.min(30, v + 1))}>+</button>
-            </div>
-          </div>
+          <label className="field">
+            <span>{ft('gradesRange')}</span>
+            <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
+              <option value="">{ft('allGrades')}</option>
+              <option value="0">0</option>
+              <option value="1-4">1-4</option>
+              <option value="5-9">5-9</option>
+              <option value="10-12">10-12</option>
+              <option value="1-12">1-12</option>
+            </select>
+          </label>
 
           <button
             type="button"
@@ -1026,18 +827,9 @@ export default function ParentSchoolsMapPage() {
               setCityFilter('');
               setDistrictFilter('');
               setTypeFilter('');
-              setMinRating(0);
               setPrivatePriceLimit(null);
               setSelectedLanguages([]);
-              setSelectedAccreditation([]);
-              setSelectedPrograms([]);
-              setSelectedServices([]);
-              setSelectedMeals([]);
-              setSelectedSpecialists([]);
-              setEntranceExam('all');
-              setSelectedAdvanced([]);
-              setMinClassSize(0);
-              setMinClubs(0);
+              setGradeRangeFilter('');
             }}
           >
             {ft('reset')}
