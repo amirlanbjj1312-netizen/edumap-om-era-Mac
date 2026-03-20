@@ -1941,14 +1941,16 @@ export default function SchoolInfoPage() {
         session.user?.user_metadata?.role ||
         session.user?.app_metadata?.role ||
         '';
+      const normalizedRole = String(rawRole).trim().toLowerCase();
       if (!ignore) {
-        setViewerRole(String(rawRole).trim().toLowerCase());
+        setViewerRole(normalizedRole);
       }
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
       const selectedSchoolId =
-        typeof window !== 'undefined'
+        typeof window !== 'undefined' &&
+        (normalizedRole === 'moderator' || normalizedRole === 'superadmin')
           ? localStorage.getItem(SELECTED_SCHOOL_STORAGE_KEY) || ''
           : '';
       const targetId = selectedSchoolId || fallbackId;
