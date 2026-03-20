@@ -10,6 +10,7 @@ const {
 const {
   recordProgramAnalyticsEvent,
   getProgramAnalyticsSummary,
+  resetProgramAnalytics,
 } = require('../services/programAnalyticsStore');
 const {
   recordEngagementAnalyticsEvent,
@@ -356,14 +357,21 @@ const buildSchoolsRouter = () => {
       const schools = await readStore();
       const nameById = schools.reduce((acc, school) => {
         const schoolId = school?.school_id;
-        if (!schoolId) return acc;
         const schoolName =
           school?.basic_info?.display_name?.ru ||
           school?.basic_info?.name?.ru ||
           school?.basic_info?.display_name?.en ||
           school?.basic_info?.name?.en ||
-          schoolId;
-        acc[schoolId] = schoolName;
+          school?.basic_info?.email ||
+          schoolId ||
+          'Школа';
+        if (schoolId) {
+          acc[schoolId] = schoolName;
+        }
+        const email = normalizeEmail(school?.basic_info?.email);
+        if (email) {
+          acc[buildFallbackSchoolId(email)] = schoolName;
+        }
         return acc;
       }, {});
 
@@ -379,6 +387,19 @@ const buildSchoolsRouter = () => {
           actor: actor.email || actor.id,
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/analytics/program-info/reset', async (req, res, next) => {
+    try {
+      const actor = await requireSuperadmin(req, res);
+      if (!actor) return;
+      const result = await resetProgramAnalytics({
+        actorEmail: String(actor.email || ''),
+      });
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }

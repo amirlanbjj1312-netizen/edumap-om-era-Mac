@@ -11,6 +11,7 @@ import {
   loadRatingSurveyAnalytics,
   loadRatingSurveyCampaigns,
   loadRatingSurveyConfig,
+  resetProgramInfoAnalytics,
   resetSchoolRating,
   resetEngagementAnalytics,
   updateRatingSurveyConfig,
@@ -144,6 +145,7 @@ export default function StatisticsPage() {
   const [consultations, setConsultations] = useState<ConsultationRequest[]>([]);
   const [summary, setSummary] = useState<{
     days: number;
+    reset_at?: string | null;
     totals: { open: number; read_more: number; close: number };
     topPrograms: Array<{ program_name: string; open: number; read_more: number; close: number }>;
     topSchools: Array<{
@@ -338,6 +340,7 @@ export default function StatisticsPage() {
   );
 
   const canManageSurveys = actorRole === 'moderator' || actorRole === 'superadmin';
+  const canResetProgramAnalytics = actorRole === 'superadmin';
   const canResetEngagement = actorRole === 'superadmin';
 
   const engagementByType = useMemo(() => {
@@ -565,6 +568,27 @@ export default function StatisticsPage() {
       setMessage('Период статистики сброшен.');
     } catch (error) {
       setMessage((error as Error)?.message || 'Не удалось сбросить период статистики');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetProgramAnalytics = async () => {
+    if (!token || !canResetProgramAnalytics) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'Начать новый период для статистики программ? История не удалится, но отчеты будут считаться от текущего момента.'
+      );
+      if (!confirmed) return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      await resetProgramInfoAnalytics(token);
+      await reload();
+      setMessage('Статистика программ сброшена на новый период.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось сбросить статистику программ');
     } finally {
       setLoading(false);
     }
@@ -962,6 +986,36 @@ export default function StatisticsPage() {
                   <p className="request-title">{t('statisticsProgramInfoRate')}</p>
                   <p className="muted">{readMoreRate}%</p>
                 </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  marginTop: 12,
+                }}
+              >
+                {summary?.reset_at ? (
+                  <p className="muted" style={{ margin: 0 }}>
+                    Статистика программ считается с{' '}
+                    {new Date(summary.reset_at).toLocaleString()}
+                  </p>
+                ) : (
+                  <span />
+                )}
+                {canResetProgramAnalytics ? (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={handleResetProgramAnalytics}
+                    disabled={loading}
+                  >
+                    Сбросить статистику программ
+                  </button>
+                ) : null}
               </div>
 
               <div className="card" style={{ marginTop: 16 }}>

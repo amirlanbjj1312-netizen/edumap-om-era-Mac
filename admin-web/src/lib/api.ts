@@ -467,6 +467,7 @@ export async function loadProgramInfoAnalytics(
   return authRequestJson<{
     data: {
       days: number;
+      reset_at?: string | null;
       totals: { open: number; read_more: number; close: number };
       topPrograms: Array<{ program_name: string; open: number; read_more: number; close: number }>;
       topSchools: Array<{
@@ -479,6 +480,18 @@ export async function loadProgramInfoAnalytics(
       sampled_events: number;
     };
   }>(`/schools/analytics/program-info?${query}`, { token });
+}
+
+export async function resetProgramInfoAnalytics(token: string) {
+  return authRequestJson<{
+    data: {
+      ok: boolean;
+      resetAt: string;
+    };
+  }>('/schools/analytics/program-info/reset', {
+    token,
+    method: 'POST',
+  });
 }
 
 export async function recordEngagementEvent(payload: {

@@ -84,6 +84,17 @@ const ensureProgramAnalyticsTable = async () => {
     CREATE INDEX IF NOT EXISTS idx_program_analytics_events_school_event
     ON program_analytics_events (school_id, event_type);
   `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS program_analytics_resets (
+      id BIGSERIAL PRIMARY KEY,
+      actor_email TEXT,
+      reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_program_analytics_resets_reset_at
+    ON program_analytics_resets (reset_at DESC);
+  `);
 };
 
 const ensureEngagementAnalyticsTables = async () => {
