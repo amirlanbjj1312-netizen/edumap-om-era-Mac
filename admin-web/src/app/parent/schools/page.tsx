@@ -1187,7 +1187,6 @@ export default function ParentSchoolsPage() {
           aria-expanded={mobileFiltersOpen}
           aria-controls="schools-mobile-filters"
         >
-          <span aria-hidden="true">⚙</span>
           <span>
             {ft('filters')}
             {activeFiltersCount ? ` (${activeFiltersCount})` : ''}
@@ -1199,11 +1198,13 @@ export default function ParentSchoolsPage() {
         </Link>
         <button
           type="button"
-          className={`schools-mobile-action schools-mobile-action-compare ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+          className={`schools-mobile-action schools-mobile-action-compare${compareMode ? ' compare-mode' : ' compare-idle'} ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
           onClick={onCompareAction}
         >
           <span>
-            {(compareMode && compareIds.length === compareTargetCount) ? compareUi.showCompare : compareUi.compare}
+            {compareMode
+              ? (compareIds.length === compareTargetCount ? compareUi.showCompare : compareUi.pickTwo)
+              : compareUi.compare}
             {' '}
             ({compareCount}/{compareTargetCount})
           </span>
@@ -1212,6 +1213,18 @@ export default function ParentSchoolsPage() {
           <span aria-hidden="true">✦</span>
           <span>{compareUi.aiMatch}</span>
         </Link>
+      </div>
+      <div className="schools-mobile-meta">
+        <span className="schools-mobile-total">{sortedRows.length} {t('schools_word')}</span>
+        {compareMode ? (
+          <button
+            type="button"
+            className="schools-mobile-compare-cancel"
+            onClick={cancelCompareMode}
+          >
+            {compareUi.cancelCompare}
+          </button>
+        ) : null}
       </div>
 
       <div className="schools-mobile-filter-bar">

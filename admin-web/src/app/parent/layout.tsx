@@ -187,9 +187,15 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                   {t(item.labelKey)}
                 </Link>
               ))}
-              <button type="button" className="topnav-logout" onClick={handleSignOut}>
-                {t('logout')}
-              </button>
+              {guest ? (
+                <Link href="/login" className="topnav-logout">
+                  {t('sign_in')}
+                </Link>
+              ) : (
+                <button type="button" className="topnav-logout" onClick={handleSignOut}>
+                  {t('logout')}
+                </button>
+              )}
             </nav>
           </header>
         ) : null}

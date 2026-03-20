@@ -182,6 +182,7 @@ export default function ParentProfilePage() {
 
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() || t('parent_default');
   const initial = (profile.firstName || profile.lastName || profile.email || 'U').trim().charAt(0).toUpperCase() || 'U';
+  const avatarLabel = guest ? t('guest') : initial;
   const ui =
     locale === 'en'
       ? {
@@ -422,17 +423,20 @@ export default function ParentProfilePage() {
             width: 76,
             height: 76,
             borderRadius: '50%',
-            border: '3px solid #ffc107',
+            border: guest ? '3px solid #f59e0b' : '3px solid #ffc107',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 34,
+            fontSize: guest ? 18 : 34,
             fontWeight: 800,
             background: 'rgba(255,255,255,0.08)',
             flexShrink: 0,
+            color: '#fff',
+            lineHeight: 1,
+            textTransform: guest ? 'none' : 'uppercase',
           }}
         >
-          {initial}
+          {avatarLabel}
         </div>
         <div>
           <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
@@ -444,82 +448,83 @@ export default function ParentProfilePage() {
       {guest ? <p className="muted">{t('guest_note')}</p> : null}
 
       <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-        <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-            <p style={{ margin: 0, fontWeight: 700 }}>{ui.editProfile}</p>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => {
-                setDraftFirstName(profile.firstName);
-                setDraftLastName(profile.lastName);
-                setDraftEmail(profile.email);
-                setIsEditing((prev) => !prev);
-                setSaveStatus('');
-              }}
-              disabled={guest}
-            >
-              {ui.editProfile}
-            </button>
-          </div>
-          {isEditing ? (
-            <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-              <label className="field">
-                <span>{ui.firstName}</span>
-                <input className="input" value={draftFirstName} onChange={(e) => setDraftFirstName(e.target.value)} />
-              </label>
-              <label className="field">
-                <span>{ui.lastName}</span>
-                <input className="input" value={draftLastName} onChange={(e) => setDraftLastName(e.target.value)} />
-              </label>
-              <label className="field">
-                <span>{ui.email}</span>
-                <input
-                  className="input"
-                  type="email"
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                />
-              </label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" className="button" onClick={onSaveProfile} disabled={saving}>
-                  {saving ? '...' : ui.save}
-                </button>
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() => {
-                    setDraftFirstName(profile.firstName);
-                    setDraftLastName(profile.lastName);
-                    setDraftEmail(profile.email);
-                    setIsEditing(false);
-                    setSaveStatus('');
-                  }}
-                  disabled={saving}
-                >
-                  {ui.cancel}
-                </button>
+        {!guest ? (
+          <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700 }}>{ui.editProfile}</p>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setDraftFirstName(profile.firstName);
+                  setDraftLastName(profile.lastName);
+                  setDraftEmail(profile.email);
+                  setIsEditing((prev) => !prev);
+                  setSaveStatus('');
+                }}
+              >
+                {ui.editProfile}
+              </button>
+            </div>
+            {isEditing ? (
+              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                <label className="field">
+                  <span>{ui.firstName}</span>
+                  <input className="input" value={draftFirstName} onChange={(e) => setDraftFirstName(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>{ui.lastName}</span>
+                  <input className="input" value={draftLastName} onChange={(e) => setDraftLastName(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>{ui.email}</span>
+                  <input
+                    className="input"
+                    type="email"
+                    value={draftEmail}
+                    onChange={(e) => setDraftEmail(e.target.value)}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                  />
+                </label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="button" onClick={onSaveProfile} disabled={saving}>
+                    {saving ? '...' : ui.save}
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => {
+                      setDraftFirstName(profile.firstName);
+                      setDraftLastName(profile.lastName);
+                      setDraftEmail(profile.email);
+                      setIsEditing(false);
+                      setSaveStatus('');
+                    }}
+                    disabled={saving}
+                  >
+                    {ui.cancel}
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div style={{ marginTop: 10 }}>
-              <p style={{ margin: 0, fontWeight: 700 }}>{fullName}</p>
-              <p className="muted" style={{ margin: '4px 0 0' }}>{profile.email || '—'}</p>
-            </div>
-          )}
-          {saveStatus ? (
-            <p
-              style={{
-                margin: '8px 0 0',
-                color: saveStatus === ui.profileSaved ? '#15803d' : '#b91c1c',
-              }}
-            >
-              {saveStatus}
-            </p>
-          ) : null}
-        </div>
+            ) : (
+              <div style={{ marginTop: 10 }}>
+                <p style={{ margin: 0, fontWeight: 700 }}>{fullName}</p>
+                <p className="muted" style={{ margin: '4px 0 0' }}>{profile.email || '—'}</p>
+              </div>
+            )}
+            {saveStatus ? (
+              <p
+                style={{
+                  margin: '8px 0 0',
+                  color: saveStatus === ui.profileSaved ? '#15803d' : '#b91c1c',
+                }}
+              >
+                {saveStatus}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
           <p style={{ margin: 0, fontWeight: 700 }}>{t('language')}</p>
@@ -767,28 +772,30 @@ export default function ParentProfilePage() {
           </div>
         ) : null}
 
-        <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>
-            {t('favorite_schools')}
-          </p>
-          {favoriteSchools.length ? (
-            <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
-              {favoriteSchools.map((school) => (
-                <Link
-                  key={String(school.school_id)}
-                  href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}`}
-                  className="profile-favorite-link"
-                >
-                  ♥ {getSchoolTitle(school)}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="muted" style={{ margin: '6px 0 0' }}>
-              {t('no_favorite_schools')}
+        {!guest ? (
+          <div style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
+            <p style={{ margin: 0, fontWeight: 700 }}>
+              {t('favorite_schools')}
             </p>
-          )}
-        </div>
+            {favoriteSchools.length ? (
+              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                {favoriteSchools.map((school) => (
+                  <Link
+                    key={String(school.school_id)}
+                    href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}`}
+                    className="profile-favorite-link"
+                  >
+                    ♥ {getSchoolTitle(school)}
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="muted" style={{ margin: '6px 0 0' }}>
+                {t('no_favorite_schools')}
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

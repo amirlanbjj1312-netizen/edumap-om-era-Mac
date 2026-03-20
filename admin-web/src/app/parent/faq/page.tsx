@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParentLocale } from '@/lib/parentLocale';
 
 export default function ParentFaqPage() {
   const { locale } = useParentLocale();
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
   const ui =
     locale === 'en'
       ? {
@@ -39,15 +41,32 @@ export default function ParentFaqPage() {
   return (
     <div className="card">
       <h2 className="section-title">{ui.title}</h2>
-      <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-        {ui.items.map((item) => (
-          <div key={item.q} style={{ border: '1px solid rgba(120,106,255,0.2)', borderRadius: 14, padding: 12 }}>
-            <p style={{ margin: 0, fontWeight: 700 }}>{item.q}</p>
-            <p className="muted" style={{ margin: '6px 0 0' }}>{item.a}</p>
-          </div>
-        ))}
+      <div className="faq-list">
+        {ui.items.map((item, index) => {
+          const isOpen = openIndex === index;
+          return (
+            <section key={item.q} className={`faq-item${isOpen ? ' open' : ''}`}>
+              <button
+                type="button"
+                className="faq-trigger"
+                onClick={() => setOpenIndex((prev) => (prev === index ? null : index))}
+                aria-expanded={isOpen}
+              >
+                <span className="faq-question">{item.q}</span>
+                <span className={`faq-arrow${isOpen ? ' open' : ''}`} aria-hidden="true">
+                  ▾
+                </span>
+              </button>
+              {isOpen ? (
+                <div className="faq-answer-wrap">
+                  <p className="faq-answer">{item.a}</p>
+                </div>
+              ) : null}
+            </section>
+          );
+        })}
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div className="faq-back-row">
         <Link className="button secondary" href="/parent/profile">
           {ui.back}
         </Link>
@@ -55,4 +74,3 @@ export default function ParentFaqPage() {
     </div>
   );
 }
-

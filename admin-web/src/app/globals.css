@@ -794,6 +794,73 @@ a {
   color: #b91c1c;
 }
 
+.faq-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.faq-item {
+  border-radius: 18px;
+  border: 1px solid #eef1f7;
+  background: #f8f9fc;
+  box-shadow: 0 1px 0 rgba(29, 43, 76, 0.03);
+  overflow: hidden;
+}
+
+.faq-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #2f3d57;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px;
+  text-align: left;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.faq-question {
+  min-width: 0;
+}
+
+.faq-arrow {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f3d57;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(21, 33, 62, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.faq-arrow.open {
+  transform: rotate(180deg);
+}
+
+.faq-answer-wrap {
+  padding: 0 24px 20px;
+}
+
+.faq-answer {
+  margin: 0;
+  color: #5f6d87;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.faq-back-row {
+  margin-top: 16px;
+}
+
 .requests-list {
   display: grid;
   gap: 12px;
@@ -1416,6 +1483,10 @@ a {
 }
 
 .schools-mobile-actions {
+  display: none;
+}
+
+.schools-mobile-meta {
   display: none;
 }
 
@@ -4572,24 +4643,40 @@ a {
   }
 
   .topbar {
-    flex-wrap: wrap;
-    align-items: stretch;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 10px;
+    overflow: hidden;
+    padding: 10px 12px;
   }
 
   .topbar-brand-wrap {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
   }
 
   .brand {
-    font-size: 31px;
+    font-size: 25px;
   }
 
   .topnav {
-    width: 100%;
+    width: auto;
+    flex: 1 1 auto;
     justify-content: flex-start;
-    padding-bottom: 0;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .topnav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topnav a,
+  .topnav-logout {
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-size: 15px;
   }
 
   .parent-news-tabs {
@@ -4627,6 +4714,33 @@ a {
     width: 100%;
   }
 
+  .faq-list {
+    gap: 12px;
+  }
+
+  .faq-item {
+    border-radius: 16px;
+  }
+
+  .faq-trigger {
+    gap: 14px;
+    padding: 18px 16px;
+    font-size: 16px;
+  }
+
+  .faq-arrow {
+    width: 32px;
+    height: 32px;
+  }
+
+  .faq-answer-wrap {
+    padding: 0 16px 18px;
+  }
+
+  .faq-answer {
+    font-size: 15px;
+  }
+
   .schools-head {
     flex-direction: column;
     align-items: flex-start;
@@ -4636,8 +4750,26 @@ a {
     display: none;
   }
 
+  .market-hero {
+    padding: 18px 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .market-title {
+    font-size: clamp(24px, 8vw, 34px);
+    line-height: 1.08;
+  }
+
   .market-search-row {
     grid-template-columns: 1fr;
+    margin-top: 12px;
+    gap: 10px;
+  }
+
+  .market-search-button {
+    min-height: 48px;
+    width: 100%;
+    justify-content: center;
   }
 
   .market-grid {
@@ -4655,23 +4787,23 @@ a {
   .schools-mobile-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin: 12px 0 14px;
+    gap: 10px;
+    margin: 10px 0 8px;
   }
 
   .schools-mobile-action {
-    min-height: 68px;
-    border-radius: 26px;
+    min-height: 58px;
+    border-radius: 22px;
     border: 2px solid #d7ddf0;
     background: #ffffff;
     color: #33415c;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 0 12px;
+    gap: 6px;
+    padding: 0 10px;
     text-align: center;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     line-height: 1.15;
     box-shadow: 0 2px 0 rgba(23, 35, 66, 0.08);
@@ -4679,7 +4811,7 @@ a {
   }
 
   .schools-mobile-action span[aria-hidden='true'] {
-    font-size: 19px;
+    font-size: 18px;
     line-height: 1;
   }
 
@@ -4688,8 +4820,14 @@ a {
     grid-column: 1 / -1;
   }
 
+  .schools-mobile-action-sort,
+  .schools-mobile-action-filter-inline,
+  .schools-mobile-action-map {
+    order: 1;
+  }
+
   .schools-mobile-action-filter-inline {
-    min-height: 68px;
+    min-height: 58px;
     background: #ffffff;
     border-color: #d7ddf0;
     color: #33415c;
@@ -4702,22 +4840,62 @@ a {
   }
 
   .schools-mobile-action-compare {
-    min-height: 74px;
-    background: #f7a20b;
-    border-color: #e09100;
-    color: #21314f;
+    order: 3;
+    min-height: 62px;
+    background: #fff7e8;
+    border-color: #f0c774;
+    color: #6b531f;
   }
 
   .schools-mobile-action-compare.active {
-    background: #f0a400;
+    background: linear-gradient(180deg, #ffb11f, #f09b00);
     border-color: #cf8500;
+    color: #18305d;
+  }
+
+  .schools-mobile-action-compare.compare-mode:not(.active) {
+    background: #fff1cf;
+    border-color: #e7bc62;
+    color: #684d10;
+  }
+
+  .schools-mobile-action-compare.compare-idle {
+    box-shadow: none;
   }
 
   .schools-mobile-action-ai {
-    min-height: 68px;
-    background: #efc98b;
-    border-color: #e2b96f;
-    color: #8c95ad;
+    order: 4;
+    min-height: 54px;
+    background: #f8edd6;
+    border-color: #ead19c;
+    color: #7b7f92;
+    font-weight: 700;
+  }
+
+  .schools-mobile-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 16px;
+  }
+
+  .schools-mobile-total {
+    color: #6a7898;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .schools-mobile-compare-cancel {
+    appearance: none;
+    border: 1px solid #e7caca;
+    background: #fff6f6;
+    color: #b42318;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .market-chip-map,
@@ -4802,6 +4980,16 @@ a {
   .parent-school-badge {
     min-height: 28px;
     padding: 5px 12px;
+  }
+
+  .ai-fab-wrap {
+    right: 12px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .ai-fab-restore {
+    right: 12px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
   }
 
   .market-school-phone,
