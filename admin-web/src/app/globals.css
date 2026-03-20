@@ -861,6 +861,57 @@ a {
   margin-top: 16px;
 }
 
+.guest-gated-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.guest-gated-content {
+  filter: blur(10px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.guest-gated-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.guest-gated-title {
+  margin: 0;
+  color: #1f2a44;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.guest-gated-text {
+  margin: 0;
+  max-width: 460px;
+  color: #5f6d87;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.guest-locked-button {
+  cursor: not-allowed;
+  opacity: 0.88;
+}
+
+.school-guest-locked {
+  border-radius: 24px;
+}
+
 .requests-list {
   display: grid;
   gap: 12px;
@@ -4739,6 +4790,18 @@ a {
 
   .faq-answer {
     font-size: 15px;
+  }
+
+  .guest-gated-overlay {
+    padding: 16px;
+  }
+
+  .guest-gated-title {
+    font-size: 18px;
+  }
+
+  .guest-gated-text {
+    font-size: 14px;
   }
 
   .schools-head {

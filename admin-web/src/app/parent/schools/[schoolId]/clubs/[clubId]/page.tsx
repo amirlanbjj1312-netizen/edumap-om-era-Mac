@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { loadSchoolById } from '@/lib/api';
+import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolClubs, buildSchoolTeachers } from '@/lib/clubViews';
 
@@ -30,6 +31,7 @@ const getName = (school: unknown, locale: 'ru' | 'en' | 'kk') => {
 
 export default function ParentSchoolClubDetailsPage() {
   const { locale } = useParentLocale();
+  const [guest] = useState(() => isGuestMode());
   const params = useParams<{ schoolId: string; clubId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
   const clubId = decodeURIComponent(String(params?.clubId || ''));
@@ -92,6 +94,19 @@ export default function ParentSchoolClubDetailsPage() {
     price: locale === 'en' ? 'Price' : locale === 'kk' ? 'Бағасы' : 'Цена',
     minutes: locale === 'en' ? 'min' : locale === 'kk' ? 'мин' : 'мин',
     close: locale === 'en' ? 'Close' : locale === 'kk' ? 'Жабу' : 'Закрыть',
+    guestGateTitle:
+      locale === 'en'
+        ? 'Club details are available after sign in'
+        : locale === 'kk'
+          ? 'Үйірме ақпараты кіруден кейін ашылады'
+          : 'Информация о кружке доступна после входа',
+    guestGateText:
+      locale === 'en'
+        ? 'Photos, trainer card and section details are available only for registered users.'
+        : locale === 'kk'
+          ? 'Фотолар, жаттықтырушы картасы және секция туралы толық мәлімет тек тіркелген пайдаланушыларға қолжетімді.'
+          : 'Фотографии, карточка преподавателя и подробная информация о секции доступны только зарегистрированным пользователям.',
+    signIn: locale === 'en' ? 'Sign in' : locale === 'kk' ? 'Кіру' : 'Войти',
   };
 
   return (
@@ -101,11 +116,12 @@ export default function ParentSchoolClubDetailsPage() {
           ‹ {ui.back}
         </Link>
       </div>
-      <section className="school-mobile-photo-card">
-        {loading ? <p className="muted">...</p> : null}
-        {!loading && !club ? <p className="muted">{ui.notFound}</p> : null}
-        {club ? (
-          <>
+      <section className={`school-mobile-photo-card${guest ? ' guest-gated-panel' : ''}`}>
+        <div className={guest ? 'guest-gated-content' : ''}>
+          {loading ? <p className="muted">...</p> : null}
+          {!loading && !club ? <p className="muted">{ui.notFound}</p> : null}
+          {club ? (
+            <>
             <h3 className="school-mobile-photo-title">{club.name}</h3>
             <p className="muted" style={{ marginTop: 0 }}>{schoolName}</p>
             <div className="club-detail-lines">
@@ -169,7 +185,17 @@ export default function ParentSchoolClubDetailsPage() {
                 </div>
               </div>
             ) : null}
-          </>
+            </>
+          ) : null}
+        </div>
+        {guest ? (
+          <div className="guest-gated-overlay">
+            <p className="guest-gated-title">{ui.guestGateTitle}</p>
+            <p className="guest-gated-text">{ui.guestGateText}</p>
+            <Link className="button" href="/login">
+              {ui.signIn}
+            </Link>
+          </div>
         ) : null}
       </section>
       {activeSectionPhoto ? (

@@ -153,7 +153,7 @@ export default function ParentAiMatchPage() {
   const router = useRouter();
   const { locale } = useParentLocale();
   const [guest] = useState(() => isGuestMode());
-  const previewUnlocked = true;
+  const previewUnlocked = false;
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [rows, setRows] = useState<SchoolRow[]>([]);
@@ -416,6 +416,10 @@ export default function ParentAiMatchPage() {
   };
 
   const onCompareAction = () => {
+    if (guest) {
+      setError(ui.authRequired);
+      return;
+    }
     if (!compareMode) {
       setCompareMode(true);
       setCompareSelectedIds([]);

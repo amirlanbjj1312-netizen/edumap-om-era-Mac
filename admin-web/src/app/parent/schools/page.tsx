@@ -394,6 +394,7 @@ export default function ParentSchoolsPage() {
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [guestGateMessage, setGuestGateMessage] = useState('');
   const compareTargetCount = 2;
   const compareCount = compareIds.length;
   const compareUi = useMemo(
@@ -444,6 +445,24 @@ export default function ParentSchoolsPage() {
           : {
               add: 'Добавить в избранное',
               remove: 'Убрать из избранного',
+            },
+    [locale]
+  );
+  const guestGateUi = useMemo(
+    () =>
+      locale === 'en'
+        ? {
+            message: 'This feature is available only after registration.',
+            filters: 'Filters are available only for registered users.',
+          }
+        : locale === 'kk'
+          ? {
+              message: 'Бұл мүмкіндік тек тіркелген пайдаланушыларға қолжетімді.',
+              filters: 'Сүзгілер тек тіркелген пайдаланушыларға қолжетімді.',
+            }
+          : {
+              message: 'Эта функция доступна только зарегистрированным пользователям.',
+              filters: 'Фильтры доступны только зарегистрированным пользователям.',
             },
     [locale]
   );
@@ -984,6 +1003,11 @@ export default function ParentSchoolsPage() {
   }, [mobileFiltersOpen]);
 
   const onCompareAction = () => {
+    if (guest) {
+      setGuestGateMessage(guestGateUi.message);
+      setCompareError('');
+      return;
+    }
     if (!compareMode) {
       clearCompareIds();
       setCompareIds([]);
@@ -1004,6 +1028,11 @@ export default function ParentSchoolsPage() {
     setCompareIds([]);
     setCompareError('');
     setCompareMode(false);
+  };
+
+  const showGuestGateMessage = (message = guestGateUi.message) => {
+    setGuestGateMessage(message);
+    setCompareError('');
   };
 
   const resetFilters = () => {
@@ -1141,12 +1170,20 @@ export default function ParentSchoolsPage() {
           <Link href="/parent/schools/map" className="market-chip market-chip-map">
             {t('map')}
           </Link>
-          <Link href="/parent/ai-match" className="market-chip accent action-chip market-chip-ai">
+          <Link
+            href="/parent/ai-match"
+            className={`market-chip accent action-chip market-chip-ai${guest ? ' guest-locked-button' : ''}`}
+            onClick={(event) => {
+              if (!guest) return;
+              event.preventDefault();
+              showGuestGateMessage();
+            }}
+          >
             {compareUi.aiMatch}
           </Link>
           <button
             type="button"
-            className={`market-chip accent action-chip market-chip-compare ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+            className={`market-chip accent action-chip market-chip-compare${guest ? ' guest-locked-button' : ''} ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
             onClick={onCompareAction}
           >
             {(compareMode && compareIds.length === compareTargetCount) ? compareUi.showCompare : compareUi.compare}
@@ -1167,7 +1204,7 @@ export default function ParentSchoolsPage() {
           <span className="schools-total market-schools-total">{sortedRows.length} {t('schools_word')}</span>
         </div>
       </section>
-      {compareError ? <p style={{ marginTop: 8, color: '#b91c1c' }}>{compareError}</p> : null}
+      {compareError || guestGateMessage ? <p style={{ marginTop: 8, color: '#b91c1c' }}>{compareError || guestGateMessage}</p> : null}
 
       <div className="schools-mobile-actions">
         <button
@@ -1182,8 +1219,14 @@ export default function ParentSchoolsPage() {
         </button>
         <button
           type="button"
-          className={`schools-mobile-action schools-mobile-action-filter-inline${mobileFiltersOpen ? ' active' : ''}`}
-          onClick={() => setMobileFiltersOpen((prev) => !prev)}
+          className={`schools-mobile-action schools-mobile-action-filter-inline${mobileFiltersOpen ? ' active' : ''}${guest ? ' guest-locked-button' : ''}`}
+          onClick={() => {
+            if (guest) {
+              showGuestGateMessage(guestGateUi.filters);
+              return;
+            }
+            setMobileFiltersOpen((prev) => !prev);
+          }}
           aria-expanded={mobileFiltersOpen}
           aria-controls="schools-mobile-filters"
         >
@@ -1198,7 +1241,7 @@ export default function ParentSchoolsPage() {
         </Link>
         <button
           type="button"
-          className={`schools-mobile-action schools-mobile-action-compare${compareMode ? ' compare-mode' : ' compare-idle'} ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
+          className={`schools-mobile-action schools-mobile-action-compare${guest ? ' guest-locked-button' : ''}${compareMode ? ' compare-mode' : ' compare-idle'} ${(compareMode && compareIds.length === compareTargetCount) ? 'active compare-ready' : ''}`}
           onClick={onCompareAction}
         >
           <span>
@@ -1209,7 +1252,15 @@ export default function ParentSchoolsPage() {
             ({compareCount}/{compareTargetCount})
           </span>
         </button>
-        <Link href="/parent/ai-match" className="schools-mobile-action schools-mobile-action-ai">
+        <Link
+          href="/parent/ai-match"
+          className={`schools-mobile-action schools-mobile-action-ai${guest ? ' guest-locked-button' : ''}`}
+          onClick={(event) => {
+            if (!guest) return;
+            event.preventDefault();
+            showGuestGateMessage();
+          }}
+        >
           <span aria-hidden="true">✦</span>
           <span>{compareUi.aiMatch}</span>
         </Link>
@@ -1230,8 +1281,14 @@ export default function ParentSchoolsPage() {
       <div className="schools-mobile-filter-bar">
         <button
           type="button"
-          className={`button secondary schools-mobile-filter-trigger${mobileFiltersOpen ? ' active' : ''}`}
-          onClick={() => setMobileFiltersOpen((prev) => !prev)}
+          className={`button secondary schools-mobile-filter-trigger${mobileFiltersOpen ? ' active' : ''}${guest ? ' guest-locked-button' : ''}`}
+          onClick={() => {
+            if (guest) {
+              showGuestGateMessage(guestGateUi.filters);
+              return;
+            }
+            setMobileFiltersOpen((prev) => !prev);
+          }}
           aria-expanded={mobileFiltersOpen}
           aria-controls="schools-mobile-filters"
         >
@@ -1289,9 +1346,20 @@ export default function ParentSchoolsPage() {
 
       <div className="schools-booking-layout">
         <aside className="schools-filter-sidebar">
-          <div className="schools-filter-card">
-            <p className="schools-filter-title">{ft('filters')}</p>
-            {filtersContent}
+          <div className={`schools-filter-card${guest ? ' guest-gated-panel' : ''}`}>
+            <div className={guest ? 'guest-gated-content' : ''}>
+              <p className="schools-filter-title">{ft('filters')}</p>
+              {filtersContent}
+            </div>
+            {guest ? (
+              <div className="guest-gated-overlay">
+                <p className="guest-gated-title">{ft('filters')}</p>
+                <p className="guest-gated-text">{guestGateUi.filters}</p>
+                <Link className="button" href="/login">
+                  {t('sign_in_account')}
+                </Link>
+              </div>
+            ) : null}
           </div>
           {guest ? <p className="muted">{t('guest_schools_note')}</p> : null}
         </aside>
@@ -1508,7 +1576,16 @@ export default function ParentSchoolsPage() {
           >
             ×
           </button>
-          <Link href="/parent/chat" className="ai-fab-main" aria-label="Открыть AI чат">
+          <Link
+            href="/parent/chat"
+            className={`ai-fab-main${guest ? ' guest-locked-button' : ''}`}
+            aria-label="Открыть AI чат"
+            onClick={(event) => {
+              if (!guest) return;
+              event.preventDefault();
+              showGuestGateMessage();
+            }}
+          >
             <span className="ai-fab-icon" aria-hidden="true">💬</span>
             <span className="ai-fab-label">{compareUi.aiChat}</span>
           </Link>

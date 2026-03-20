@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { loadSchoolById, requestJson } from '@/lib/api';
+import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { supabase } from '@/lib/supabaseClient';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
@@ -726,6 +727,7 @@ const formatAfterSchoolValue = (
 
 export default function ParentSchoolDetailsPage() {
   const { locale } = useParentLocale();
+  const [guest] = useState(() => isGuestMode());
   const ui = {
     back: locale === 'en' ? 'Back' : locale === 'kk' ? 'Артқа' : 'Назад',
     loading: locale === 'en' ? 'Loading...' : locale === 'kk' ? 'Жүктелуде...' : 'Загрузка...',
@@ -800,6 +802,19 @@ export default function ParentSchoolDetailsPage() {
     primaryShort: locale === 'en' ? 'Primary' : locale === 'kk' ? 'Бастауыш' : 'Начальная',
     middleShort: locale === 'en' ? 'Middle' : locale === 'kk' ? 'Орта буын' : 'Средняя',
     highShort: locale === 'en' ? 'High' : locale === 'kk' ? 'Жоғары' : 'Старшая',
+    guestGateTitle:
+      locale === 'en'
+        ? 'Full school card is available after sign in'
+        : locale === 'kk'
+          ? 'Толық мектеп картасы кіруден кейін ашылады'
+          : 'Полная карточка школы доступна после входа',
+    guestGateText:
+      locale === 'en'
+        ? 'Detailed information, map, clubs and extended sections are available only for registered users.'
+        : locale === 'kk'
+          ? 'Толық ақпарат, карта, үйірмелер және кеңейтілген бөлімдер тек тіркелген пайдаланушыларға қолжетімді.'
+          : 'Подробная информация, карта, кружки и расширенные разделы доступны только зарегистрированным пользователям.',
+    signIn: locale === 'en' ? 'Sign in' : locale === 'kk' ? 'Кіру' : 'Войти',
   };
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
@@ -1554,6 +1569,8 @@ export default function ParentSchoolDetailsPage() {
             <h1 className="school-mobile-name">{name}</h1>
             <p className="school-mobile-city">{cityLabel}</p>
           </section>
+          <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
+            <div className={guest ? 'guest-gated-content' : ''}>
 
           <section className="school-mobile-facts">
             {typeInfoText ? (
@@ -2053,6 +2070,17 @@ export default function ParentSchoolDetailsPage() {
               <p style={{ margin: 0, color: '#1f2a44', lineHeight: 1.45 }}>{description}</p>
             </section>
           ) : null}
+            </div>
+            {guest ? (
+              <div className="guest-gated-overlay">
+                <p className="guest-gated-title">{ui.guestGateTitle}</p>
+                <p className="guest-gated-text">{ui.guestGateText}</p>
+                <Link className="button" href="/login">
+                  {ui.signIn}
+                </Link>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

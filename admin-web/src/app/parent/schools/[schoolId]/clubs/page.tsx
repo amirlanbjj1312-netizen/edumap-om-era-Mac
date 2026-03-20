@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadSchoolById } from '@/lib/api';
+import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildSchoolClubs } from '@/lib/clubViews';
 
@@ -104,6 +105,7 @@ const getWeekdayTitle = (locale: Locale, key: WeekdayKey) => {
 
 export default function ParentSchoolClubsPage() {
   const { locale } = useParentLocale();
+  const [guest] = useState(() => isGuestMode());
   const params = useParams<{ schoolId: string }>();
   const schoolId = decodeURIComponent(String(params?.schoolId || ''));
 
@@ -174,6 +176,19 @@ export default function ParentSchoolClubsPage() {
         : locale === 'kk'
           ? 'Секция жоқ'
           : 'Нет секций',
+    guestGateTitle:
+      locale === 'en'
+        ? 'Clubs are available after sign in'
+        : locale === 'kk'
+          ? 'Үйірмелер кіруден кейін ашылады'
+          : 'Кружки доступны после входа',
+    guestGateText:
+      locale === 'en'
+        ? 'Club schedules and detailed section cards are available only for registered users.'
+        : locale === 'kk'
+          ? 'Үйірме кестесі мен толық карточкалар тек тіркелген пайдаланушыларға қолжетімді.'
+          : 'Расписание кружков и подробные карточки секций доступны только зарегистрированным пользователям.',
+    signIn: locale === 'en' ? 'Sign in' : locale === 'kk' ? 'Кіру' : 'Войти',
   };
 
   return (
@@ -183,46 +198,57 @@ export default function ParentSchoolClubsPage() {
           ‹ {ui.back}
         </Link>
       </div>
-      <section className="school-mobile-photo-card">
-        <h3 className="school-mobile-photo-title">{ui.title}</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          {schoolName}
-        </p>
-        {loading ? <p className="muted">...</p> : null}
-        {!loading && !clubs.length ? <p className="muted">{ui.empty}</p> : null}
-        {!loading && clubs.length ? (
-          <div className="club-schedule-table">
-            <p className="club-week-table-title">{ui.dayTable}</p>
-            <div className="club-schedule-scroll">
-              <div className="club-schedule-grid">
-                {groupedByWeekday.map((group) => (
-                  <section key={group.key} className="club-schedule-col">
-                    <h4 className="club-schedule-col-title">{group.title}</h4>
-                    <div className="club-schedule-col-body">
-                      {group.items.length ? (
-                        group.items.map((club) => (
-                          <Link
-                            key={`${group.key}-${club.id}`}
-                            href={`/parent/schools/${encodeURIComponent(schoolId)}/clubs/${encodeURIComponent(club.id)}`}
-                            className="club-schedule-item"
-                          >
-                            <p className="club-schedule-item-name">{club.name}</p>
-                            <p className="club-schedule-item-meta">
-                              {ui.classes}: {club.class_range || '—'}
-                            </p>
-                            <p className="club-schedule-item-meta">
-                              {ui.teacher}: {club.teacher_name || '—'}
-                            </p>
-                          </Link>
-                        ))
-                      ) : (
-                        <p className="club-schedule-empty">{ui.emptyDay}</p>
-                      )}
-                    </div>
-                  </section>
-                ))}
+      <section className={`school-mobile-photo-card${guest ? ' guest-gated-panel' : ''}`}>
+        <div className={guest ? 'guest-gated-content' : ''}>
+          <h3 className="school-mobile-photo-title">{ui.title}</h3>
+          <p className="muted" style={{ marginTop: 0 }}>
+            {schoolName}
+          </p>
+          {loading ? <p className="muted">...</p> : null}
+          {!loading && !clubs.length ? <p className="muted">{ui.empty}</p> : null}
+          {!loading && clubs.length ? (
+            <div className="club-schedule-table">
+              <p className="club-week-table-title">{ui.dayTable}</p>
+              <div className="club-schedule-scroll">
+                <div className="club-schedule-grid">
+                  {groupedByWeekday.map((group) => (
+                    <section key={group.key} className="club-schedule-col">
+                      <h4 className="club-schedule-col-title">{group.title}</h4>
+                      <div className="club-schedule-col-body">
+                        {group.items.length ? (
+                          group.items.map((club) => (
+                            <Link
+                              key={`${group.key}-${club.id}`}
+                              href={`/parent/schools/${encodeURIComponent(schoolId)}/clubs/${encodeURIComponent(club.id)}`}
+                              className="club-schedule-item"
+                            >
+                              <p className="club-schedule-item-name">{club.name}</p>
+                              <p className="club-schedule-item-meta">
+                                {ui.classes}: {club.class_range || '—'}
+                              </p>
+                              <p className="club-schedule-item-meta">
+                                {ui.teacher}: {club.teacher_name || '—'}
+                              </p>
+                            </Link>
+                          ))
+                        ) : (
+                          <p className="club-schedule-empty">{ui.emptyDay}</p>
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
               </div>
             </div>
+          ) : null}
+        </div>
+        {guest ? (
+          <div className="guest-gated-overlay">
+            <p className="guest-gated-title">{ui.guestGateTitle}</p>
+            <p className="guest-gated-text">{ui.guestGateText}</p>
+            <Link className="button" href="/login">
+              {ui.signIn}
+            </Link>
           </div>
         ) : null}
       </section>

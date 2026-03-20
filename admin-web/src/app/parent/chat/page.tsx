@@ -206,7 +206,7 @@ export default function ParentChatPage() {
   const [text, setText] = useState('');
   const [guest] = useState(() => isGuestMode());
   const [left, setLeft] = useState<number>(() => getAiChatLeft(getParentPlan()));
-  const previewUnlocked = true;
+  const previewUnlocked = false;
 
   const ui = useMemo(
     () =>
