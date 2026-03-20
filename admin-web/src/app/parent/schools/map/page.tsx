@@ -179,6 +179,15 @@ const toFloat = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const hasValidCoordinates = (lat: number | null, lng: number | null): lat is number => {
+  if (lat === null || lng === null) return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat < -90 || lat > 90) return false;
+  if (lng < -180 || lng > 180) return false;
+  if (Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
+  return true;
+};
+
 const toNumber = (value: unknown): number => {
   const raw = toText(value).replace(',', '.').trim();
   const parsed = Number(raw);
@@ -491,7 +500,7 @@ export default function ParentSchoolsMapPage() {
       rows.filter((row) => {
         const lat = toFloat(row.basic_info?.coordinates?.latitude);
         const lng = toFloat(row.basic_info?.coordinates?.longitude);
-        return lat !== null && lng !== null;
+        return hasValidCoordinates(lat, lng);
       }),
     [rows]
   );
@@ -665,7 +674,7 @@ export default function ParentSchoolsMapPage() {
       .map((row) => {
         const lat = toFloat(row.basic_info?.coordinates?.latitude);
         const lng = toFloat(row.basic_info?.coordinates?.longitude);
-        if (lat === null || lng === null) return null;
+        if (!hasValidCoordinates(lat, lng)) return null;
         return {
           id: row.school_id || `${lat}-${lng}`,
           name: toText(row.basic_info?.display_name) || toText(row.basic_info?.name) || schoolDefaultText,
