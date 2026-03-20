@@ -4984,14 +4984,14 @@ a {
 
   .booking-cards-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
-    margin-inline: -8px;
+    gap: 16px;
+    margin-inline: -4px;
   }
 
   .parent-school-card {
-    padding: 12px 12px 10px;
+    padding: 14px 14px 12px;
     border-radius: 16px;
-    padding-right: 58px;
+    padding-right: 60px;
   }
 
   .parent-school-link {
@@ -5001,7 +5001,7 @@ a {
   .market-school-row {
     grid-template-columns: 68px minmax(0, 1fr);
     align-items: start;
-    gap: 12px;
+    gap: 14px;
   }
 
   .school-image-placeholder {
@@ -5020,9 +5020,9 @@ a {
 
   .market-school-main {
     min-width: 0;
-    padding-top: 2px;
+    padding-top: 3px;
     padding-left: 0;
-    padding-right: 2px;
+    padding-right: 6px;
   }
 
   .market-school-phone {
@@ -5030,7 +5030,7 @@ a {
   }
 
   .market-school-price {
-    margin-top: 8px;
+    margin-top: 10px;
     color: #2f63c9;
     font-weight: 800;
     font-size: 15px;
@@ -5056,8 +5056,8 @@ a {
   }
 
   .parent-school-badges {
-    margin-top: 5px;
-    gap: 5px;
+    margin-top: 7px;
+    gap: 6px;
   }
 
   .parent-school-badge {
@@ -5082,13 +5082,13 @@ a {
   }
 
   .parent-school-meta {
-    margin-top: 8px;
+    margin-top: 10px;
     gap: 6px;
     align-items: center;
   }
 
   .parent-school-expand-hint {
-    margin-top: 6px;
+    margin-top: 8px;
     display: flex;
     align-items: center;
     justify-content: flex-start;
