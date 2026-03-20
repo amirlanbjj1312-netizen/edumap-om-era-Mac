@@ -11,6 +11,11 @@ const {
   recordProgramAnalyticsEvent,
   getProgramAnalyticsSummary,
 } = require('../services/programAnalyticsStore');
+const {
+  recordEngagementAnalyticsEvent,
+  getEngagementAnalyticsSummary,
+  resetEngagementAnalytics,
+} = require('../services/engagementAnalyticsStore');
 const { buildConfig } = require('../utils/config');
 const { autofillMissingSchoolLocales } = require('../services/schoolLocaleTranslator');
 const { ValidationError, validateSchoolPayload } = require('../validation');
@@ -89,6 +94,29 @@ const buildSchoolsRouter = () => {
     }
     return data.user;
   };
+  const requireSuperadmin = async (req, res) => {
+    if (!supabaseAdmin) {
+      res.status(500).json({ error: 'Supabase admin is not configured' });
+      return null;
+    }
+    const token = getBearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: 'Authorization token is required' });
+      return null;
+    }
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      res.status(401).json({ error: 'Invalid token' });
+      return null;
+    }
+    const role =
+      data.user?.user_metadata?.role || data.user?.app_metadata?.role || '';
+    if (role !== 'superadmin') {
+      res.status(403).json({ error: 'Only superadmin can reset analytics' });
+      return null;
+    }
+    return data.user;
+  };
   const requireAdminOrSuperadmin = async (req, res) => {
     if (!supabaseAdmin) {
       res.status(500).json({ error: 'Supabase admin is not configured' });
@@ -113,6 +141,27 @@ const buildSchoolsRouter = () => {
       return null;
     }
     return { user: data.user, role };
+  };
+  const resolveOptionalActor = async (req) => {
+    const token = getBearerToken(req);
+    if (!token || !supabaseAdmin) {
+      return { actorType: 'guest', actorUserId: null, actorRole: 'guest' };
+    }
+    try {
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !data?.user) {
+        return { actorType: 'guest', actorUserId: null, actorRole: 'guest' };
+      }
+      const role =
+        data.user?.user_metadata?.role || data.user?.app_metadata?.role || 'user';
+      return {
+        actorType: 'auth',
+        actorUserId: data.user.id,
+        actorRole: role,
+      };
+    } catch (_error) {
+      return { actorType: 'guest', actorUserId: null, actorRole: 'guest' };
+    }
   };
 
   const TEST_BILLING_TARIFFS = [
@@ -330,6 +379,93 @@ const buildSchoolsRouter = () => {
           actor: actor.email || actor.id,
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/analytics/engagement', async (req, res, next) => {
+    try {
+      const actor = await resolveOptionalActor(req);
+      const schoolId = String(req.body?.schoolId || '').trim();
+      const eventType = String(req.body?.eventType || '').trim();
+      const locale = String(req.body?.locale || '').trim();
+      const source = String(req.body?.source || 'parent_web').trim();
+
+      if (!eventType) {
+        return res.status(400).json({ error: 'eventType is required' });
+      }
+      if (schoolId.length > 120 || source.length > 40) {
+        return res.status(400).json({ error: 'Invalid analytics payload length' });
+      }
+      if (locale && !['ru', 'en', 'kk'].includes(locale)) {
+        return res.status(400).json({ error: 'Invalid locale' });
+      }
+
+      await recordEngagementAnalyticsEvent({
+        schoolId: schoolId || null,
+        eventType,
+        locale,
+        source,
+        actorType: actor.actorType,
+        actorUserId: actor.actorUserId,
+        metadata: req.body?.metadata,
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      if (String(error?.message || '').includes('Invalid eventType')) {
+        return res.status(400).json({ error: 'Invalid eventType' });
+      }
+      next(error);
+    }
+  });
+
+  router.get('/analytics/engagement', async (req, res, next) => {
+    try {
+      const actor = await requireModerator(req, res);
+      if (!actor) return;
+
+      const days = Number.parseInt(String(req.query?.days || '30'), 10);
+      const limit = Number.parseInt(String(req.query?.limit || '10'), 10);
+      const summary = await getEngagementAnalyticsSummary({ days, limit });
+      const schools = await readStore();
+      const nameById = schools.reduce((acc, school) => {
+        const schoolId = school?.school_id;
+        if (!schoolId) return acc;
+        const schoolName =
+          school?.basic_info?.display_name?.ru ||
+          school?.basic_info?.name?.ru ||
+          school?.basic_info?.display_name?.en ||
+          school?.basic_info?.name?.en ||
+          schoolId;
+        acc[schoolId] = schoolName;
+        return acc;
+      }, {});
+
+      res.json({
+        data: {
+          ...summary,
+          topSchools: (summary.topSchools || []).map((row) => ({
+            ...row,
+            school_name: nameById[row.school_id] || row.school_id,
+          })),
+          actor: actor.email || actor.id,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/analytics/engagement/reset', async (req, res, next) => {
+    try {
+      const actor = await requireSuperadmin(req, res);
+      if (!actor) return;
+      const result = await resetEngagementAnalytics({
+        actorEmail: String(actor.email || ''),
+      });
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }

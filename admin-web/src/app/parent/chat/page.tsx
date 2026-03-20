@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getAccessToken, loadSchools, requestAiSchoolChat } from '@/lib/api';
+import { getAccessToken, loadSchools, recordEngagementEvent, requestAiSchoolChat } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { getParentPlan } from '@/lib/parentSubscription';
 import { consumeAiChat, getAiChatLeft } from '@/lib/parentUsage';
@@ -272,6 +272,14 @@ export default function ParentChatPage() {
   );
 
   useEffect(() => {
+    void recordEngagementEvent({
+      eventType: 'ai_chat_open',
+      locale,
+      source: 'ai_chat',
+    }).catch(() => undefined);
+  }, [locale]);
+
+  useEffect(() => {
     let mounted = true;
     loadSchools()
       .then((payload) => {
@@ -299,6 +307,11 @@ export default function ParentChatPage() {
     setText('');
     setError('');
     try {
+      void recordEngagementEvent({
+        eventType: 'ai_chat_message',
+        locale,
+        source: 'ai_chat',
+      }).catch(() => undefined);
       const token = await getAccessToken();
       if (!token) {
         throw new Error(

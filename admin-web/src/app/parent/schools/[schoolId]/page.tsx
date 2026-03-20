@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchoolById, requestJson } from '@/lib/api';
+import { loadSchoolById, recordEngagementEvent, requestJson } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { supabase } from '@/lib/supabaseClient';
@@ -728,6 +728,7 @@ const formatAfterSchoolValue = (
 export default function ParentSchoolDetailsPage() {
   const { locale } = useParentLocale();
   const [guest] = useState(() => isGuestMode());
+  const lastTrackedSchoolIdRef = useRef('');
   const ui = {
     back: locale === 'en' ? 'Back' : locale === 'kk' ? 'Артқа' : 'Назад',
     loading: locale === 'en' ? 'Loading...' : locale === 'kk' ? 'Жүктелуде...' : 'Загрузка...',
@@ -863,6 +864,18 @@ export default function ParentSchoolDetailsPage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const trackedSchoolId = String(school?.school_id || '').trim();
+    if (!trackedSchoolId || lastTrackedSchoolIdRef.current === trackedSchoolId) return;
+    lastTrackedSchoolIdRef.current = trackedSchoolId;
+    void recordEngagementEvent({
+      eventType: 'school_card_view',
+      schoolId: trackedSchoolId,
+      locale,
+      source: 'school_card',
+    }).catch(() => undefined);
+  }, [locale, school?.school_id]);
 
   useEffect(() => {
     let mounted = true;

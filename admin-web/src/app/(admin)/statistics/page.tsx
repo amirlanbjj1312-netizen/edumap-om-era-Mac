@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createRatingSurveyCampaign,
   closeRatingSurveyCampaign,
+  loadEngagementAnalytics,
   loadProgramInfoAnalytics,
   loadRatingSurveyAnalytics,
   loadRatingSurveyCampaigns,
   loadRatingSurveyConfig,
+  resetEngagementAnalytics,
   updateRatingSurveyConfig,
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
@@ -57,6 +59,44 @@ type SurveyAnalyticsPayload = {
   schools: SurveyAnalyticsRow[];
 };
 
+type EngagementSummaryPayload = {
+  days: number;
+  reset_at?: string | null;
+  sampled_events: number;
+  topEvents: Array<{
+    event_type: string;
+    all: number;
+    guest: number;
+    auth: number;
+  }>;
+  timeline: Array<{
+    date: string;
+    school_card_view: number;
+    compare_add: number;
+    ai_match_run: number;
+    ai_chat_open: number;
+    ai_chat_message: number;
+    guest_gate_click: number;
+  }>;
+  topSchools: Array<{
+    school_id: string;
+    school_name: string;
+    views: number;
+    compare_adds: number;
+    guest_views: number;
+    auth_views: number;
+  }>;
+};
+
+const ENGAGEMENT_LABELS: Record<string, string> = {
+  school_card_view: 'Открытия карточек школ',
+  compare_add: 'Добавления в сравнение',
+  ai_match_run: 'Запуски AI подбора',
+  ai_chat_open: 'Открытия AI чата',
+  ai_chat_message: 'Сообщения в AI чате',
+  guest_gate_click: 'Нажатия на закрытые функции',
+};
+
 const normalizeEmail = (value: string) => String(value || '').trim().toLowerCase();
 const buildFallbackSchoolId = (email: string) => {
   const base = normalizeEmail(email)
@@ -102,6 +142,7 @@ export default function StatisticsPage() {
     }>;
     sampled_events: number;
   } | null>(null);
+  const [engagementSummary, setEngagementSummary] = useState<EngagementSummaryPayload | null>(null);
   const [surveyConfig, setSurveyConfig] = useState<{
     cycle_days: number;
     updated_at?: string;
@@ -170,9 +211,14 @@ export default function StatisticsPage() {
           Array.isArray(consultationsResponse?.data) ? consultationsResponse.data : []
         );
         setSummary(null);
+        setEngagementSummary(null);
       } else {
-        const response = await loadProgramInfoAnalytics(token, { days, limit: 12 });
-        setSummary(response?.data || null);
+        const [programResponse, engagementResponse] = await Promise.all([
+          loadProgramInfoAnalytics(token, { days, limit: 12 }),
+          loadEngagementAnalytics(token, { days, limit: 12 }),
+        ]);
+        setSummary(programResponse?.data || null);
+        setEngagementSummary(engagementResponse?.data || null);
         setOwnSchool(null);
         setConsultations([]);
       }
@@ -276,6 +322,43 @@ export default function StatisticsPage() {
   );
 
   const canManageSurveys = actorRole === 'moderator' || actorRole === 'superadmin';
+  const canResetEngagement = actorRole === 'superadmin';
+
+  const engagementByType = useMemo(() => {
+    const map = new Map<string, { event_type: string; all: number; guest: number; auth: number }>();
+    (engagementSummary?.topEvents || []).forEach((row) => {
+      map.set(row.event_type, row);
+    });
+    return map;
+  }, [engagementSummary]);
+
+  const engagementCards = useMemo(
+    () => [
+      engagementByType.get('school_card_view'),
+      engagementByType.get('compare_add'),
+      engagementByType.get('ai_match_run'),
+      engagementByType.get('ai_chat_open'),
+      engagementByType.get('ai_chat_message'),
+      engagementByType.get('guest_gate_click'),
+    ].filter(Boolean) as Array<{ event_type: string; all: number; guest: number; auth: number }>,
+    [engagementByType]
+  );
+
+  const timelinePeak = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...(engagementSummary?.timeline || []).map(
+          (row) =>
+            Number(row.school_card_view || 0) +
+            Number(row.compare_add || 0) +
+            Number(row.ai_match_run || 0) +
+            Number(row.ai_chat_open || 0) +
+            Number(row.ai_chat_message || 0)
+        )
+      ),
+    [engagementSummary]
+  );
 
   const addSurveyQuestion = () => {
     setSurveyQuestionsDraft((prev) => [
@@ -450,6 +533,27 @@ export default function StatisticsPage() {
     }
   };
 
+  const handleResetEngagement = async () => {
+    if (!token || !canResetEngagement) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'Начать новый период статистики? История не удалится, но новые отчеты будут считаться от текущего момента.'
+      );
+      if (!confirmed) return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      await resetEngagementAnalytics(token);
+      await reload();
+      setMessage('Период статистики сброшен.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось сбросить период статистики');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!authReady) {
     return <div className="card">{t('checkingSession')}</div>;
   }
@@ -564,6 +668,227 @@ export default function StatisticsPage() {
             </>
           ) : (
             <>
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="requests-head" style={{ marginBottom: 12 }}>
+                  <h3 style={{ margin: 0 }}>Статистика родителей</h3>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {engagementSummary?.reset_at ? (
+                      <span className="muted" style={{ alignSelf: 'center' }}>
+                        Считаем с {new Date(engagementSummary.reset_at).toLocaleString()}
+                      </span>
+                    ) : null}
+                    {canResetEngagement ? (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={handleResetEngagement}
+                        disabled={loading}
+                      >
+                        Сбросить период
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="schools-admin-list">
+                  {engagementCards.map((row) => (
+                    <div key={row.event_type} className="schools-admin-card">
+                      <p className="request-title">
+                        {ENGAGEMENT_LABELS[row.event_type] || row.event_type}
+                      </p>
+                      <p className="muted" style={{ fontSize: 28, margin: '8px 0 4px' }}>
+                        {row.all}
+                      </p>
+                      <p className="muted" style={{ margin: 0 }}>
+                        Гости: {row.guest} · Вход: {row.auth}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 16,
+                    border: '1px solid rgba(120,106,255,0.18)',
+                    borderRadius: 16,
+                    padding: 16,
+                    background: '#fff',
+                  }}
+                >
+                  <div className="requests-head" style={{ marginBottom: 8 }}>
+                    <h3 style={{ margin: 0 }}>Динамика по дням</h3>
+                    <p className="muted" style={{ margin: 0 }}>
+                      Просмотры карточек, сравнение и AI за {days} дней
+                    </p>
+                  </div>
+                  {(engagementSummary?.timeline || []).length ? (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${Math.min(
+                          Math.max((engagementSummary?.timeline || []).length, 1),
+                          14
+                        )}, minmax(28px, 1fr))`,
+                        gap: 8,
+                        alignItems: 'end',
+                      }}
+                    >
+                      {(engagementSummary?.timeline || []).map((row) => {
+                        const total =
+                          row.school_card_view +
+                          row.compare_add +
+                          row.ai_match_run +
+                          row.ai_chat_open +
+                          row.ai_chat_message;
+                        const height = Math.max(10, Math.round((total / timelinePeak) * 140));
+                        return (
+                          <div key={row.date} style={{ display: 'grid', gap: 6 }}>
+                            <div
+                              title={`${row.date}: ${total}`}
+                              style={{
+                                height,
+                                borderRadius: 10,
+                                background:
+                                  'linear-gradient(180deg, rgba(79,95,255,0.92) 0%, rgba(255,164,30,0.88) 100%)',
+                              }}
+                            />
+                            <span
+                              className="muted"
+                              style={{ fontSize: 11, textAlign: 'center' }}
+                            >
+                              {row.date.slice(5)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="muted" style={{ marginBottom: 0 }}>
+                      Событий пока нет.
+                    </p>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 16,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                    gap: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      border: '1px solid rgba(120,106,255,0.18)',
+                      borderRadius: 16,
+                      padding: 16,
+                      background: '#fff',
+                    }}
+                  >
+                    <h3 style={{ marginTop: 0 }}>События по функциям</h3>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {(engagementSummary?.topEvents || []).map((row) => {
+                        const width = Math.max(
+                          4,
+                          Math.round((Number(row.all || 0) / Math.max(1, engagementCards[0]?.all || 1, ...engagementCards.map((item) => item.all))) * 100)
+                        );
+                        return (
+                          <div key={row.event_type}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 10,
+                                marginBottom: 4,
+                              }}
+                            >
+                              <span>{ENGAGEMENT_LABELS[row.event_type] || row.event_type}</span>
+                              <strong>{row.all}</strong>
+                            </div>
+                            <div
+                              style={{
+                                height: 10,
+                                borderRadius: 999,
+                                background: 'rgba(120,106,255,0.12)',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${width}%`,
+                                  height: '100%',
+                                  background: '#4f5fff',
+                                }}
+                              />
+                            </div>
+                            <p className="muted" style={{ margin: '4px 0 0' }}>
+                              guest {row.guest} · auth {row.auth}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      border: '1px solid rgba(120,106,255,0.18)',
+                      borderRadius: 16,
+                      padding: 16,
+                      background: '#fff',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <h3 style={{ marginTop: 0 }}>Топ школ</h3>
+                    {engagementSummary?.topSchools?.length ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Школа</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Просмотры</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Сравнение</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Guest</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Auth</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {engagementSummary.topSchools.map((row) => (
+                            <tr key={row.school_id}>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                <strong>{row.school_name || row.school_id}</strong>
+                                <p className="muted" style={{ margin: '4px 0 0' }}>
+                                  {row.school_id}
+                                </p>
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {row.views}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {row.compare_adds}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {row.guest_views}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {row.auth_views}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="muted" style={{ marginBottom: 0 }}>
+                        Пока нет просмотров карточек школ.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <p className="muted" style={{ margin: '12px 0 0' }}>
+                  Всего событий в выборке: {engagementSummary?.sampled_events || 0}
+                </p>
+              </div>
+
               <div className="schools-admin-list">
                 <div className="schools-admin-card">
                   <p className="request-title">{t('statisticsProgramInfoOpen')}</p>

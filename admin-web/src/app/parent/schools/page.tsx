@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadSchools } from '@/lib/api';
+import { loadSchools, recordEngagementEvent } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -981,6 +981,12 @@ export default function ParentSchoolsPage() {
 
   const onCompareAction = () => {
     if (guest) {
+      void recordEngagementEvent({
+        eventType: 'guest_gate_click',
+        locale,
+        source: 'schools_compare',
+        metadata: { feature: 'compare' },
+      }).catch(() => undefined);
       setGuestGateMessage(guestGateUi.message);
       setCompareError('');
       return;
@@ -1008,6 +1014,12 @@ export default function ParentSchoolsPage() {
   };
 
   const showGuestGateMessage = (message = guestGateUi.message) => {
+    void recordEngagementEvent({
+      eventType: 'guest_gate_click',
+      locale,
+      source: 'schools_guest_gate',
+      metadata: { feature: 'locked_action' },
+    }).catch(() => undefined);
     setGuestGateMessage(message);
     setCompareError('');
   };
@@ -1468,6 +1480,14 @@ export default function ParentSchoolsPage() {
                                 if (result.limitReached) {
                                   setCompareError(compareUi.pickTwo);
                                   return;
+                                }
+                                if (!compareIds.includes(String(row.school_id))) {
+                                  void recordEngagementEvent({
+                                    eventType: 'compare_add',
+                                    schoolId: String(row.school_id),
+                                    locale,
+                                    source: 'schools_list',
+                                  }).catch(() => undefined);
                                 }
                                 setCompareError('');
                                 setCompareIds(result.ids);

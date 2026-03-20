@@ -86,6 +86,47 @@ const ensureProgramAnalyticsTable = async () => {
   `);
 };
 
+const ensureEngagementAnalyticsTables = async () => {
+  const db = getPool();
+  if (!db) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS engagement_analytics_events (
+      id BIGSERIAL PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      school_id TEXT,
+      actor_type TEXT NOT NULL DEFAULT 'guest',
+      actor_user_id TEXT,
+      locale TEXT,
+      source TEXT NOT NULL DEFAULT 'parent_web',
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_engagement_analytics_events_created_at
+    ON engagement_analytics_events (created_at DESC);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_engagement_analytics_events_type
+    ON engagement_analytics_events (event_type, created_at DESC);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_engagement_analytics_events_school
+    ON engagement_analytics_events (school_id, created_at DESC);
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS engagement_analytics_resets (
+      id BIGSERIAL PRIMARY KEY,
+      actor_email TEXT,
+      reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_engagement_analytics_resets_reset_at
+    ON engagement_analytics_resets (reset_at DESC);
+  `);
+};
+
 const ensureNewsTable = async () => {
   const db = getPool();
   if (!db) return;
@@ -166,6 +207,7 @@ module.exports = {
   getPool,
   ensureSchoolsTable,
   ensureProgramAnalyticsTable,
+  ensureEngagementAnalyticsTables,
   ensureNewsTable,
   ensureCoursesTestsTable,
   ensureChatTables,

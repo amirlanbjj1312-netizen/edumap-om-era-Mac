@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loadSchools, requestAiSchoolChat } from '@/lib/api';
+import { loadSchools, recordEngagementEvent, requestAiSchoolChat } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { getParentPlan } from '@/lib/parentSubscription';
 import { consumeAiMatch, getAiMatchLeft } from '@/lib/parentUsage';
@@ -339,7 +339,15 @@ export default function ParentAiMatchPage() {
   const budgetOptions = useMemo(() => [300000, 500000, 800000, 1200000], []);
 
   const onRun = async () => {
-    if (guest && !previewUnlocked) return;
+    if (guest && !previewUnlocked) {
+      void recordEngagementEvent({
+        eventType: 'guest_gate_click',
+        locale,
+        source: 'ai_match',
+        metadata: { feature: 'ai_match' },
+      }).catch(() => undefined);
+      return;
+    }
     const basePrompt = prompt.trim();
     const criteriaParts: string[] = [];
     const selectedCityLabel = cityOptions.find((item) => item.key === selectedCity)?.label || '';
@@ -378,6 +386,11 @@ export default function ParentAiMatchPage() {
     setLeft(usage.left);
     setProcessing(true);
     try {
+      void recordEngagementEvent({
+        eventType: 'ai_match_run',
+        locale,
+        source: 'ai_match',
+      }).catch(() => undefined);
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token || '';
       if (!token) {
@@ -411,12 +424,24 @@ export default function ParentAiMatchPage() {
     setCompareSelectedIds((prev) => {
       if (prev.includes(schoolId)) return prev.filter((id) => id !== schoolId);
       if (prev.length >= 2) return prev;
+      void recordEngagementEvent({
+        eventType: 'compare_add',
+        schoolId,
+        locale,
+        source: 'ai_match_results',
+      }).catch(() => undefined);
       return [...prev, schoolId];
     });
   };
 
   const onCompareAction = () => {
     if (guest) {
+      void recordEngagementEvent({
+        eventType: 'guest_gate_click',
+        locale,
+        source: 'ai_match_compare',
+        metadata: { feature: 'compare' },
+      }).catch(() => undefined);
       setError(ui.authRequired);
       return;
     }

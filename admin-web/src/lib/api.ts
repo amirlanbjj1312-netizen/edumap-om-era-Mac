@@ -474,6 +474,72 @@ export async function loadProgramInfoAnalytics(
   }>(`/schools/analytics/program-info?${query}`, { token });
 }
 
+export async function recordEngagementEvent(payload: {
+  eventType: 'school_card_view' | 'compare_add' | 'ai_match_run' | 'ai_chat_open' | 'ai_chat_message' | 'guest_gate_click';
+  schoolId?: string;
+  locale?: 'ru' | 'kk' | 'en';
+  source?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const token = await getAccessToken();
+  return requestJson<{ ok: boolean }>('/schools/analytics/engagement', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadEngagementAnalytics(
+  token: string,
+  options: { days?: number; limit?: number } = {}
+) {
+  const days = Number.isFinite(options.days) ? Math.max(1, Math.floor(options.days as number)) : 30;
+  const limit = Number.isFinite(options.limit) ? Math.max(1, Math.floor(options.limit as number)) : 10;
+  const query = `days=${encodeURIComponent(String(days))}&limit=${encodeURIComponent(String(limit))}`;
+  return authRequestJson<{
+    data: {
+      days: number;
+      reset_at?: string | null;
+      sampled_events: number;
+      topEvents: Array<{
+        event_type: string;
+        all: number;
+        guest: number;
+        auth: number;
+      }>;
+      timeline: Array<{
+        date: string;
+        school_card_view: number;
+        compare_add: number;
+        ai_match_run: number;
+        ai_chat_open: number;
+        ai_chat_message: number;
+        guest_gate_click: number;
+      }>;
+      topSchools: Array<{
+        school_id: string;
+        school_name: string;
+        views: number;
+        compare_adds: number;
+        guest_views: number;
+        auth_views: number;
+      }>;
+    };
+  }>(`/schools/analytics/engagement?${query}`, { token });
+}
+
+export async function resetEngagementAnalytics(token: string) {
+  return authRequestJson<{
+    data: {
+      ok: boolean;
+      resetAt: string;
+    };
+  }>('/schools/analytics/engagement/reset', {
+    token,
+    method: 'POST',
+  });
+}
+
 export async function requestAiSchoolChat(
   token: string,
   payload: { message: string; schoolIds: string[] }
