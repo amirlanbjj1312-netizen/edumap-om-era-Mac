@@ -200,6 +200,8 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Долгота: { en: 'Longitude', kk: 'Бойлық' },
   Директор: { en: 'Principal', kk: 'Директор' },
   'Зам. директора': { en: 'Deputy principal', kk: 'Директор орынбасары' },
+  principal: { en: 'Principal', kk: 'Директор' },
+  deputy_principal: { en: 'Deputy principal', kk: 'Директор орынбасары' },
   'Кураторы классов': { en: 'Class curators', kk: 'Сынып кураторлары' },
   'Есть кураторы классов': { en: 'Class curators available', kk: 'Сынып кураторлары бар' },
   'По одному на класс': { en: 'One per class', kk: 'Әр сыныпқа бір куратор' },
@@ -663,6 +665,13 @@ const OPTION_LABELS: Record<
     kk: 'Мектепке дайындық',
   },
   Psychology: { ru: 'Психология', en: 'Psychology', kk: 'Психология' },
+  psychologist: { ru: 'Психолог', en: 'Psychologist', kk: 'Психолог' },
+  speech_therapist: { ru: 'Логопед', en: 'Speech therapist', kk: 'Логопед' },
+  defectologist: { ru: 'Дефектолог', en: 'Defectologist', kk: 'Дефектолог' },
+  special_educator: { ru: 'Спецпедагог', en: 'Special educator', kk: 'Арнайы педагог' },
+  tutor: { ru: 'Тьютор', en: 'Tutor', kk: 'Тьютор' },
+  social_worker: { ru: 'Социальный работник', en: 'Social worker', kk: 'Әлеуметтік қызметкер' },
+  nurse: { ru: 'Медсестра', en: 'Nurse', kk: 'Медбике' },
 };
 
 const translateOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
@@ -856,13 +865,13 @@ const UNIVERSITY_ADMISSION_RATE_OPTIONS = ['<50%', '50-70%', '70-85%', '85-95%',
 const SUPPORT_LEVEL_OPTIONS = ['No', 'On request', 'Part-time', 'Full-time'];
 const PARENT_COMMITTEE_OPTIONS = ['No', 'Yes'];
 const PERSONNEL_MEMBER_OPTIONS = [
-  'Психолог',
-  'Логопед',
-  'Дефектолог',
-  'Спецпедагог',
-  'Тьютор',
-  'Социальный работник',
-  'Медсестра',
+  'psychologist',
+  'speech_therapist',
+  'defectologist',
+  'special_educator',
+  'tutor',
+  'social_worker',
+  'nurse',
 ];
 const RESPONSE_SLA_OPTIONS = ['4', '8', '12', '24', '48', '72'];
 const DIGITAL_PLATFORM_OPTIONS = [
@@ -1375,13 +1384,13 @@ export default function SchoolInfoPage() {
   );
   const personnelMembersValue = useMemo(() => {
     const next: string[] = [];
-    if (Boolean(getDeep(profile, 'services.psychologists'))) next.push('Психолог');
-    if (Boolean(getDeep(profile, 'services.speech_therapists'))) next.push('Логопед');
-    if (Boolean(getDeep(profile, 'services.defectologists'))) next.push('Дефектолог');
-    if (Boolean(getDeep(profile, 'services.special_educators'))) next.push('Спецпедагог');
-    if (Boolean(getDeep(profile, 'services.tutors'))) next.push('Тьютор');
-    if (Boolean(getDeep(profile, 'services.social_workers'))) next.push('Социальный работник');
-    if (Boolean(getDeep(profile, 'services.nurses'))) next.push('Медсестра');
+    if (Boolean(getDeep(profile, 'services.psychologists'))) next.push('psychologist');
+    if (Boolean(getDeep(profile, 'services.speech_therapists'))) next.push('speech_therapist');
+    if (Boolean(getDeep(profile, 'services.defectologists'))) next.push('defectologist');
+    if (Boolean(getDeep(profile, 'services.special_educators'))) next.push('special_educator');
+    if (Boolean(getDeep(profile, 'services.tutors'))) next.push('tutor');
+    if (Boolean(getDeep(profile, 'services.social_workers'))) next.push('social_worker');
+    if (Boolean(getDeep(profile, 'services.nurses'))) next.push('nurse');
     return next;
   }, [profile]);
 
@@ -1389,13 +1398,13 @@ export default function SchoolInfoPage() {
     updateField(path, list.join(', '));
   };
   const updatePersonnelMembers = (selected: string[]) => {
-    updateField('services.psychologists', selected.includes('Психолог'));
-    updateField('services.speech_therapists', selected.includes('Логопед'));
-    updateField('services.defectologists', selected.includes('Дефектолог'));
-    updateField('services.special_educators', selected.includes('Спецпедагог'));
-    updateField('services.tutors', selected.includes('Тьютор'));
-    updateField('services.social_workers', selected.includes('Социальный работник'));
-    updateField('services.nurses', selected.includes('Медсестра'));
+    updateField('services.psychologists', selected.includes('psychologist'));
+    updateField('services.speech_therapists', selected.includes('speech_therapist'));
+    updateField('services.defectologists', selected.includes('defectologist'));
+    updateField('services.special_educators', selected.includes('special_educator'));
+    updateField('services.tutors', selected.includes('tutor'));
+    updateField('services.social_workers', selected.includes('social_worker'));
+    updateField('services.nurses', selected.includes('nurse'));
   };
   const changeTab = (
     tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
@@ -3460,7 +3469,7 @@ export default function SchoolInfoPage() {
               const isExpanded = expandedLeadershipKey === key;
               const summaryParts = [
                 String(member?.full_name || '').trim(),
-                String(member?.position || '').trim(),
+                translateOption(String(member?.position || ''), contentLocale).trim(),
                 String(member?.bio?.[contentLocale] || '').trim(),
               ].filter(Boolean);
               return (
@@ -3591,7 +3600,7 @@ export default function SchoolInfoPage() {
                     const isExpanded = expandedTeacherIndex === index;
                     const summaryParts = [
                       String(member?.full_name || '').trim(),
-                      String(member?.position || '').trim(),
+                      translateOption(String(member?.position || ''), contentLocale).trim(),
                       String(member?.education_degree || '').trim(),
                       String(member?.subjects || '').trim(),
                       Number(member?.experience_years || 0) > 0
