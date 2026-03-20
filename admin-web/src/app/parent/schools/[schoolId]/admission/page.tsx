@@ -132,7 +132,6 @@ export default function ParentSchoolAdmissionPage() {
         : locale === 'kk'
           ? 'Қабылдау қалай өтеді'
           : 'Как проходит поступление',
-    consult: locale === 'en' ? 'Request consultation' : locale === 'kk' ? 'Кеңес сұрау' : 'Запросить консультацию',
   };
 
   const examRequired = Boolean(getIn(school, 'education.entrance_exam.required'));
@@ -218,9 +217,6 @@ export default function ParentSchoolAdmissionPage() {
           <div className="school-admission-actions">
             <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-consult-btn">
               {ui.back}
-            </Link>
-            <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-consult-btn">
-              {ui.consult}
             </Link>
           </div>
         ) : null}

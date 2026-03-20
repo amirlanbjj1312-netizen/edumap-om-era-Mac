@@ -4985,12 +4985,17 @@ a {
   .booking-cards-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+    margin-inline: -8px;
   }
 
   .parent-school-card {
     padding: 12px 12px 10px;
     border-radius: 16px;
     padding-right: 58px;
+  }
+
+  .parent-school-link {
+    width: 100%;
   }
 
   .market-school-row {

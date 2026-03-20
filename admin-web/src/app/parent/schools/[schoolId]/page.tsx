@@ -4,10 +4,9 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchoolById, recordEngagementEvent, requestJson } from '@/lib/api';
+import { loadSchoolById, recordEngagementEvent } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
-import { supabase } from '@/lib/supabaseClient';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
 
@@ -51,15 +50,6 @@ type ContactItem = {
   label: string;
   value: string;
   href?: string;
-};
-
-type ConsultationFormState = {
-  parentName: string;
-  parentPhone: string;
-  parentEmail: string;
-  childName: string;
-  childGrade: string;
-  comment: string;
 };
 
 type ProgramDetails = {
@@ -738,7 +728,6 @@ export default function ParentSchoolDetailsPage() {
     address: locale === 'en' ? 'Address' : locale === 'kk' ? 'Мекенжай' : 'Адрес',
     city: locale === 'en' ? 'City' : locale === 'kk' ? 'Қала' : 'Город',
     district: locale === 'en' ? 'District' : locale === 'kk' ? 'Аудан' : 'Район',
-    consult: locale === 'en' ? 'Request consultation' : locale === 'kk' ? 'Кеңес сұрау' : 'Запросить консультацию',
     clubs: locale === 'en' ? 'Clubs and sections' : locale === 'kk' ? 'Үйірмелер мен секциялар' : 'Кружки и секции',
     schoolPrograms: locale === 'en' ? 'Study programs' : locale === 'kk' ? 'Оқу бағдарламалары' : 'Учебные программы',
     programInfo: locale === 'en' ? 'Program information' : locale === 'kk' ? 'Бағдарлама туралы' : 'Информация о программе',
@@ -833,18 +822,7 @@ export default function ParentSchoolDetailsPage() {
   const [activeTeacher, setActiveTeacher] = useState<TeacherCard | null>(null);
   const [activeMedia, setActiveMedia] = useState<MediaViewerState | null>(null);
   const [activeProgram, setActiveProgram] = useState('');
-  const [consultOpen, setConsultOpen] = useState(false);
   const [typeInfoOpen, setTypeInfoOpen] = useState(false);
-  const [consultSending, setConsultSending] = useState(false);
-  const [consultStatus, setConsultStatus] = useState('');
-  const [consultForm, setConsultForm] = useState<ConsultationFormState>({
-    parentName: '',
-    parentPhone: '',
-    parentEmail: '',
-    childName: '',
-    childGrade: '1',
-    comment: '',
-  });
 
   useEffect(() => {
     let mounted = true;
@@ -876,32 +854,6 @@ export default function ParentSchoolDetailsPage() {
       source: 'school_card',
     }).catch(() => undefined);
   }, [locale, school?.school_id]);
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      const user = data?.session?.user;
-      if (!user) return;
-      const meta = (user.user_metadata || {}) as Record<string, unknown>;
-      const firstName = typeof meta.firstName === 'string' ? meta.firstName.trim() : '';
-      const lastName = typeof meta.lastName === 'string' ? meta.lastName.trim() : '';
-      const fullName =
-        `${firstName} ${lastName}`.trim() ||
-        (typeof meta.name === 'string' ? meta.name.trim() : '');
-      const phone = typeof meta.phone === 'string' ? meta.phone.trim() : '';
-      const email = typeof user.email === 'string' ? user.email.trim() : '';
-      setConsultForm((prev) => ({
-        ...prev,
-        parentName: prev.parentName || fullName,
-        parentPhone: prev.parentPhone || phone,
-        parentEmail: prev.parentEmail || email,
-      }));
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const name = pickFirstText(
     school,
@@ -1517,50 +1469,6 @@ export default function ParentSchoolDetailsPage() {
     setActiveMedia({ ...activeMedia, index: nextIndex });
   };
 
-  const updateConsultField = (field: keyof ConsultationFormState, value: string) => {
-    setConsultForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const submitConsultation = async () => {
-    if (!school) return;
-    const payload = {
-      schoolId: String(school.school_id || ''),
-      schoolName: name,
-      parentName: consultForm.parentName.trim(),
-      parentPhone: formatKzPhone(consultForm.parentPhone),
-      parentEmail: consultForm.parentEmail.trim(),
-      childName: consultForm.childName.trim(),
-      childGrade: consultForm.childGrade.trim().toLowerCase(),
-      consultationType: 'First meeting',
-      consultationTypeLabel: 'First meeting',
-      comment: consultForm.comment.trim(),
-      whatsappPhone: formatKzPhone(consultForm.parentPhone),
-    };
-    if (
-      !payload.parentName ||
-      !payload.parentPhone ||
-      !payload.childName ||
-      !payload.childGrade
-    ) {
-      setConsultStatus('Заполните имя, телефон, имя ребенка и класс.');
-      return;
-    }
-    setConsultSending(true);
-    setConsultStatus('');
-    try {
-      await requestJson('/consultations', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      setConsultStatus('Заявка отправлена. Школа скоро свяжется с вами.');
-      setConsultOpen(false);
-    } catch (error) {
-      setConsultStatus((error as Error)?.message || 'Не удалось отправить заявку.');
-    } finally {
-      setConsultSending(false);
-    }
-  };
-
   return (
     <div className="school-mobile-page">
       <div className="school-mobile-backrow">
@@ -1662,89 +1570,9 @@ export default function ParentSchoolDetailsPage() {
 
           <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
             <div className={guest ? 'guest-gated-content' : ''}>
-
-          <button type="button" className="school-consult-btn" onClick={() => setConsultOpen((prev) => !prev)}>
-            {ui.consult}
-          </button>
           <Link href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`} className="school-consult-btn">
             {ui.clubs}
           </Link>
-          {consultOpen ? (
-            <section className="school-consult-form">
-              <div className="form-row">
-                <label className="field">
-                  <span>Ваше имя</span>
-                  <input
-                    className="input"
-                    value={consultForm.parentName}
-                    onChange={(e) => updateConsultField('parentName', e.target.value)}
-                    placeholder="Имя и фамилия"
-                  />
-                </label>
-                <label className="field">
-                  <span>Телефон</span>
-                  <input
-                    className="input"
-                    value={consultForm.parentPhone}
-                    onChange={(e) => updateConsultField('parentPhone', formatKzPhone(e.target.value))}
-                    placeholder="+7..."
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="field">
-                  <span>Email (необязательно)</span>
-                  <input
-                    className="input"
-                    value={consultForm.parentEmail}
-                    onChange={(e) => updateConsultField('parentEmail', e.target.value)}
-                    placeholder="name@mail.com"
-                  />
-                </label>
-                <label className="field">
-                  <span>Имя ребенка</span>
-                  <input
-                    className="input"
-                    value={consultForm.childName}
-                    onChange={(e) => updateConsultField('childName', e.target.value)}
-                    placeholder="Имя ребенка"
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="field">
-                  <span>Класс</span>
-                  <select
-                    className="input"
-                    value={consultForm.childGrade}
-                    onChange={(e) => updateConsultField('childGrade', e.target.value)}
-                  >
-                    <option value="pre-k">Pre-K</option>
-                    {Array.from({ length: 12 }, (_v, i) => String(i + 1)).map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Комментарий (необязательно)</span>
-                  <input
-                    className="input"
-                    value={consultForm.comment}
-                    onChange={(e) => updateConsultField('comment', e.target.value)}
-                    placeholder="Что хотите уточнить"
-                  />
-                </label>
-              </div>
-              <div className="actions">
-                <button type="button" className="button" onClick={submitConsultation} disabled={consultSending}>
-                  {consultSending ? 'Отправляем...' : 'Отправить заявку'}
-                </button>
-              </div>
-            </section>
-          ) : null}
-          {consultStatus ? <p className="muted">{consultStatus}</p> : null}
 
           {SECTION_LABELS.map((section) => {
             const items =
