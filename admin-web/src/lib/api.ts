@@ -393,6 +393,13 @@ export async function deleteReviewById(token: string, reviewId: string) {
   );
 }
 
+export async function resetSchoolRating(token: string, schoolId: string) {
+  return authRequestJson<{ ok: true }>(
+    `/schools/reviews/reset-school/${encodeURIComponent(schoolId)}`,
+    { token, method: 'POST' }
+  );
+}
+
 export async function loadNewsFeed() {
   return requestJson<{ data: Array<any> }>('/news');
 }

@@ -4,11 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createRatingSurveyCampaign,
   closeRatingSurveyCampaign,
+  deleteReviewById,
   loadEngagementAnalytics,
+  loadAllReviews,
   loadProgramInfoAnalytics,
   loadRatingSurveyAnalytics,
   loadRatingSurveyCampaigns,
   loadRatingSurveyConfig,
+  resetSchoolRating,
   resetEngagementAnalytics,
   updateRatingSurveyConfig,
 } from '@/lib/api';
@@ -57,6 +60,16 @@ type SurveyAnalyticsPayload = {
   campaigns_count: number;
   responses_count: number;
   schools: SurveyAnalyticsRow[];
+};
+
+type ReviewModerationRow = {
+  id: string;
+  school_id: string;
+  school_name: string;
+  author: string;
+  text: string;
+  rating: number;
+  created_at: string;
 };
 
 type EngagementSummaryPayload = {
@@ -153,6 +166,7 @@ export default function StatisticsPage() {
   const [surveyCycleDaysDraft, setSurveyCycleDaysDraft] = useState(60);
   const [surveyCampaigns, setSurveyCampaigns] = useState<Array<any>>([]);
   const [surveyAnalytics, setSurveyAnalytics] = useState<SurveyAnalyticsPayload | null>(null);
+  const [allReviews, setAllReviews] = useState<ReviewModerationRow[]>([]);
   const [surveyTitle, setSurveyTitle] = useState('Опрос удовлетворенности');
   const [surveyDescription, setSurveyDescription] = useState('');
   const [surveyTargetType, setSurveyTargetType] = useState<'school' | 'all_parents' | 'specific_parents'>('school');
@@ -245,6 +259,8 @@ export default function StatisticsPage() {
       setSurveyCycleDaysDraft(Number(configData?.cycle_days || 60));
       setSurveyCampaigns(Array.isArray(campaignsRes?.data) ? campaignsRes.data : []);
       setSurveyAnalytics(analyticsRes?.data || null);
+      const reviewsRes = await loadAllReviews(token);
+      setAllReviews(Array.isArray(reviewsRes?.data) ? reviewsRes.data : []);
     } catch (error) {
       setMessage((error as Error)?.message || 'Не удалось загрузить управление анкетами');
     } finally {
@@ -551,6 +567,46 @@ export default function StatisticsPage() {
       setMessage((error as Error)?.message || 'Не удалось сбросить период статистики');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!token || !reviewId) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Удалить этот отзыв? Действие нельзя отменить.');
+      if (!confirmed) return;
+    }
+    setSurveyLoading(true);
+    setMessage('');
+    try {
+      await deleteReviewById(token, reviewId);
+      await Promise.all([reload(), loadSurveyControlData()]);
+      setMessage('Отзыв удален.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось удалить отзыв');
+    } finally {
+      setSurveyLoading(false);
+    }
+  };
+
+  const handleResetSchoolRating = async (schoolId: string, schoolName: string) => {
+    if (!token || !schoolId) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        `Сбросить рейтинг школы "${schoolName || schoolId}" и удалить все ее отзывы? Действие нельзя отменить.`
+      );
+      if (!confirmed) return;
+    }
+    setSurveyLoading(true);
+    setMessage('');
+    try {
+      await resetSchoolRating(token, schoolId);
+      await Promise.all([reload(), loadSurveyControlData()]);
+      setMessage('Рейтинг школы сброшен, отзывы очищены.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось сбросить рейтинг школы');
+    } finally {
+      setSurveyLoading(false);
     }
   };
 
@@ -1338,6 +1394,7 @@ export default function StatisticsPage() {
                           <th style={{ textAlign: 'left', padding: '6px 8px' }}>Популярность</th>
                           <th style={{ textAlign: 'left', padding: '6px 8px' }}>Текущий рейтинг</th>
                           <th style={{ textAlign: 'left', padding: '6px 8px' }}>Расчетный рейтинг</th>
+                          <th style={{ textAlign: 'left', padding: '6px 8px' }}>Действия</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1364,10 +1421,71 @@ export default function StatisticsPage() {
                             <td style={{ padding: '6px 8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
                               {row.calculated_rating || 0}
                             </td>
+                            <td style={{ padding: '6px 8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => handleResetSchoolRating(row.school_id, row.school_name)}
+                                disabled={surveyLoading}
+                              >
+                                Сбросить рейтинг
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  <div
+                    style={{
+                      border: '1px solid rgba(120,106,255,0.2)',
+                      borderRadius: 12,
+                      padding: 12,
+                      marginTop: 12,
+                    }}
+                  >
+                    <p style={{ marginTop: 0, fontWeight: 700 }}>Модерация отзывов</p>
+                    {allReviews.length ? (
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        {allReviews.slice(0, 20).map((review) => (
+                          <div
+                            key={review.id}
+                            style={{
+                              border: '1px solid rgba(120,106,255,0.2)',
+                              borderRadius: 10,
+                              padding: 12,
+                              background: '#fff',
+                            }}
+                          >
+                            <p style={{ margin: 0, fontWeight: 700 }}>
+                              {review.school_name || review.school_id}
+                            </p>
+                            <p className="muted" style={{ margin: '4px 0 0' }}>
+                              Автор: {review.author || '—'} · Рейтинг: {review.rating || 0} ·{' '}
+                              {review.created_at ? new Date(review.created_at).toLocaleString() : '—'}
+                            </p>
+                            <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
+                              {review.text || '—'}
+                            </p>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => handleDeleteReview(review.id)}
+                                disabled={surveyLoading}
+                              >
+                                Удалить отзыв
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="muted" style={{ marginBottom: 0 }}>
+                        Отзывов пока нет.
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : null}

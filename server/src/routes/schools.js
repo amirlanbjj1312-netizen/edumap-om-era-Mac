@@ -701,6 +701,60 @@ const buildSchoolsRouter = () => {
     }
   });
 
+  router.post('/reviews/reset-school/:schoolId', async (req, res, next) => {
+    try {
+      const actor = await requireModerator(req, res);
+      if (!actor) return;
+      const schoolId = String(req.params?.schoolId || '').trim();
+      if (!schoolId) {
+        return res.status(400).json({ error: 'schoolId is required' });
+      }
+
+      const schools = await readStore();
+      const school = schools.find((item) => String(item?.school_id || '') === schoolId);
+      if (!school) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+
+      const auditLog = Array.isArray(school?.system?.audit_log)
+        ? school.system.audit_log
+        : [];
+
+      const updatedProfile = {
+        ...school,
+        reviews: {
+          ...(school.reviews || {}),
+          items: [],
+          count: 0,
+          average_rating: null,
+          highlight: '',
+        },
+        system: {
+          ...(school.system || {}),
+          rating: 0,
+          reviews_count: 0,
+          highlight_review: '',
+          updated_at: new Date().toISOString(),
+          audit_log: [
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              at: new Date().toISOString(),
+              action: 'reset_school_rating',
+              actor: actor.email || actor.id,
+              school_id: schoolId,
+            },
+            ...auditLog,
+          ].slice(0, 100),
+        },
+      };
+
+      await upsertSchool(updatedProfile);
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/:id/monetization', async (req, res, next) => {
     try {
       const actorPayload = await requireAdminOrSuperadmin(req, res);
