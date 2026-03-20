@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
@@ -191,7 +191,7 @@ function FactRow({
 }: {
   icon: IconKind;
   label: string;
-  value: string;
+  value: ReactNode;
   onClick?: () => void;
   asButton?: boolean;
 }) {
@@ -232,10 +232,10 @@ function ExpandableFactRow({
 }: {
   icon: IconKind;
   label: string;
-  value: string;
+  value: ReactNode;
   open: boolean;
   onToggle: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className={`school-mobile-fact-expand${open ? ' is-open' : ''}`}>
@@ -1600,12 +1600,13 @@ export default function ParentSchoolDetailsPage() {
               <ExpandableFactRow
                 icon="price"
                 label={ui.price}
-                value={price}
+                value={<span className={guest ? 'guest-price-blur' : ''}>{price}</span>}
                 open={priceExpanded}
                 onToggle={() => setPriceExpanded((prev) => !prev)}
               >
-                {feeRules.length ? (
-                  <div className="school-price-rules">
+                <div className={guest ? 'guest-price-blur' : ''}>
+                  {feeRules.length ? (
+                    <div className="school-price-rules">
                     {feeRules.map((rule, index) => (
                       <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
                         <span>{ui.priceFromTo}: {rule.from_grade}-{rule.to_grade}</span>
@@ -1632,10 +1633,11 @@ export default function ParentSchoolDetailsPage() {
                         <strong>{ui.priceComment}:</strong> {financeComment}
                       </p>
                     ) : null}
-                  </div>
-                ) : (
-                  <p className="school-price-comment">{price}</p>
-                )}
+                    </div>
+                  ) : (
+                    <p className="school-price-comment">{price}</p>
+                  )}
+                </div>
               </ExpandableFactRow>
             ) : null}
             <FactRow icon="city" label={ui.city} value={cityLabel} />

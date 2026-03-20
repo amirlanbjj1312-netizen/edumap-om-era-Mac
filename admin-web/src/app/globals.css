@@ -903,6 +903,13 @@ a {
   line-height: 1.45;
 }
 
+.guest-price-blur {
+  display: inline-block;
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+}
+
 .guest-locked-button {
   cursor: not-allowed;
   opacity: 0.88;

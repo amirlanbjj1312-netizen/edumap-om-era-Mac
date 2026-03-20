@@ -1463,7 +1463,8 @@ export default function ParentSchoolsPage() {
                         <p className="muted market-school-phone">{formatKzPhone(toText(row.basic_info?.phone)) || t('phone_unknown')}</p>
                         {isPrivateSchool ? (
                           <p className="market-school-price">
-                            {priceLabel}: {formattedFee}
+                            {priceLabel}:{' '}
+                            <span className={guest ? 'guest-price-blur' : ''}>{formattedFee}</span>
                           </p>
                         ) : null}
                       </div>
