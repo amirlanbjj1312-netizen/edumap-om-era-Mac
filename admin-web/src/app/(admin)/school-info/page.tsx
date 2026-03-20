@@ -2285,7 +2285,7 @@ export default function SchoolInfoPage() {
     <LocaleContext.Provider value={contentLocale}>
     <div className="page">
       <div className="locale-toggle">
-        {(['ru', 'en', 'kk'] as const).map((lang) => (
+        {(['ru', 'kk', 'en'] as const).map((lang) => (
           <button
             key={lang}
             type="button"

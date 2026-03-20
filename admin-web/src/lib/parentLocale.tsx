@@ -289,8 +289,8 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
 
 export const localeOptions: Array<{ value: ParentLocale; label: string }> = [
   { value: 'ru', label: 'RU' },
-  { value: 'en', label: 'EN' },
   { value: 'kk', label: 'KZ' },
+  { value: 'en', label: 'EN' },
 ];
 
 export const getParentLocale = (): ParentLocale => {

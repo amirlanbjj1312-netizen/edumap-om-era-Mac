@@ -846,7 +846,7 @@ export default function AdminNewsPage() {
   return (
     <div className="card">
       <div className="locale-toggle" style={{ marginBottom: 8 }}>
-        {(['ru', 'en', 'kk'] as const).map((lang) => (
+        {(['ru', 'kk', 'en'] as const).map((lang) => (
           <button
             key={lang}
             type="button"

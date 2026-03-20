@@ -466,7 +466,7 @@ export default function ProfilePage() {
         <p style={{ margin: 0, fontWeight: 700 }}>{ui.languageTitle}</p>
         <p className="muted" style={{ margin: '4px 0 8px' }}>{ui.languageHint}</p>
         <div className="locale-toggle" style={{ justifyContent: 'flex-start', marginBottom: 0 }}>
-          {(['ru', 'en', 'kk'] as const).map((lang) => (
+          {(['ru', 'kk', 'en'] as const).map((lang) => (
             <button
               key={lang}
               type="button"

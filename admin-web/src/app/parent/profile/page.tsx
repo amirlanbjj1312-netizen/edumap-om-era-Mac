@@ -544,9 +544,11 @@ export default function ParentProfilePage() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link className="button secondary" href="/parent/support">
-            {ui.contactSupport}
-          </Link>
+          {!guest ? (
+            <Link className="button secondary" href="/parent/support">
+              {ui.contactSupport}
+            </Link>
+          ) : null}
           <Link className="button secondary" href="/parent/notifications">
             {ui.notifications}
           </Link>
