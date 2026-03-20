@@ -12,6 +12,7 @@ const {
   getProgramAnalyticsSummary,
 } = require('../services/programAnalyticsStore');
 const { buildConfig } = require('../utils/config');
+const { autofillMissingSchoolLocales } = require('../services/schoolLocaleTranslator');
 const { ValidationError, validateSchoolPayload } = require('../validation');
 
 const buildSchoolsRouter = () => {
@@ -330,6 +331,36 @@ const buildSchoolsRouter = () => {
         },
       });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/translate-locales', async (req, res, next) => {
+    try {
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
+      const profile = validateSchoolPayload(req.body || {});
+      const schoolId = String(profile?.school_id || '').trim();
+
+      if (actorRole === 'admin') {
+        const schools = await readStore();
+        const existing = schools.find((item) => item?.school_id === schoolId);
+        const isOwn = existing
+          ? isAdminOwnSchool(actor, existing)
+          : isAdminOwnSchool(actor, profile);
+        if (!isOwn) {
+          return res.status(403).json({ error: 'Admin can translate only own school profile' });
+        }
+      }
+
+      const translated = await autofillMissingSchoolLocales(config, profile);
+      res.json({ data: translated });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
       next(error);
     }
   });

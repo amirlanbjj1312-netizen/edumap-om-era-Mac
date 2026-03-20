@@ -48,6 +48,16 @@ export async function upsertSchool(profile: any) {
   });
 }
 
+export async function autofillSchoolLocales(profile: any) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ data: any }>('/schools/translate-locales', {
+    token,
+    method: 'POST',
+    body: safeStringify(profile),
+  });
+}
+
 export async function deleteSchool(schoolId: string) {
   const token = await getAccessToken();
   if (!token) throw new Error('Authorization token is required');

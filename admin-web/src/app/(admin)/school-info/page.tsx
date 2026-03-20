@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
+  autofillSchoolLocales,
   loadSchools,
   upsertSchool,
 } from '@/lib/api';
@@ -2212,7 +2213,14 @@ export default function SchoolInfoPage() {
           clubs_catalog: normalizedClubsCatalog,
         },
       };
-      await upsertSchool(payload);
+      let finalPayload = payload;
+      try {
+        const translated = await autofillSchoolLocales(payload);
+        finalPayload = translated?.data || payload;
+      } catch {
+        // Keep save flow working even if auto-translation is unavailable.
+      }
+      await upsertSchool(finalPayload);
       setState('saved');
       setMessage(t('Сохранено.'));
       setTimeout(() => setState('idle'), 1500);
