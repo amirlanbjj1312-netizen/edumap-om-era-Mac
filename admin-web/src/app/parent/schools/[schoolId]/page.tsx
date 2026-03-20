@@ -1569,9 +1569,6 @@ export default function ParentSchoolDetailsPage() {
             <h1 className="school-mobile-name">{name}</h1>
             <p className="school-mobile-city">{cityLabel}</p>
           </section>
-          <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
-            <div className={guest ? 'guest-gated-content' : ''}>
-
           <section className="school-mobile-facts">
             {typeInfoText ? (
               <ExpandableFactRow
@@ -1632,6 +1629,24 @@ export default function ParentSchoolDetailsPage() {
             {districtLabel ? <FactRow icon="district" label={ui.district} value={districtLabel} /> : null}
             {addressLabel ? <FactRow icon="address" label={ui.address} value={addressLabel} /> : null}
           </section>
+
+          {hasMap ? (
+            <section className="school-mobile-map-card">
+              <iframe
+                title="Карта школы"
+                src={mapSrc}
+                className="school-mobile-map"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <Link href={fullMapHref} className="school-mobile-map-cta">
+                Нажмите, чтобы раскрыть карту
+              </Link>
+            </section>
+          ) : null}
+
+          <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
+            <div className={guest ? 'guest-gated-content' : ''}>
 
           <button type="button" className="school-consult-btn" onClick={() => setConsultOpen((prev) => !prev)}>
             {ui.consult}
@@ -1715,21 +1730,6 @@ export default function ParentSchoolDetailsPage() {
             </section>
           ) : null}
           {consultStatus ? <p className="muted">{consultStatus}</p> : null}
-
-          {hasMap ? (
-            <section className="school-mobile-map-card">
-              <iframe
-                title="Карта школы"
-                src={mapSrc}
-                className="school-mobile-map"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-              <Link href={fullMapHref} className="school-mobile-map-cta">
-                Нажмите, чтобы раскрыть карту
-              </Link>
-            </section>
-          ) : null}
 
           {SECTION_LABELS.map((section) => {
             const items =

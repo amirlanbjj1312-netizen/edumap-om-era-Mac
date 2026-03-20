@@ -475,13 +475,8 @@ export default function ParentSchoolsPage() {
             title: 'Sort by',
             close: 'Close',
             recommended: 'Relevance (default)',
-            rating: 'Rating: high to low',
-            reviews: 'Reviews: more to fewer',
             priceAsc: 'Price: ascending',
             priceDesc: 'Price: descending',
-            distance: 'Distance: closer to farther',
-            name: 'Name: A-Z',
-            updated: 'Recently updated',
           }
         : locale === 'kk'
           ? {
@@ -490,13 +485,8 @@ export default function ParentSchoolsPage() {
               title: 'Сұрыптау',
               close: 'Жабу',
               recommended: 'Релеванттылық (әдепкі)',
-              rating: 'Рейтинг: жоғарыдан төмен',
-              reviews: 'Пікірлер: көптен азға',
               priceAsc: 'Баға: өсу ретімен',
               priceDesc: 'Баға: кему ретімен',
-              distance: 'Қашықтық: жақыннан алысқа',
-              name: 'Атауы: А-Я',
-              updated: 'Жақында жаңартылған',
             }
           : {
               button: 'Сортировка',
@@ -504,30 +494,17 @@ export default function ParentSchoolsPage() {
               title: 'Сортировать по',
               close: 'Закрыть',
               recommended: 'Наши рекомендации',
-              rating: 'Оценка объекта (по убыванию)',
-              reviews: 'Лучшие отзывы и самая низкая цена',
               priceAsc: 'Цена (сначала самая низкая)',
               priceDesc: 'Цена (сначала самая высокая)',
-              distance: 'Сначала дома и апартаменты',
-              name: 'Оценка объекта (по возрастанию)',
-              updated: 'Оценка объекта и цена',
             },
     [locale]
   );
   const currentSortLabel = useMemo(() => {
     switch (sortMode) {
-      case 'rating':
-        return sortUi.rating;
-      case 'reviews':
-        return sortUi.reviews;
       case 'priceAsc':
         return sortUi.priceAsc;
       case 'priceDesc':
         return sortUi.priceDesc;
-      case 'name':
-        return sortUi.name;
-      case 'updated':
-        return sortUi.updated;
       default:
         return sortUi.recommended;
     }
@@ -1385,10 +1362,6 @@ export default function ParentSchoolsPage() {
                     { key: 'recommended', label: sortUi.recommended, disabled: false },
                     { key: 'priceAsc', label: sortUi.priceAsc, disabled: false },
                     { key: 'priceDesc', label: sortUi.priceDesc, disabled: false },
-                    { key: 'rating', label: sortUi.rating, disabled: false },
-                    { key: 'reviews', label: sortUi.reviews, disabled: false },
-                    { key: 'name', label: sortUi.name, disabled: false },
-                    { key: 'updated', label: sortUi.updated, disabled: false },
                   ].map((item) => (
                     <button
                       key={item.key}
