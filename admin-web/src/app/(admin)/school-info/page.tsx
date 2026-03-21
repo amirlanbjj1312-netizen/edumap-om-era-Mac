@@ -161,6 +161,7 @@ const parseGradeRange = (value: string) => {
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
+const SCHOOL_INFO_DRAFT_STORAGE_PREFIX = 'EDUMAP_SCHOOL_INFO_DRAFT';
 
 const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1309,6 +1310,8 @@ export default function SchoolInfoPage() {
   const [viewerRole, setViewerRole] = useState('');
   const [state, setState] = useState<LoadingState>('idle');
   const [message, setMessage] = useState('');
+  const [draftKey, setDraftKey] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   >('basic');
@@ -1317,6 +1320,8 @@ export default function SchoolInfoPage() {
   const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
   const [expandedSuccessStoryIndex, setExpandedSuccessStoryIndex] = useState<number | null>(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const savedSnapshotRef = useRef('');
+  const draftSyncEnabledRef = useRef(false);
 
   const schoolId = useMemo(() => {
     if (!profile?.school_id) return '';
@@ -1962,7 +1967,9 @@ export default function SchoolInfoPage() {
           ? localStorage.getItem(SELECTED_SCHOOL_STORAGE_KEY) || ''
           : '';
       const targetId = selectedSchoolId || fallbackId;
+      const nextDraftKey = `${SCHOOL_INFO_DRAFT_STORAGE_PREFIX}:${targetId}`;
       setFallbackSchoolId(targetId);
+      setDraftKey(nextDraftKey);
 
       try {
         const result = await loadSchools();
@@ -1974,7 +1981,7 @@ export default function SchoolInfoPage() {
         });
         const base = createEmptySchoolProfile({ school_id: targetId });
         if (!ignore) {
-          const nextProfile = existing ? createEmptySchoolProfile(existing) : base;
+          let nextProfile = existing ? createEmptySchoolProfile(existing) : base;
           nextProfile.finance = {
             ...(nextProfile.finance || {}),
             fee_rules: normalizeFinanceFeeRules(nextProfile),
@@ -2105,11 +2112,40 @@ export default function SchoolInfoPage() {
             }
           }
 
+          let restoredFromDraft = false;
+          if (typeof window !== 'undefined') {
+            const rawDraft = localStorage.getItem(nextDraftKey);
+            if (rawDraft) {
+              try {
+                const parsedDraft = JSON.parse(rawDraft);
+                if (parsedDraft?.profile && typeof parsedDraft.profile === 'object') {
+                  nextProfile = createEmptySchoolProfile(parsedDraft.profile);
+                  nextProfile.finance = {
+                    ...(nextProfile.finance || {}),
+                    fee_rules: normalizeFinanceFeeRules(nextProfile),
+                  };
+                  restoredFromDraft = true;
+                }
+              } catch {
+                localStorage.removeItem(nextDraftKey);
+              }
+            }
+          }
+
+          savedSnapshotRef.current = JSON.stringify(
+            existing ? createEmptySchoolProfile(existing) : base
+          );
+          draftSyncEnabledRef.current = true;
           setProfile(nextProfile);
+          setHasUnsavedChanges(restoredFromDraft);
+          if (restoredFromDraft) {
+            setMessage('Черновик восстановлен.');
+          }
           setState('idle');
         }
       } catch (error) {
         if (!ignore) {
+          draftSyncEnabledRef.current = false;
           setProfile(createEmptySchoolProfile({ school_id: fallbackId }));
           setState('error');
           setMessage(t('Не удалось загрузить данные.'));
@@ -2120,8 +2156,42 @@ export default function SchoolInfoPage() {
     load();
     return () => {
       ignore = true;
+      draftSyncEnabledRef.current = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!profile || !draftKey || !draftSyncEnabledRef.current || typeof window === 'undefined') {
+      return;
+    }
+    const currentSnapshot = JSON.stringify(profile);
+    const isDirty = currentSnapshot !== savedSnapshotRef.current;
+    setHasUnsavedChanges(isDirty);
+    if (!isDirty) {
+      localStorage.removeItem(draftKey);
+      return;
+    }
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        updatedAt: new Date().toISOString(),
+        profile,
+      })
+    );
+  }, [draftKey, profile]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges || typeof window === 'undefined') return undefined;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   const updateField = (path: string, value: any) => {
     setProfile((prev: SchoolProfile | null) => (prev ? setDeep(prev, path, value) : prev));
   };
@@ -2239,6 +2309,12 @@ export default function SchoolInfoPage() {
         // Keep save flow working even if auto-translation is unavailable.
       }
       await upsertSchool(finalPayload);
+      savedSnapshotRef.current = JSON.stringify(finalPayload);
+      setProfile(finalPayload);
+      setHasUnsavedChanges(false);
+      if (draftKey && typeof window !== 'undefined') {
+        localStorage.removeItem(draftKey);
+      }
       setState('saved');
       setMessage(t('Сохранено.'));
       setTimeout(() => setState('idle'), 1500);
@@ -4546,6 +4622,9 @@ export default function SchoolInfoPage() {
         >
           {state === 'saving' ? t('Сохраняем...') : t('Сохранить')}
         </button>
+        {hasUnsavedChanges ? (
+          <span className="muted">Есть несохранённый черновик в этом браузере.</span>
+        ) : null}
         {message && <span className={`status ${state}`}>{message}</span>}
         {schoolId && <span className="muted">ID: {schoolId}</span>}
       </div>
