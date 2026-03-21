@@ -72,6 +72,7 @@ const PAYMENT_SYSTEMS = new Set([
   'Қамтылған',
 ]);
 const FEE_RULE_CURRENCIES = new Set(['KZT', 'USD', 'EUR']);
+const FEE_RULE_PERIODS = new Set(['monthly', 'yearly']);
 const SUBSCRIPTION_STATUSES = new Set([
   '',
   'inactive',
@@ -524,18 +525,19 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
   ensureNumericMap(finance.monthly_fee_by_grade, 'finance.monthly_fee_by_grade', {
     min: 0,
     max: 100000000,
-    keyPattern: /^(?:[1-9]|1[0-2])$/,
+    keyPattern: /^(?:[0-9]|1[0-3])$/,
   });
   const feeRules = Array.isArray(finance.fee_rules) ? finance.fee_rules : [];
   ensure(feeRules.length <= 20, 'finance.fee_rules has too many items');
-  let lastToGrade = 0;
+  let lastToGrade = -1;
   let activeCurrency = '';
   feeRules.forEach((rule, index) => {
     ensure(isObject(rule), `finance.fee_rules.${index} must be object`);
-    ensureIntegerStringInRange(rule.from_grade, 1, 12, `finance.fee_rules.${index}.from_grade`);
-    ensureIntegerStringInRange(rule.to_grade, 1, 12, `finance.fee_rules.${index}.to_grade`);
+    ensureIntegerStringInRange(rule.from_grade, 0, 13, `finance.fee_rules.${index}.from_grade`);
+    ensureIntegerStringInRange(rule.to_grade, 0, 13, `finance.fee_rules.${index}.to_grade`);
     ensureNumericStringInRange(rule.amount, 0, 100000000, `finance.fee_rules.${index}.amount`);
     ensureEnum(rule.currency, FEE_RULE_CURRENCIES, `finance.fee_rules.${index}.currency`);
+    ensureEnum(rule.period || 'monthly', FEE_RULE_PERIODS, `finance.fee_rules.${index}.period`);
     ensureMaxLen(rule.comment, 500, `finance.fee_rules.${index}.comment`);
 
     const fromGrade = Number(rule.from_grade);
