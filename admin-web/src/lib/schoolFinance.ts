@@ -1,11 +1,13 @@
 type Locale = 'ru' | 'en' | 'kk';
 type FeeCurrency = 'KZT' | 'USD' | 'EUR';
+export type SchoolFeePeriod = 'monthly' | 'yearly';
 
 export type SchoolFeeRule = {
   from_grade: number;
   to_grade: number;
   amount: number;
   currency: FeeCurrency;
+  period: SchoolFeePeriod;
   comment: string;
 };
 
@@ -13,6 +15,7 @@ type FeeSummary = {
   min: number;
   max: number;
   currency: FeeCurrency | '';
+  period: SchoolFeePeriod | '';
   hasFeeRules: boolean;
   hasAnyFee: boolean;
 };
@@ -26,7 +29,8 @@ const CURRENCY_SYMBOLS: Record<FeeCurrency, string> = {
 };
 
 export const SCHOOL_FEE_CURRENCIES: FeeCurrency[] = ['KZT', 'USD', 'EUR'];
-export const SCHOOL_GRADE_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+export const SCHOOL_FEE_PERIODS: SchoolFeePeriod[] = ['monthly', 'yearly'];
+export const SCHOOL_GRADE_OPTIONS = Array.from({ length: 14 }, (_, index) => index);
 
 const toText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -48,7 +52,7 @@ const toGradeNumber = (value: unknown): number => {
   if (!raw) return 0;
   const parsed = Number(raw);
   if (!Number.isInteger(parsed)) return 0;
-  if (parsed < 1 || parsed > 12) return 0;
+  if (parsed < 0 || parsed > 13) return 0;
   return parsed;
 };
 
@@ -56,6 +60,11 @@ const toCurrency = (value: unknown): FeeCurrency => {
   const raw = toText(value).trim().toUpperCase();
   if (raw === 'USD' || raw === 'EUR' || raw === 'KZT') return raw;
   return DEFAULT_CURRENCY;
+};
+
+const toPeriod = (value: unknown): SchoolFeePeriod => {
+  const raw = toText(value).trim().toLowerCase();
+  return raw === 'yearly' ? 'yearly' : 'monthly';
 };
 
 const normalizeRule = (value: unknown): SchoolFeeRule | null => {
@@ -70,6 +79,7 @@ const normalizeRule = (value: unknown): SchoolFeeRule | null => {
     to_grade: toGrade,
     amount,
     currency: toCurrency(rule.currency),
+    period: toPeriod(rule.period),
     comment: toText(rule.comment).trim(),
   };
 };
@@ -111,6 +121,7 @@ export const buildFeeRulesFromGradeMap = (value: unknown): SchoolFeeRule[] => {
     to_grade: grades[0].grade,
     amount: grades[0].amount,
     currency: DEFAULT_CURRENCY,
+    period: 'monthly',
     comment: '',
   } as SchoolFeeRule;
 
@@ -123,13 +134,14 @@ export const buildFeeRulesFromGradeMap = (value: unknown): SchoolFeeRule[] => {
       continue;
     }
     rules.push(current);
-    current = {
-      from_grade: item.grade,
-      to_grade: item.grade,
-      amount: item.amount,
-      currency: DEFAULT_CURRENCY,
-      comment: '',
-    };
+      current = {
+        from_grade: item.grade,
+        to_grade: item.grade,
+        amount: item.amount,
+        currency: DEFAULT_CURRENCY,
+        period: 'monthly',
+        comment: '',
+      };
   }
 
   rules.push(current);
@@ -156,10 +168,11 @@ export const buildFeeRulesFromFinance = (finance: {
 
   return [
     {
-      from_grade: 1,
-      to_grade: 12,
+      from_grade: 0,
+      to_grade: 13,
       amount: fallbackAmount,
       currency: DEFAULT_CURRENCY,
+      period: 'monthly',
       comment: '',
     },
   ];
@@ -171,17 +184,20 @@ const getRuleSummary = (rules: SchoolFeeRule[]): FeeSummary => {
       min: 0,
       max: 0,
       currency: '',
+      period: '',
       hasFeeRules: false,
       hasAnyFee: false,
     };
   }
 
   const currencies = [...new Set(rules.map((rule) => rule.currency))];
-  if (currencies.length !== 1) {
+  const periods = [...new Set(rules.map((rule) => rule.period))];
+  if (currencies.length !== 1 || periods.length !== 1) {
     return {
       min: 0,
       max: 0,
       currency: '',
+      period: '',
       hasFeeRules: true,
       hasAnyFee: true,
     };
@@ -191,6 +207,7 @@ const getRuleSummary = (rules: SchoolFeeRule[]): FeeSummary => {
     min: Math.min(...rules.map((rule) => rule.amount)),
     max: Math.max(...rules.map((rule) => rule.amount)),
     currency: currencies[0],
+    period: periods[0],
     hasFeeRules: true,
     hasAnyFee: true,
   };
@@ -222,6 +239,7 @@ export const getSchoolFeeSummary = (row: {
     min: fallback,
     max: fallback,
     currency: fallback > 0 ? FALLBACK_PRICE_CURRENCY : '',
+    period: fallback > 0 ? 'monthly' : '',
     hasFeeRules: false,
     hasAnyFee: fallback > 0,
   };
@@ -233,23 +251,33 @@ export const getComparableMonthlyFee = (
   const summary = getSchoolFeeSummary(row);
   if (!summary.hasAnyFee) return 0;
   if (summary.currency && summary.currency !== 'KZT') return 0;
+  if (summary.period === 'yearly') {
+    return Math.round(summary.min / 12);
+  }
   return summary.min;
 };
 
 const formatCurrency = (value: number, currency: FeeCurrency) =>
   `${value.toLocaleString('ru-RU')} ${CURRENCY_SYMBOLS[currency]}`;
 
+const formatPeriodSuffix = (period: SchoolFeePeriod, locale: Locale) => {
+  if (locale === 'en') return period === 'yearly' ? '/ year' : '/ month';
+  if (locale === 'kk') return period === 'yearly' ? '/ жыл' : '/ ай';
+  return period === 'yearly' ? '/ год' : '/ мес';
+};
+
 export const formatSchoolFee = (
   row: Parameters<typeof getSchoolFeeSummary>[0],
   _locale: Locale,
   fallbackText: string
 ): string => {
+  const locale = _locale;
   const summary = getSchoolFeeSummary(row);
   if (!summary.hasAnyFee || !summary.currency) return fallbackText;
 
   if (summary.hasFeeRules && summary.min !== summary.max) {
-    return `${formatCurrency(summary.min, summary.currency)} - ${formatCurrency(summary.max, summary.currency)}`;
+    return `${formatCurrency(summary.min, summary.currency)} - ${formatCurrency(summary.max, summary.currency)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
   }
 
-  return formatCurrency(summary.min, summary.currency);
+  return `${formatCurrency(summary.min, summary.currency)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
 };

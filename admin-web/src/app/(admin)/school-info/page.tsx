@@ -21,6 +21,7 @@ import {
   buildFeeRulesFromFinance,
   buildGradeFeeMapFromRules,
   SCHOOL_FEE_CURRENCIES,
+  SCHOOL_FEE_PERIODS,
   SCHOOL_GRADE_OPTIONS,
 } from '@/lib/schoolFinance';
 
@@ -37,7 +38,7 @@ const parseArrayValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const ADMISSION_SEAT_GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+const ADMISSION_SEAT_GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 
 const parseSeatGradesValue = (value: unknown) => {
   const raw = String(value || '').trim();
@@ -167,6 +168,7 @@ const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
   to_grade: '',
   amount: '',
   currency: 'KZT',
+  period: 'monthly',
   comment: '',
   ...overrides,
 });
@@ -341,6 +343,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Фото преподавателя не загружено': { en: 'Teacher photo not uploaded', kk: 'Мұғалім фотосы жүктелмеген' },
   'Для классов': { en: 'Grades', kk: 'Сыныптар үшін' },
   'Стоимость в месяц': { en: 'Monthly fee', kk: 'Айлық төлем' },
+  Стоимость: { en: 'Tuition fee', kk: 'Оқу құны' },
+  Период: { en: 'Period', kk: 'Кезең' },
+  'В месяц': { en: 'Per month', kk: 'Айына' },
+  'В год': { en: 'Per year', kk: 'Жылына' },
   ИЛИ: { en: 'OR', kk: 'НЕМЕСЕ' },
   'Можно указать URL или загрузить файл. Если заполнены оба поля, приоритет у файла.': {
     en: 'You can provide a URL or upload a file. If both are set, file has priority.',
@@ -353,7 +359,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Гос финансирование': { en: 'State funding', kk: 'Мемлекеттік қаржыландыру' },
   Самоокупаемость: { en: 'Self-funded', kk: 'Өзін-өзі қаржыландыру' },
   'Бесплатные места': { en: 'Free places', kk: 'Тегін орындар' },
-  'Стоимость / мес': { en: 'Monthly fee', kk: 'Айлық төлем' },
+  'Стоимость / мес': { en: 'Tuition fee', kk: 'Оқу құны' },
   'Опции оплаты': { en: 'Payment options', kk: 'Төлем опциялары' },
   Скидки: { en: 'Discounts', kk: 'Жеңілдіктер' },
   Гранты: { en: 'Grants', kk: 'Гранттар' },
@@ -720,6 +726,7 @@ const normalizeFinanceFeeRules = (profile: SchoolProfile | null) => {
         to_grade: String(item.to_grade || ''),
         amount: String(item.amount || ''),
         currency: String(item.currency || 'KZT'),
+        period: String(item.period || 'monthly'),
         comment: String(item.comment || ''),
       });
     });
@@ -731,6 +738,7 @@ const normalizeFinanceFeeRules = (profile: SchoolProfile | null) => {
       to_grade: String(rule.to_grade),
       amount: String(rule.amount),
       currency: rule.currency,
+      period: rule.period,
       comment: rule.comment,
     })
   );
@@ -818,7 +826,7 @@ const CURRICULA_GROUPS = {
   additional: ['Bilingual Program', 'Author program'],
 };
 
-const GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 const TEACHING_LANGUAGE_OPTIONS = [
   'Kazakh',
   'Russian',
@@ -891,7 +899,7 @@ const MEAL_OPTIONS = [
   'No meals',
 ];
 const MEAL_TIMES_OPTIONS = ['1', '2', '3', '4'];
-const MEAL_GRADE_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+const MEAL_GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 const PARENT_FEEDBACK_FORMAT_OPTIONS = ['Messenger chat', 'Email', 'Calls', 'Offline meetings', 'Mixed'];
 const PARENT_MEETING_FREQUENCY_OPTIONS = [
   'Weekly',
@@ -2159,7 +2167,13 @@ export default function SchoolInfoPage() {
       const normalizedFeeRules = buildFeeRulesFromFinance(currentProfile.finance);
       const derivedGradeFeeMap = buildGradeFeeMapFromRules(normalizedFeeRules);
       const derivedMonthlyFee = normalizedFeeRules.length
-        ? String(Math.min(...normalizedFeeRules.map((rule) => rule.amount)))
+        ? String(
+            Math.min(
+              ...normalizedFeeRules.map((rule) =>
+                rule.period === 'yearly' ? Math.round(rule.amount / 12) : rule.amount
+              )
+            )
+          )
         : String(currentProfile.finance?.monthly_fee || '');
       const normalizedSchoolType = normalizeSchoolType(currentProfile.basic_info?.type);
       const paymentOptions = normalizeListValue(currentProfile.finance?.payment_options);
@@ -2659,7 +2673,7 @@ export default function SchoolInfoPage() {
                       {feeRules.map((rule, index) => (
                         <div key={String(rule.id || `fee-rule-${index}`)} className="teacher-card">
                           <div className="teacher-card-head">
-                            <h3>{`${t('Стоимость / мес')} #${index + 1}`}</h3>
+                            <h3>{`${t('Стоимость')} #${index + 1}`}</h3>
                             <button
                               type="button"
                               className="button secondary"
@@ -2710,6 +2724,17 @@ export default function SchoolInfoPage() {
                               onChange={(value: string) =>
                                 updateFinanceFeeRule(index, { amount: value })
                               }
+                            />
+                            <Select
+                              label="Период"
+                              value={String((rule as any).period || 'monthly')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { period: value || 'monthly' })
+                              }
+                              options={SCHOOL_FEE_PERIODS.map((period) => ({
+                                value: period,
+                                label: period === 'yearly' ? t('В год') : t('В месяц'),
+                              }))}
                             />
                             <Select
                               label="Валюта"

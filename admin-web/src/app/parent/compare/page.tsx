@@ -321,7 +321,19 @@ const formatGradeFees = (
   rules.forEach((rule) => {
     const range = rule.from_grade === rule.to_grade ? `${rule.from_grade}` : `${rule.from_grade}-${rule.to_grade}`;
     const symbol = rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : '€';
-    const line = `${classLabel} ${range}: ${rule.amount.toLocaleString('ru-RU')} ${symbol}`;
+    const periodLabel =
+      locale === 'en'
+        ? rule.period === 'yearly'
+          ? '/ year'
+          : '/ month'
+        : locale === 'kk'
+          ? rule.period === 'yearly'
+            ? '/ жыл'
+            : '/ ай'
+          : rule.period === 'yearly'
+            ? '/ год'
+            : '/ мес';
+    const line = `${classLabel} ${range}: ${rule.amount.toLocaleString('ru-RU')} ${symbol} ${periodLabel}`;
     const prev = byCurrency.get(rule.currency) || [];
     prev.push(line);
     byCurrency.set(rule.currency, prev);
@@ -537,7 +549,7 @@ export default function ParentComparePage() {
       ['cameras', criteriaLabel('Камеры', 'Cameras', 'Камералар')],
       ['accessControl', criteriaLabel('Контроль доступа', 'Access control', 'Кіру бақылауы')],
       ['medicalOffice', criteriaLabel('Медпункт', 'Medical office', 'Медпункт')],
-      ['monthly', criteriaLabel('Ежемесячная стоимость', 'Monthly fee', 'Айлық төлем')],
+      ['monthly', criteriaLabel('Стоимость обучения', 'Tuition fee', 'Оқу құны')],
       ['monthlyByGrade', criteriaLabel('Стоимость по классам', 'Fee by grade', 'Сыныптар бойынша төлем')],
       ['discounts', criteriaLabel('Скидки', 'Discounts', 'Жеңілдіктер')],
       ['grants', criteriaLabel('Гранты/Стипендии', 'Grants/Scholarships', 'Гранттар/Стипендиялар')],

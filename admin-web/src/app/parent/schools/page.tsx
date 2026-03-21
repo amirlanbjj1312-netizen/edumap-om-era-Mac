@@ -1469,10 +1469,10 @@ export default function ParentSchoolsPage() {
               ) || formatSchoolTypes(row.basic_info?.type, locale);
               const priceLabel =
                 locale === 'en'
-                  ? 'Monthly fee'
+                  ? 'Tuition fee'
                   : locale === 'kk'
-                    ? 'Айлық құны'
-                    : 'Ежемесячная стоимость';
+                    ? 'Оқу құны'
+                    : 'Стоимость обучения';
               const onRequest =
                 locale === 'en'
                   ? 'on request'
