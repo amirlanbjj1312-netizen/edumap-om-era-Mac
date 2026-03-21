@@ -648,6 +648,14 @@ export default function ParentSchoolsMapPage() {
       popupAnchor: [1, -34],
       shadowSize: [41, 41],
     });
+    const blueIcon = L.icon?.({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
 
     if (markersLayerRef.current) {
       markersLayerRef.current.remove();
@@ -659,10 +667,11 @@ export default function ParentSchoolsMapPage() {
 
     schools.forEach((school) => {
       const isFocused = focusedSchoolId && school.id === focusedSchoolId;
-      const marker = orangeIcon
+      const markerIcon = isFocused && blueIcon ? blueIcon : orangeIcon;
+      const marker = markerIcon
         ? (L.marker as unknown as (point: [number, number], options?: { icon?: unknown }) => LeafletMarker)(
             [school.lat, school.lng],
-            { icon: orangeIcon }
+            { icon: markerIcon }
           )
         : L.marker([school.lat, school.lng]);
       marker.bindPopup(
