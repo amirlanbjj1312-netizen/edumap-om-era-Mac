@@ -31,6 +31,8 @@ const normalizeEmail = (value) =>
   String(value || '')
     .trim()
     .toLowerCase();
+const EXCLUDED_STATS_EMAILS = new Set(['amirlan.sm@mail.ru']);
+const isStatsExcludedEmail = (value) => EXCLUDED_STATS_EMAILS.has(normalizeEmail(value));
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -192,7 +194,9 @@ const buildRatingSurveysRouter = () => {
       const actor = await requireModerator(req, res);
       if (!actor) return;
       const campaigns = await listSurveyCampaigns();
-      const responses = await listSurveyResponses();
+      const responses = (await listSurveyResponses()).filter(
+        (item) => !isStatsExcludedEmail(item?.user_email)
+      );
       const schools = await readStore();
       const schoolNameById = new Map(
         schools.map((item) => [String(item?.school_id || '').trim(), resolveSchoolName(item)])
@@ -202,14 +206,18 @@ const buildRatingSurveysRouter = () => {
         const campaignResponses = responses.filter((item) => item.campaign_id === campaign.id);
         const answeredByUsers = new Set(campaignResponses.map((item) => item.user_id)).size;
         const targetType = String(campaign.target_type || 'school');
+        const visibleParentEmails = Array.isArray(campaign.parent_emails)
+          ? campaign.parent_emails.filter((item) => !isStatsExcludedEmail(item))
+          : [];
         const targetLabel =
           targetType === 'all_parents'
             ? 'Все родители'
             : targetType === 'specific_parents'
-              ? `Конкретные родители (${Array.isArray(campaign.parent_emails) ? campaign.parent_emails.length : 0})`
+              ? `Конкретные родители (${visibleParentEmails.length})`
               : 'По школам';
         return {
           ...campaign,
+          parent_emails: visibleParentEmails,
           school_names: campaign.school_ids.map((id) => schoolNameById.get(id) || id),
           target_label: targetLabel,
           responses_count: campaignResponses.length,
@@ -279,12 +287,13 @@ const buildRatingSurveysRouter = () => {
     try {
       const actor = await requireModerator(req, res);
       if (!actor) return;
-      const [campaigns, responses, schools, consultations] = await Promise.all([
+      const [campaigns, rawResponses, schools, consultations] = await Promise.all([
         listSurveyCampaigns(),
         listSurveyResponses(),
         readStore(),
         consultationsStore.list(),
       ]);
+      const responses = rawResponses.filter((item) => !isStatsExcludedEmail(item?.user_email));
       const surveyStore = await readSurveyStore();
       const questionById = new Map(
         (surveyStore?.config?.questions || []).map((question) => [String(question?.id || '').trim(), question])
