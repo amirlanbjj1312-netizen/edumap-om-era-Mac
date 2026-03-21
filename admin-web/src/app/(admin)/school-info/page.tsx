@@ -2063,14 +2063,7 @@ export default function SchoolInfoPage() {
               'license.licenseNumber'
             );
             const resolvedLicenseNumber = licenseNumber || nestedLicenseNumber;
-            const currentSchoolEmail = String(getDeep(nextProfile, 'basic_info.email', '') || '')
-              .trim()
-              .toLowerCase();
-
-            if (currentSchoolEmail && currentSchoolEmail === sessionEmail) {
-              setDeep(nextProfile, 'basic_info.email', '');
-            }
-
+            setIfEmpty('basic_info.email', sessionEmail);
             setIfEmpty('basic_info.display_name.ru', organization);
             setIfEmpty('basic_info.display_name.en', organization);
             setIfEmpty('basic_info.display_name.kk', organization);
