@@ -385,18 +385,17 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Скидки: { en: 'Discounts', kk: 'Жеңілдіктер' },
   Гранты: { en: 'Grants', kk: 'Гранттар' },
   Филиалы: { en: 'Branches', kk: 'Филиалдар' },
-  'Основной адрес': { en: 'Main address', kk: 'Негізгі мекенжай' },
   Филиал: { en: 'Branch', kk: 'Филиал' },
-  'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.':
+  'У школы два адресных блока. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.':
     {
-      en: 'If the school has branches, add the second and third address. Each branch can have its own city, district, address, latitude, and longitude.',
-      kk: 'Егер мектептің филиалдары болса, екінші және үшінші мекенжайды қосыңыз. Әр филиал үшін өз қаласын, ауданын, мекенжайын, ендігін және бойлығын көрсетуге болады.',
+      en: 'The school has two address blocks. Each branch can have its own city, district, address, latitude, and longitude.',
+      kk: 'Мектепте екі мекенжай блогы бар. Әр филиал үшін өз қаласын, ауданын, мекенжайын, ендігін және бойлығын көрсетуге болады.',
     },
   'Добавить филиал': { en: 'Add branch', kk: 'Филиал қосу' },
   'Удалить филиал': { en: 'Remove branch', kk: 'Филиалды жою' },
-  'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.': {
-    en: 'You can add up to 2 branches. Together with the main address, this gives up to 3 school addresses.',
-    kk: '2 филиалға дейін қосуға болады. Негізгі мекенжаймен бірге мектептің 3 мекенжайына дейін болады.',
+  'Можно заполнить Филиал 1 и Филиал 2.': {
+    en: 'You can fill in Branch 1 and Branch 2.',
+    kk: 'Филиал 1 мен Филиал 2-ні толтыруға болады.',
   },
   'Добавить цену': { en: 'Add fee', kk: 'Төлем қосу' },
   'Удалить цену': { en: 'Remove fee', kk: 'Төлемді жою' },
@@ -2606,7 +2605,7 @@ export default function SchoolInfoPage() {
                       gap: 10,
                     }}
                   >
-                    <strong>{t('Основной адрес')}</strong>
+                    <strong>{`${t('Филиал')} 1`}</strong>
                     <FieldRow>
                       <Select
                         label="Город"
@@ -2674,7 +2673,7 @@ export default function SchoolInfoPage() {
                       }}
                     >
                       {t(
-                        'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.'
+                        'У школы два адресных блока. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.'
                       )}
                     </p>
                     <p
@@ -2685,12 +2684,10 @@ export default function SchoolInfoPage() {
                         color: 'rgba(90, 90, 120, 0.82)',
                       }}
                     >
-                      {t(
-                        'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.'
-                      )}
+                      {t('Можно заполнить Филиал 1 и Филиал 2.')}
                     </p>
                   </div>
-                  {additionalLocations.map((location, index) => (
+                  {additionalLocations.slice(0, 1).map((location, index) => (
                     <div
                       key={String((location as any).id || index)}
                       style={{
@@ -2709,7 +2706,7 @@ export default function SchoolInfoPage() {
                           alignItems: 'center',
                         }}
                       >
-                        <strong>{`${t('Филиал')} #${index + 1}`}</strong>
+                        <strong>{`${t('Филиал')} ${index + 2}`}</strong>
                         <button
                           type="button"
                           className="button secondary"
@@ -2803,7 +2800,7 @@ export default function SchoolInfoPage() {
                       </FieldRow>
                     </div>
                   ))}
-                  {additionalLocations.length < 2 ? (
+                  {additionalLocations.length < 1 ? (
                     <div>
                       <button
                         type="button"

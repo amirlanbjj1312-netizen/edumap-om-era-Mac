@@ -1576,16 +1576,16 @@ export default function ParentSchoolsPage() {
                         {mainAddress ? (
                           <div className="market-school-address-list">
                             <p className="market-school-address-row">
-                              <strong>{locale === 'en' ? 'Address' : locale === 'kk' ? 'Мекенжай' : 'Адрес'}:</strong> {mainAddress}
+                              <strong>{locale === 'en' ? 'Branch 1' : locale === 'kk' ? '1-филиал' : 'Филиал 1'}:</strong> {mainAddress}
                             </p>
-                            {branchAddresses.map((address, addressIndex) => (
+                            {branchAddresses.slice(0, 1).map((address, addressIndex) => (
                               <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
                                 <strong>
                                   {locale === 'en'
-                                    ? `Branch ${addressIndex + 1}`
+                                    ? `Branch ${addressIndex + 2}`
                                     : locale === 'kk'
-                                      ? `${addressIndex + 1}-филиал`
-                                      : `Филиал ${addressIndex + 1}`}
+                                      ? `${addressIndex + 2}-филиал`
+                                      : `Филиал ${addressIndex + 2}`}
                                   :
                                 </strong>{' '}
                                 {address}
@@ -1594,14 +1594,14 @@ export default function ParentSchoolsPage() {
                           </div>
                         ) : branchAddresses.length ? (
                           <div className="market-school-address-list">
-                            {branchAddresses.map((address, addressIndex) => (
+                            {branchAddresses.slice(0, 1).map((address, addressIndex) => (
                               <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
                                 <strong>
                                   {locale === 'en'
-                                    ? `Branch ${addressIndex + 1}`
+                                    ? `Branch ${addressIndex + 2}`
                                     : locale === 'kk'
-                                      ? `${addressIndex + 1}-филиал`
-                                      : `Филиал ${addressIndex + 1}`}
+                                      ? `${addressIndex + 2}-филиал`
+                                      : `Филиал ${addressIndex + 2}`}
                                   :
                                 </strong>{' '}
                                 {address}

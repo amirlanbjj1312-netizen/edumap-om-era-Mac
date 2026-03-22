@@ -1021,14 +1021,21 @@ export default function ParentSchoolDetailsPage() {
     },
   ].filter((item) => item.value);
   const contactRows = [
-    ...(addressLabel ? [{ label: ui.address, value: addressLabel }] : []),
-    ...additionalAddresses.map((value, index) => ({
+    ...(addressLabel
+      ? [
+          {
+            label: locale === 'en' ? 'Branch 1' : locale === 'kk' ? '1-филиал' : 'Филиал 1',
+            value: addressLabel,
+          },
+        ]
+      : []),
+    ...additionalAddresses.slice(0, 1).map((value, index) => ({
       label:
         locale === 'en'
-          ? `Branch ${index + 1}`
+          ? `Branch ${index + 2}`
           : locale === 'kk'
-            ? `${index + 1}-филиал`
-            : `Филиал ${index + 1}`,
+            ? `${index + 2}-филиал`
+            : `Филиал ${index + 2}`,
       value,
     })),
     ...contactItems.map((item) => ({ label: item.label, value: item.value })),
