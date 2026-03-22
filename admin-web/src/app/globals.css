@@ -867,9 +867,16 @@ a {
 }
 
 .guest-gated-content {
+  display: grid;
+  gap: 14px;
   filter: blur(10px);
   pointer-events: none;
   user-select: none;
+}
+
+.school-detail-sections {
+  display: grid;
+  gap: 14px;
 }
 
 .guest-gated-overlay {
@@ -5188,6 +5195,24 @@ a {
 
   .school-admission-grid {
     grid-template-columns: 1fr;
+  }
+
+  .school-link-cards-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .school-link-card {
+    min-height: 100px;
+    padding: 18px 18px;
+  }
+
+  .school-link-card-title {
+    font-size: 19px;
+  }
+
+  .school-link-card-subtitle {
+    font-size: 13px;
   }
 
   .school-admission-stage-content {

@@ -373,6 +373,43 @@ const getSchoolPhotoCount = (row: SchoolRow): number => extractMediaUrls(row.med
 
 const getSchoolUpdatedAt = (row: SchoolRow): number => Date.parse(toText(row.updated_at) || '') || 0;
 
+const normalizeSchoolIdentity = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+const buildSchoolDedupeKey = (row: SchoolRow, locale: 'ru' | 'en' | 'kk'): string => {
+  const schoolId = toText(row.school_id).trim().toLowerCase();
+  if (schoolId) return `id:${schoolId}`;
+
+  const brand = normalizeSchoolIdentity(getBrandTitle(row, locale));
+  const city = normalizeSchoolIdentity(toText(row.basic_info?.city));
+  const district = normalizeSchoolIdentity(toText(row.basic_info?.district));
+  return `meta:${brand}|${city}|${district}`;
+};
+
+const dedupeSchoolRows = (rows: SchoolRow[], locale: 'ru' | 'en' | 'kk'): SchoolRow[] => {
+  const byKey = new Map<string, SchoolRow>();
+
+  rows.forEach((row) => {
+    const key = buildSchoolDedupeKey(row, locale);
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, row);
+      return;
+    }
+
+    if (getSchoolUpdatedAt(row) > getSchoolUpdatedAt(current)) {
+      byKey.set(key, row);
+    }
+  });
+
+  return Array.from(byKey.values());
+};
+
 const getSchoolQualityScore = (row: SchoolRow): number => {
   const monthlyFee = getComparableMonthlyFee(row);
   const programsCount = getSchoolProgramsCount(row);
@@ -731,7 +768,7 @@ export default function ParentSchoolsPage() {
     loadSchools()
       .then((payload) => {
         if (!mounted) return;
-        setRows(Array.isArray(payload?.data) ? payload.data : []);
+        setRows(dedupeSchoolRows(Array.isArray(payload?.data) ? payload.data : [], locale));
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -739,7 +776,7 @@ export default function ParentSchoolsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     const unsub = subscribeCompareIds((ids) => setCompareIds(ids));

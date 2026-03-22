@@ -945,6 +945,22 @@ export default function ParentSchoolDetailsPage() {
     ['basic_info.address', `basic_info.address.${locale}`, 'basic_info.address.ru'],
     ''
   );
+  const additionalLocationsRaw = Array.isArray(getIn(school, 'basic_info.additional_locations'))
+    ? (getIn(school, 'basic_info.additional_locations') as Array<Record<string, unknown>>)
+    : [];
+  const additionalAddresses = additionalLocationsRaw
+    .map((item) => {
+      const city = localizeOption(String(item?.city || '').trim(), locale);
+      const district = localizeOption(String(item?.district || '').trim(), locale);
+      const address =
+        pickFirstText(
+          item,
+          ['address', `address.${locale}`, 'address.ru'],
+          ''
+        ) || '';
+      return [city, district, address].filter(Boolean).join(', ');
+    })
+    .filter(Boolean);
   const price = formatSchoolFee(
     {
       finance: {
@@ -997,7 +1013,19 @@ export default function ParentSchoolDetailsPage() {
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
   ].filter((item) => item.value);
-  const contactRows = contactItems.map((item) => ({ label: item.label, value: item.value }));
+  const contactRows = [
+    ...(addressLabel ? [{ label: ui.address, value: addressLabel }] : []),
+    ...additionalAddresses.map((value, index) => ({
+      label:
+        locale === 'en'
+          ? `Address ${index + 2}`
+          : locale === 'kk'
+            ? `${index + 2}-мекенжай`
+            : `Адрес ${index + 2}`,
+      value,
+    })),
+    ...contactItems.map((item) => ({ label: item.label, value: item.value })),
+  ];
   const educationLanguages = localizeUniqueList(getIn(school, 'education.languages'), locale);
   const educationPrograms = Array.from(
     new Set(
@@ -1569,7 +1597,7 @@ export default function ParentSchoolDetailsPage() {
           ) : null}
 
           <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
-            <div className={guest ? 'guest-gated-content' : ''}>
+            <div className={guest ? 'guest-gated-content school-detail-sections' : 'school-detail-sections'}>
           <Link href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`} className="school-consult-btn">
             {ui.clubs}
           </Link>
