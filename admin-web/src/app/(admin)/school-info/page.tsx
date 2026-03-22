@@ -174,6 +174,18 @@ const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const createAdditionalLocationEntry = (overrides: Record<string, unknown> = {}) => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  address: { ru: '', en: '', kk: '' },
+  city: '',
+  district: '',
+  coordinates: {
+    latitude: '',
+    longitude: '',
+  },
+  ...overrides,
+});
+
 const LocaleContext = createContext<'ru' | 'en' | 'kk'>('ru');
 
 const LABELS: Record<string, { en: string; kk: string }> = {
@@ -364,6 +376,19 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Опции оплаты': { en: 'Payment options', kk: 'Төлем опциялары' },
   Скидки: { en: 'Discounts', kk: 'Жеңілдіктер' },
   Гранты: { en: 'Grants', kk: 'Гранттар' },
+  Филиалы: { en: 'Branches', kk: 'Филиалдар' },
+  Филиал: { en: 'Branch', kk: 'Филиал' },
+  'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.':
+    {
+      en: 'If the school has branches, add the second and third address. Each branch can have its own city, district, address, latitude, and longitude.',
+      kk: 'Егер мектептің филиалдары болса, екінші және үшінші мекенжайды қосыңыз. Әр филиал үшін өз қаласын, ауданын, мекенжайын, ендігін және бойлығын көрсетуге болады.',
+    },
+  'Добавить филиал': { en: 'Add branch', kk: 'Филиал қосу' },
+  'Удалить филиал': { en: 'Remove branch', kk: 'Филиалды жою' },
+  'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.': {
+    en: 'You can add up to 2 branches. Together with the main address, this gives up to 3 school addresses.',
+    kk: '2 филиалға дейін қосуға болады. Негізгі мекенжаймен бірге мектептің 3 мекенжайына дейін болады.',
+  },
   'Добавить цену': { en: 'Add fee', kk: 'Төлем қосу' },
   'Удалить цену': { en: 'Remove fee', kk: 'Төлемді жою' },
   'С класса': { en: 'From grade', kk: 'Сыныптан бастап' },
@@ -1353,6 +1378,17 @@ export default function SchoolInfoPage() {
     () => String(getDeep(profile, 'finance.grants_info', '') || ''),
     [profile]
   );
+  const additionalLocations = useMemo(() => {
+    const raw = getDeep(profile, 'basic_info.additional_locations', []);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) =>
+      createAdditionalLocationEntry(
+        item && typeof item === 'object' && !Array.isArray(item)
+          ? (item as Record<string, unknown>)
+          : {}
+      )
+    );
+  }, [profile]);
   const showFinance = useMemo(() => schoolTypeValue === 'Private', [schoolTypeValue]);
   const localePath = (path: string) => `${path}.${contentLocale}`;
   const t = (label: string) => translateLabel(label, contentLocale);
@@ -1418,6 +1454,23 @@ export default function SchoolInfoPage() {
     updateField('services.tutors', selected.includes('tutor'));
     updateField('services.social_workers', selected.includes('social_worker'));
     updateField('services.nurses', selected.includes('nurse'));
+  };
+  const setAdditionalLocations = (items: Array<Record<string, unknown>>) => {
+    updateField('basic_info.additional_locations', items);
+  };
+  const addAdditionalLocation = () => {
+    setAdditionalLocations([...additionalLocations, createAdditionalLocationEntry()]);
+  };
+  const updateAdditionalLocation = (index: number, patch: Record<string, unknown>) => {
+    if (!additionalLocations[index]) return;
+    setAdditionalLocations(
+      additionalLocations.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item
+      )
+    );
+  };
+  const removeAdditionalLocation = (index: number) => {
+    setAdditionalLocations(additionalLocations.filter((_item, itemIndex) => itemIndex !== index));
   };
   const changeTab = (
     tab: 'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
@@ -2562,6 +2615,132 @@ export default function SchoolInfoPage() {
                     }
                   />
                 </FieldRow>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {additionalLocations.map((location, index) => (
+                    <div
+                      key={String((location as any).id || index)}
+                      style={{
+                        border: '1px solid rgba(120,106,255,0.18)',
+                        borderRadius: 14,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <strong>{`${t('Филиал')} #${index + 1}`}</strong>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => removeAdditionalLocation(index)}
+                        >
+                          {t('Удалить филиал')}
+                        </button>
+                      </div>
+                      <FieldRow>
+                        <Input
+                          label="Город"
+                          value={String((location as any).city || '')}
+                          onChange={(value: string) =>
+                            updateAdditionalLocation(index, { city: value })
+                          }
+                        />
+                        <Input
+                          label="Район"
+                          value={String((location as any).district || '')}
+                          onChange={(value: string) =>
+                            updateAdditionalLocation(index, { district: value })
+                          }
+                        />
+                      </FieldRow>
+                      <FieldRow>
+                        <Input
+                          label="Адрес"
+                          value={String((location as any)?.address?.[contentLocale] || '')}
+                          onChange={(value: string) =>
+                            updateAdditionalLocation(index, {
+                              address: {
+                                ...((location as any).address || {}),
+                                [contentLocale]: value,
+                              },
+                            })
+                          }
+                        />
+                      </FieldRow>
+                      <FieldRow>
+                        <Input
+                          label="Широта"
+                          value={String((location as any)?.coordinates?.latitude || '')}
+                          onChange={(value: string) =>
+                            updateAdditionalLocation(index, {
+                              coordinates: {
+                                ...((location as any).coordinates || {}),
+                                latitude: value,
+                              },
+                            })
+                          }
+                        />
+                        <Input
+                          label="Долгота"
+                          value={String((location as any)?.coordinates?.longitude || '')}
+                          onChange={(value: string) =>
+                            updateAdditionalLocation(index, {
+                              coordinates: {
+                                ...((location as any).coordinates || {}),
+                                longitude: value,
+                              },
+                            })
+                          }
+                        />
+                      </FieldRow>
+                    </div>
+                  ))}
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <strong>{t('Филиалы')}</strong>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                        color: 'rgba(90, 90, 120, 0.92)',
+                      }}
+                    >
+                      {t(
+                        'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.'
+                      )}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        lineHeight: 1.4,
+                        color: 'rgba(90, 90, 120, 0.82)',
+                      }}
+                    >
+                      {t(
+                        'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.'
+                      )}
+                    </p>
+                  </div>
+                  {additionalLocations.length < 2 ? (
+                    <div>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={addAdditionalLocation}
+                      >
+                        {t('Добавить филиал')}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
                 <FieldRow>
                   <TextArea
                     label="Описание"
