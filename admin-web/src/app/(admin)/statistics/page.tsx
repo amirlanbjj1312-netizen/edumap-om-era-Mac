@@ -114,9 +114,12 @@ const ENGAGEMENT_LABELS: Record<string, string> = {
 const normalizeEmail = (value: string) => String(value || '').trim().toLowerCase();
 const buildFallbackSchoolId = (email: string) => {
   const base = normalizeEmail(email)
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `local-${base || 'school'}`;
+    .split('@')[0]
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return `school-${base || 'school'}`;
 };
 const splitToList = (value: unknown) =>
   String(value || '')

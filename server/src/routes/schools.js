@@ -52,9 +52,12 @@ const buildSchoolsRouter = () => {
     );
   const buildFallbackSchoolId = (email) => {
     const base = normalizeEmail(email)
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    return `local-${base || 'school'}`;
+      .split('@')[0]
+      .replace(/[^a-z0-9._-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60);
+    return `school-${base || 'school'}`;
   };
   const isAdminOwnSchool = (actor, profile) => {
     const actorEmail = normalizeEmail(actor?.email);

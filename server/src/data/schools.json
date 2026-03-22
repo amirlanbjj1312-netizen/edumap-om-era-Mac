@@ -1,6 +1,6 @@
 [
   {
-    "school_id": "local-amirlanbjj1312-gmail-com",
+    "school_id": "school-amirlanbjj1312-gmail-com",
     "basic_info": {
       "name": {
         "ru": "",
@@ -1692,7 +1692,7 @@
     }
   },
   {
-    "school_id": "local-quantumsch1-edumap-kz",
+    "school_id": "school-quantumsch1-edumap-kz",
     "basic_info": {
       "name": {
         "ru": "",
@@ -1894,7 +1894,7 @@
     "media": {
       "photos": [],
       "videos": [],
-      "logo": "https://jjjgagtqjvewqjczkbrg.supabase.co/storage/v1/object/public/school%20media/schools/local-quantumsch1-edumap-kz/logo/1773483395280-images-cropped.png",
+      "logo": "",
       "logo_local_uri": "",
       "certificates": [],
       "social_links": {

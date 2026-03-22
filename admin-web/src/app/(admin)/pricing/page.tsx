@@ -180,10 +180,13 @@ const formatKzt = (value: number) =>
 const normalizeEmail = (value: unknown) => String(value || '').trim().toLowerCase();
 
 const buildFallbackSchoolId = (email: string) =>
-  `local-${email
+  `school-${String(email || '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'school'}`;
+    .split('@')[0]
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'school'}`;
 
 export default function PricingPage() {
   const { locale } = useAdminLocale();

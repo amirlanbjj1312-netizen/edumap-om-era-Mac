@@ -86,13 +86,16 @@ const isSchoolProfileFilled = (profile: any) => {
   return true;
 };
 const toLocalSchoolIdFromEmail = (email: string) => {
-  const normalized = String(email || '')
+  const localPart = String(email || '')
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .split('@')[0];
+  const normalized = localPart
+    .replace(/[^a-z0-9._-]/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return normalized ? `local-${normalized}` : '';
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return normalized ? `school-${normalized}` : '';
 };
 const inferSchoolIdFromAdminEmail = (email: string) => {
   const localPart = String(email || '')

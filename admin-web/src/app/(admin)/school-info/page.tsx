@@ -2298,7 +2298,7 @@ export default function SchoolInfoPage() {
           ? resolveSessionSchoolId((await supabase.auth.getSession()).data.session?.user)
           : '';
       const ensuredId =
-        currentProfile.school_id || schoolId || sessionSchoolId || fallbackSchoolId || 'local-school';
+        currentProfile.school_id || schoolId || sessionSchoolId || fallbackSchoolId || 'school-unassigned';
       const normalizedFeeRules = buildFeeRulesFromFinance(currentProfile.finance);
       const derivedGradeFeeMap = buildGradeFeeMapFromRules(normalizedFeeRules);
       const derivedMonthlyFee = normalizedFeeRules.length

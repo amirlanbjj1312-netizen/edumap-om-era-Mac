@@ -1,9 +1,12 @@
 export const buildFallbackSchoolId = (value?: string) => {
-  const base = (value || 'school')
-    .toString()
+  const localPart = String(value || 'school')
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `local-${base || 'school'}`;
+    .split('@')[0];
+  const base = localPart
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return `school-${base || 'school'}`;
 };
