@@ -565,13 +565,11 @@ export default function ParentSchoolsMapPage() {
 
   const filteredRows = useMemo(() => {
     return rowsWithCoords.filter((row) => {
-      const schoolId = String(row.school_id || '').trim();
       const city = toText(row.basic_info?.city);
       const district = toText(row.basic_info?.district);
       const schoolTypeValues = getSchoolTypes(row.basic_info?.type);
       const monthlyFee = getMonthlyFee(row);
 
-      const focusedOk = !isEmbed || !focusedSchoolId || schoolId === focusedSchoolId;
       const cityOk = !cityFilter || city === cityFilter;
       const districtOk = !districtFilter || district === districtFilter;
       const typeOk = !typeFilter || schoolTypeValues.includes(typeFilter);
@@ -584,7 +582,6 @@ export default function ParentSchoolsMapPage() {
         selectedLanguages.some((lang) => schoolLanguages.some((schoolLang) => schoolLang.includes(normalize(lang))));
 
       return (
-        focusedOk &&
         cityOk &&
         districtOk &&
         typeOk &&
@@ -601,8 +598,6 @@ export default function ParentSchoolsMapPage() {
     maxPrivatePrice,
     selectedLanguages,
     gradeRangeFilter,
-    isEmbed,
-    focusedSchoolId,
   ]);
 
   const schools = useMemo(() => {
