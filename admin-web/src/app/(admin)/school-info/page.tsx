@@ -160,6 +160,14 @@ const parseGradeRange = (value: string) => {
 
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
+const resolveSessionSchoolId = (user: any) => {
+  const appSchoolId =
+    typeof user?.app_metadata?.school_id === 'string' ? user.app_metadata.school_id.trim() : '';
+  if (appSchoolId) return appSchoolId;
+  const userSchoolId =
+    typeof user?.user_metadata?.school_id === 'string' ? user.user_metadata.school_id.trim() : '';
+  return userSchoolId;
+};
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
 const SCHOOL_INFO_DRAFT_STORAGE_PREFIX = 'EDUMAP_SCHOOL_INFO_DRAFT';
 
@@ -2014,12 +2022,13 @@ export default function SchoolInfoPage() {
 
       const sessionEmail = normalizeEmail(session.user.email || '');
       const fallbackId = buildFallbackSchoolId(sessionEmail);
+      const assignedSchoolId = resolveSessionSchoolId(session.user);
       const selectedSchoolId =
         typeof window !== 'undefined' &&
         (normalizedRole === 'moderator' || normalizedRole === 'superadmin')
           ? localStorage.getItem(SELECTED_SCHOOL_STORAGE_KEY) || ''
           : '';
-      const targetId = selectedSchoolId || fallbackId;
+      const targetId = selectedSchoolId || assignedSchoolId || fallbackId;
       const nextDraftKey = `${SCHOOL_INFO_DRAFT_STORAGE_PREFIX}:${targetId}`;
       setFallbackSchoolId(targetId);
       setDraftKey(nextDraftKey);
@@ -2028,6 +2037,7 @@ export default function SchoolInfoPage() {
         const result = await loadSchools();
         const existing =
           result.data.find((item: any) => item?.school_id === selectedSchoolId) ||
+          result.data.find((item: any) => item?.school_id === assignedSchoolId) ||
           result.data.find((item: any) => {
           const itemEmail = normalizeEmail(item?.basic_info?.email);
           return item?.school_id === fallbackId || (itemEmail && itemEmail === sessionEmail);
@@ -2079,7 +2089,7 @@ export default function SchoolInfoPage() {
             }
           }
           if (!nextProfile.school_id) {
-            nextProfile.school_id = fallbackId;
+            nextProfile.school_id = assignedSchoolId || fallbackId;
           }
 
           if (!isCustomSchoolContext) {
@@ -2199,7 +2209,7 @@ export default function SchoolInfoPage() {
       } catch (error) {
         if (!ignore) {
           draftSyncEnabledRef.current = false;
-          setProfile(createEmptySchoolProfile({ school_id: fallbackId }));
+          setProfile(createEmptySchoolProfile({ school_id: assignedSchoolId || fallbackId }));
           setState('error');
           setMessage(t('Не удалось загрузить данные.'));
         }
@@ -2279,7 +2289,12 @@ export default function SchoolInfoPage() {
     try {
       const education = currentProfile.education || ({} as SchoolProfile['education']);
       const curricula = education.curricula || ({} as SchoolProfile['education']['curricula']);
-      const ensuredId = currentProfile.school_id || schoolId || fallbackSchoolId || 'local-school';
+      const sessionSchoolId =
+        typeof window !== 'undefined'
+          ? resolveSessionSchoolId((await supabase.auth.getSession()).data.session?.user)
+          : '';
+      const ensuredId =
+        currentProfile.school_id || schoolId || sessionSchoolId || fallbackSchoolId || 'local-school';
       const normalizedFeeRules = buildFeeRulesFromFinance(currentProfile.finance);
       const derivedGradeFeeMap = buildGradeFeeMapFromRules(normalizedFeeRules);
       const derivedMonthlyFee = normalizedFeeRules.length

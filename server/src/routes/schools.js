@@ -44,7 +44,12 @@ const buildSchoolsRouter = () => {
     }
     return null;
   };
+  const normalizeText = (value) => String(value || '').trim();
   const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+  const getActorAssignedSchoolId = (actor) =>
+    normalizeText(
+      actor?.app_metadata?.school_id || actor?.user_metadata?.school_id || ''
+    );
   const buildFallbackSchoolId = (email) => {
     const base = normalizeEmail(email)
       .replace(/[^a-z0-9]+/g, '-')
@@ -56,8 +61,13 @@ const buildSchoolsRouter = () => {
     if (!actorEmail) return false;
     const schoolEmail = normalizeEmail(profile?.basic_info?.email);
     const schoolId = String(profile?.school_id || '').trim().toLowerCase();
+    const assignedSchoolId = getActorAssignedSchoolId(actor).toLowerCase();
     const fallbackSchoolId = buildFallbackSchoolId(actorEmail);
-    return schoolEmail === actorEmail || schoolId === fallbackSchoolId;
+    return (
+      schoolEmail === actorEmail ||
+      (assignedSchoolId && schoolId === assignedSchoolId) ||
+      schoolId === fallbackSchoolId
+    );
   };
 
   const ROLE_PRIORITY = {
@@ -499,20 +509,25 @@ const buildSchoolsRouter = () => {
       const actor = actorPayload.user;
       const actorRole = actorPayload.role;
       const profile = validateSchoolPayload(req.body || {});
-      const schoolId = String(profile?.school_id || '').trim();
+      const assignedSchoolId = getActorAssignedSchoolId(actor);
+      const normalizedProfile =
+        actorRole === 'admin' && assignedSchoolId
+          ? { ...profile, school_id: assignedSchoolId }
+          : profile;
+      const schoolId = String(normalizedProfile?.school_id || '').trim();
 
       if (actorRole === 'admin') {
         const schools = await readStore();
         const existing = schools.find((item) => item?.school_id === schoolId);
         const isOwn = existing
           ? isAdminOwnSchool(actor, existing)
-          : isAdminOwnSchool(actor, profile);
+          : isAdminOwnSchool(actor, normalizedProfile);
         if (!isOwn) {
           return res.status(403).json({ error: 'Admin can translate only own school profile' });
         }
       }
 
-      const translated = await autofillMissingSchoolLocales(config, profile);
+      const translated = await autofillMissingSchoolLocales(config, normalizedProfile);
       res.json({ data: translated });
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -529,23 +544,28 @@ const buildSchoolsRouter = () => {
       const actor = actorPayload.user;
       const actorRole = actorPayload.role;
       const profile = validateSchoolPayload(req.body || {});
-      const schoolId = String(profile?.school_id || '').trim();
+      const assignedSchoolId = getActorAssignedSchoolId(actor);
+      const normalizedProfile =
+        actorRole === 'admin' && assignedSchoolId
+          ? { ...profile, school_id: assignedSchoolId }
+          : profile;
+      const schoolId = String(normalizedProfile?.school_id || '').trim();
 
       if (actorRole === 'admin') {
         const schools = await readStore();
         const existing = schools.find((item) => item?.school_id === schoolId);
         const isOwn = existing
           ? isAdminOwnSchool(actor, existing)
-          : isAdminOwnSchool(actor, profile);
+          : isAdminOwnSchool(actor, normalizedProfile);
         if (!isOwn) {
           return res
             .status(403)
             .json({ error: 'Admin can update only own school profile' });
         }
       }
-      validatePlanContentLimits(profile);
+      validatePlanContentLimits(normalizedProfile);
 
-      const saved = await upsertSchool(profile);
+      const saved = await upsertSchool(normalizedProfile);
       res.json({ data: saved });
     } catch (error) {
       if (error instanceof ValidationError) {

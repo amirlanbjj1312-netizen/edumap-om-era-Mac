@@ -28,6 +28,14 @@ type StatusState = 'idle' | 'saving' | 'saved' | 'error' | 'deleting' | 'deleted
 const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const normalizeEmail = (value: unknown) =>
   typeof value === 'string' ? value.trim().toLowerCase() : '';
+const resolveSessionSchoolId = (user: any) => {
+  const appSchoolId =
+    typeof user?.app_metadata?.school_id === 'string' ? user.app_metadata.school_id.trim() : '';
+  if (appSchoolId) return appSchoolId;
+  const userSchoolId =
+    typeof user?.user_metadata?.school_id === 'string' ? user.user_metadata.school_id.trim() : '';
+  return userSchoolId;
+};
 
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
@@ -160,8 +168,10 @@ export default function ProfilePage() {
 
     // Sync key profile fields into school profile used by school-info/parent views.
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user;
       const email = normalizeEmail(form.email);
-      const schoolId = buildFallbackSchoolId(email);
+      const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
       const result = await loadSchools();
       const existing = result.data.find((item: any) => {
         const itemEmail = normalizeEmail(item?.basic_info?.email);
@@ -230,8 +240,10 @@ export default function ProfilePage() {
     setMessage('');
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user;
       const email = normalizeEmail(form.email);
-      const schoolId = buildFallbackSchoolId(email);
+      const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
       const result = await loadSchools();
       const existing = result.data.find((item: any) => {
         const itemEmail = normalizeEmail(item?.basic_info?.email);
