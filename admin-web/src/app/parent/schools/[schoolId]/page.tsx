@@ -961,6 +961,13 @@ export default function ParentSchoolDetailsPage() {
       return [city, district, address].filter(Boolean).join(', ');
     })
     .filter(Boolean);
+  const hasBranchPoints = additionalLocationsRaw.some((item) => {
+    const coordinates =
+      item?.coordinates && typeof item.coordinates === 'object' ? item.coordinates : {};
+    const branchLat = toNumber((coordinates as { latitude?: unknown }).latitude);
+    const branchLng = toNumber((coordinates as { longitude?: unknown }).longitude);
+    return branchLat !== null && branchLng !== null;
+  });
   const price = formatSchoolFee(
     {
       finance: {
@@ -991,9 +998,9 @@ export default function ParentSchoolDetailsPage() {
   const image = pickImage(school);
   const lat = toNumber(getIn(school, 'basic_info.coordinates.latitude'));
   const lng = toNumber(getIn(school, 'basic_info.coordinates.longitude'));
-  const hasMap = lat !== null && lng !== null;
-  const mapSrc = hasMap
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${(lng as number) - 0.06}%2C${(lat as number) - 0.04}%2C${(lng as number) + 0.06}%2C${(lat as number) + 0.04}&layer=mapnik&marker=${lat}%2C${lng}`
+  const hasMap = (lat !== null && lng !== null) || hasBranchPoints;
+  const mapSrc = school?.school_id
+    ? `/parent/schools/map?focus=${encodeURIComponent(String(school.school_id))}&back=${encodeURIComponent(`/parent/schools/${encodeURIComponent(String(school.school_id))}`)}&embed=1`
     : '';
   const fullMapHref = school?.school_id
     ? `/parent/schools/map?focus=${encodeURIComponent(String(school.school_id))}&back=${encodeURIComponent(`/parent/schools/${encodeURIComponent(String(school.school_id))}`)}`
@@ -1018,10 +1025,10 @@ export default function ParentSchoolDetailsPage() {
     ...additionalAddresses.map((value, index) => ({
       label:
         locale === 'en'
-          ? `Address ${index + 2}`
+          ? `Branch ${index + 1}`
           : locale === 'kk'
-            ? `${index + 2}-мекенжай`
-            : `Адрес ${index + 2}`,
+            ? `${index + 1}-филиал`
+            : `Филиал ${index + 1}`,
       value,
     })),
     ...contactItems.map((item) => ({ label: item.label, value: item.value })),

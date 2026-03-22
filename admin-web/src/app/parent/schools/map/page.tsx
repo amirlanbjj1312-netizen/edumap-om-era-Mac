@@ -20,6 +20,15 @@ type SchoolRow = {
       latitude?: unknown;
       longitude?: unknown;
     };
+    additional_locations?: Array<{
+      city?: unknown;
+      district?: unknown;
+      address?: unknown;
+      coordinates?: {
+        latitude?: unknown;
+        longitude?: unknown;
+      };
+    }>;
   };
   education?: {
     languages?: unknown;
@@ -76,6 +85,8 @@ type MapSchool = {
   city: string;
   lat: number;
   lng: number;
+  kind?: 'main' | 'branch';
+  schoolId?: string;
 };
 
 declare global {
@@ -484,6 +495,7 @@ export default function ParentSchoolsMapPage() {
   const markersLayerRef = useRef<LeafletLayer | null>(null);
 
   const focusedSchoolId = useMemo(() => searchParams.get('focus') || '', [searchParams]);
+  const isEmbed = useMemo(() => searchParams.get('embed') === '1', [searchParams]);
   const backHref = useMemo(() => {
     const back = searchParams.get('back') || '';
     return back.startsWith('/parent/') ? back : '/parent/schools';
@@ -590,20 +602,61 @@ export default function ParentSchoolsMapPage() {
 
   const schools = useMemo(() => {
     return filteredRows
-      .map((row) => {
+      .flatMap((row) => {
         const lat = toFloat(row.basic_info?.coordinates?.latitude);
         const lng = toFloat(row.basic_info?.coordinates?.longitude);
-        if (!hasValidCoordinates(lat, lng)) return null;
-        return {
-          id: row.school_id || `${lat}-${lng}`,
-          name: toText(row.basic_info?.display_name) || toText(row.basic_info?.name) || schoolDefaultText,
-          city: localizeOption(
-            toText(row.basic_info?.city) || toText(row.basic_info?.district) || '',
-            locale
-          ),
-          lat,
-          lng,
-        };
+        const schoolId = row.school_id || '';
+        const schoolName =
+          toText(row.basic_info?.display_name) || toText(row.basic_info?.name) || schoolDefaultText;
+        const schoolCity = localizeOption(
+          toText(row.basic_info?.city) || toText(row.basic_info?.district) || '',
+          locale
+        );
+        const points: MapSchool[] = [];
+        if (hasValidCoordinates(lat, lng)) {
+          points.push({
+            id: schoolId || `${lat}-${lng}`,
+            name: schoolName,
+            city: schoolCity,
+            lat: lat as number,
+            lng: lng as number,
+            kind: 'main',
+            schoolId,
+          });
+        }
+        if (focusedSchoolId && schoolId === focusedSchoolId) {
+          const additionalLocations = Array.isArray(row.basic_info?.additional_locations)
+            ? row.basic_info.additional_locations
+            : [];
+          additionalLocations.forEach((location, index) => {
+            const coordinates =
+              location?.coordinates && typeof location.coordinates === 'object'
+                ? location.coordinates
+                : {};
+            const branchLat = toFloat((coordinates as { latitude?: unknown }).latitude);
+            const branchLng = toFloat((coordinates as { longitude?: unknown }).longitude);
+            if (!hasValidCoordinates(branchLat, branchLng)) return;
+            const branchCity = localizeOption(
+              toText(location?.city) || toText(location?.district) || '',
+              locale
+            );
+            points.push({
+              id: `${schoolId || schoolName}-branch-${index + 1}`,
+              name:
+                locale === 'en'
+                  ? `${schoolName} - Branch ${index + 1}`
+                  : locale === 'kk'
+                    ? `${schoolName} - ${index + 1}-филиал`
+                    : `${schoolName} - Филиал ${index + 1}`,
+              city: branchCity,
+              lat: branchLat as number,
+              lng: branchLng as number,
+              kind: 'branch',
+              schoolId,
+            });
+          });
+        }
+        return points;
       })
       .filter(Boolean) as MapSchool[];
   }, [filteredRows, locale, schoolDefaultText]);
@@ -667,7 +720,12 @@ export default function ParentSchoolsMapPage() {
 
     schools.forEach((school) => {
       const isFocused = focusedSchoolId && school.id === focusedSchoolId;
-      const markerIcon = isFocused && blueIcon ? blueIcon : orangeIcon;
+      const markerIcon =
+        school.kind === 'branch'
+          ? blueIcon
+          : isFocused && blueIcon
+            ? blueIcon
+            : orangeIcon;
       const marker = markerIcon
         ? (L.marker as unknown as (point: [number, number], options?: { icon?: unknown }) => LeafletMarker)(
             [school.lat, school.lng],
@@ -691,14 +749,14 @@ export default function ParentSchoolsMapPage() {
       mapRef.current.setView([48.02, 66.92], 5);
     }
     if (focusedSchoolId) {
-      const focused = schools.find((item) => item.id === focusedSchoolId);
+      const focused = schools.find((item) => item.id === focusedSchoolId || item.schoolId === focusedSchoolId);
       if (focused) mapRef.current.setView([focused.lat, focused.lng], 12);
     }
   }, [ready, schools, focusedSchoolId, noCityText]);
 
   return (
     <div className="schools-map-fullscreen-page">
-      {mobileFiltersOpen ? (
+      {!isEmbed && mobileFiltersOpen ? (
         <button
           type="button"
           className="schools-map-mobile-backdrop"
@@ -706,6 +764,7 @@ export default function ParentSchoolsMapPage() {
           onClick={() => setMobileFiltersOpen(false)}
         />
       ) : null}
+      {!isEmbed ? (
       <button
         type="button"
         aria-label={ft('closeMap')}
@@ -733,7 +792,9 @@ export default function ParentSchoolsMapPage() {
         <span style={{ fontSize: 24, lineHeight: 1 }}>×</span>
         <span>{ft('closeMap')}</span>
       </button>
+      ) : null}
 
+      {!isEmbed ? (
       <button
         type="button"
         className="schools-map-filter-fab"
@@ -741,7 +802,9 @@ export default function ParentSchoolsMapPage() {
       >
         {ft('filters')}
       </button>
+      ) : null}
 
+      {!isEmbed ? (
       <aside className={`schools-map-filters-panel${mobileFiltersOpen ? ' is-open' : ''}`}>
         <div className="schools-filter-card">
           <div className="schools-map-mobile-filter-head">
@@ -847,6 +910,7 @@ export default function ParentSchoolsMapPage() {
           {mapError ? <p style={{ color: '#b91c1c', margin: '8px 0 0' }}>{mapError}</p> : null}
         </div>
       </aside>
+      ) : null}
 
       <div ref={mapHostRef} className="schools-map-fullscreen-canvas" />
     </div>

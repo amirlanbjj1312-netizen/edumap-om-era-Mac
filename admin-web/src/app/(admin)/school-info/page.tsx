@@ -385,6 +385,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Скидки: { en: 'Discounts', kk: 'Жеңілдіктер' },
   Гранты: { en: 'Grants', kk: 'Гранттар' },
   Филиалы: { en: 'Branches', kk: 'Филиалдар' },
+  'Основной адрес': { en: 'Main address', kk: 'Негізгі мекенжай' },
   Филиал: { en: 'Branch', kk: 'Филиал' },
   'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.':
     {
@@ -1404,6 +1405,10 @@ export default function SchoolInfoPage() {
     const match = CITY_OPTIONS.find((option) => option.name === cityValue);
     return match?.districts ?? [];
   }, [cityValue]);
+  const getDistrictOptionsForCity = (city: string) => {
+    const match = CITY_OPTIONS.find((option) => option.name === city);
+    return match?.districts ?? [];
+  };
   const languagesValue = useMemo(
     () => normalizeListValue(getDeep(profile, 'education.languages', '')),
     [profile]
@@ -2591,46 +2596,100 @@ export default function SchoolInfoPage() {
                     ]}
                   />
                 </FieldRow>
-                <FieldRow>
-                  <Select
-                    label="Город"
-                    value={getDeep(profile, 'basic_info.city')}
-                    onChange={(value: string) => updateField('basic_info.city', value)}
-                    options={[
-                      { value: '', label: t('Не выбрано') },
-                      ...CITY_NAMES.map((item) => ({
-                        value: item,
-                        label: translateOption(item, contentLocale),
-                      })),
-                    ]}
-                  />
-                  <Select
-                    label="Район"
-                    value={getDeep(profile, 'basic_info.district')}
-                    onChange={(value: string) => updateField('basic_info.district', value)}
-                    options={
-                      availableDistricts.length
-                        ? [
-                            { value: '', label: t('Не выбрано') },
-                            ...availableDistricts.map((item) => ({
-                              value: item,
-                              label: translateOption(item, contentLocale),
-                            })),
-                          ]
-                        : [{ value: '', label: t('Сначала выберите город') }]
-                    }
-                  />
-                </FieldRow>
-                <FieldRow>
-                  <Input
-                    label="Адрес"
-                    value={getDeep(profile, localePath('basic_info.address'))}
-                    onChange={(value: string) =>
-                      updateField(localePath('basic_info.address'), value)
-                    }
-                  />
-                </FieldRow>
                 <div style={{ display: 'grid', gap: 12 }}>
+                  <div
+                    style={{
+                      border: '1px solid rgba(120,106,255,0.18)',
+                      borderRadius: 14,
+                      padding: 14,
+                      display: 'grid',
+                      gap: 10,
+                    }}
+                  >
+                    <strong>{t('Основной адрес')}</strong>
+                    <FieldRow>
+                      <Select
+                        label="Город"
+                        value={getDeep(profile, 'basic_info.city')}
+                        onChange={(value: string) => updateField('basic_info.city', value)}
+                        options={[
+                          { value: '', label: t('Не выбрано') },
+                          ...CITY_NAMES.map((item) => ({
+                            value: item,
+                            label: translateOption(item, contentLocale),
+                          })),
+                        ]}
+                      />
+                      <Select
+                        label="Район"
+                        value={getDeep(profile, 'basic_info.district')}
+                        onChange={(value: string) => updateField('basic_info.district', value)}
+                        options={
+                          availableDistricts.length
+                            ? [
+                                { value: '', label: t('Не выбрано') },
+                                ...availableDistricts.map((item) => ({
+                                  value: item,
+                                  label: translateOption(item, contentLocale),
+                                })),
+                              ]
+                            : [{ value: '', label: t('Сначала выберите город') }]
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Input
+                        label="Адрес"
+                        value={getDeep(profile, localePath('basic_info.address'))}
+                        onChange={(value: string) =>
+                          updateField(localePath('basic_info.address'), value)
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow>
+                      <Input
+                        label="Широта"
+                        value={getDeep(profile, 'basic_info.coordinates.latitude')}
+                        onChange={(value: string) =>
+                          updateField('basic_info.coordinates.latitude', value)
+                        }
+                      />
+                      <Input
+                        label="Долгота"
+                        value={getDeep(profile, 'basic_info.coordinates.longitude')}
+                        onChange={(value: string) =>
+                          updateField('basic_info.coordinates.longitude', value)
+                        }
+                      />
+                    </FieldRow>
+                  </div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <strong>{t('Филиалы')}</strong>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                        color: 'rgba(90, 90, 120, 0.92)',
+                      }}
+                    >
+                      {t(
+                        'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.'
+                      )}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        lineHeight: 1.4,
+                        color: 'rgba(90, 90, 120, 0.82)',
+                      }}
+                    >
+                      {t(
+                        'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.'
+                      )}
+                    </p>
+                  </div>
                   {additionalLocations.map((location, index) => (
                     <div
                       key={String((location as any).id || index)}
@@ -2660,18 +2719,45 @@ export default function SchoolInfoPage() {
                         </button>
                       </div>
                       <FieldRow>
-                        <Input
+                        <Select
                           label="Город"
                           value={String((location as any).city || '')}
                           onChange={(value: string) =>
-                            updateAdditionalLocation(index, { city: value })
+                            updateAdditionalLocation(index, {
+                              city: value,
+                              district: getDistrictOptionsForCity(value).includes(
+                                String((location as any).district || '')
+                              )
+                                ? String((location as any).district || '')
+                                : '',
+                            })
                           }
+                          options={[
+                            { value: '', label: t('Не выбрано') },
+                            ...CITY_NAMES.map((item) => ({
+                              value: item,
+                              label: translateOption(item, contentLocale),
+                            })),
+                          ]}
                         />
-                        <Input
+                        <Select
                           label="Район"
                           value={String((location as any).district || '')}
                           onChange={(value: string) =>
                             updateAdditionalLocation(index, { district: value })
+                          }
+                          options={
+                            getDistrictOptionsForCity(String((location as any).city || '')).length
+                              ? [
+                                  { value: '', label: t('Не выбрано') },
+                                  ...getDistrictOptionsForCity(String((location as any).city || '')).map(
+                                    (item) => ({
+                                      value: item,
+                                      label: translateOption(item, contentLocale),
+                                    })
+                                  ),
+                                ]
+                              : [{ value: '', label: t('Сначала выберите город') }]
                           }
                         />
                       </FieldRow>
@@ -2717,33 +2803,6 @@ export default function SchoolInfoPage() {
                       </FieldRow>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <strong>{t('Филиалы')}</strong>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 14,
-                        lineHeight: 1.5,
-                        color: 'rgba(90, 90, 120, 0.92)',
-                      }}
-                    >
-                      {t(
-                        'У школы есть филиалы? Добавьте второй и третий адрес. Для каждого филиала можно указать свой город, район, адрес, широту и долготу.'
-                      )}
-                    </p>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 13,
-                        lineHeight: 1.4,
-                        color: 'rgba(90, 90, 120, 0.82)',
-                      }}
-                    >
-                      {t(
-                        'Можно добавить до 2 филиалов. Вместе с основным адресом получится до 3 адресов школы.'
-                      )}
-                    </p>
-                  </div>
                   {additionalLocations.length < 2 ? (
                     <div>
                       <button
@@ -2802,22 +2861,6 @@ export default function SchoolInfoPage() {
                     />
                   </FieldRow>
                 ) : null}
-                <FieldRow>
-                  <Input
-                    label="Широта"
-                    value={getDeep(profile, 'basic_info.coordinates.latitude')}
-                    onChange={(value: string) =>
-                      updateField('basic_info.coordinates.latitude', value)
-                    }
-                  />
-                  <Input
-                    label="Долгота"
-                    value={getDeep(profile, 'basic_info.coordinates.longitude')}
-                    onChange={(value: string) =>
-                      updateField('basic_info.coordinates.longitude', value)
-                    }
-                  />
-                </FieldRow>
               </Section>
 
               <Section title="Лицензия">
