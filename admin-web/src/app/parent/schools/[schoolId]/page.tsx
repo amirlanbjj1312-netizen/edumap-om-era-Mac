@@ -1033,6 +1033,11 @@ export default function ParentSchoolDetailsPage() {
     })),
     ...contactItems.map((item) => ({ label: item.label, value: item.value })),
   ];
+  const addressRows = contactRows.filter((row) => {
+    const normalized = String(row.label || '').toLowerCase();
+    return normalized.includes('адрес') || normalized.includes('branch') || normalized.includes('филиал');
+  });
+  const otherContactRows = contactRows.filter((row) => !addressRows.includes(row));
   const educationLanguages = localizeUniqueList(getIn(school, 'education.languages'), locale);
   const educationPrograms = Array.from(
     new Set(
@@ -1766,7 +1771,22 @@ export default function ParentSchoolDetailsPage() {
                       </div>
                     ) : section.key === 'basic_info' ? (
                       <div className="school-service-list">
-                        {contactRows.map((row, index) => (
+                        {addressRows.length ? (
+                          <div className="school-address-grid">
+                            {addressRows.slice(0, 3).map((row, index) => (
+                              <div
+                                key={`${row.label}-${index}`}
+                                className={`school-service-item school-address-item${
+                                  index === 2 ? ' is-full-width' : ''
+                                }`}
+                              >
+                                <p>{row.label}</p>
+                                <strong>{row.value}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {otherContactRows.map((row, index) => (
                           <div key={`${row.label}-${index}`} className="school-service-item">
                             <p>{row.label}</p>
                             {contactItems.find((item) => item.label === row.label && item.value === row.value)?.href ? (

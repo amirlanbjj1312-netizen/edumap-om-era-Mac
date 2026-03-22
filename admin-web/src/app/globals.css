@@ -2842,6 +2842,16 @@ a {
   gap: 10px;
 }
 
+.school-address-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-address-item.is-full-width {
+  grid-column: 1 / -1;
+}
+
 .school-service-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
