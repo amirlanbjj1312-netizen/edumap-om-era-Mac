@@ -26,7 +26,9 @@ type SchoolRow = {
     school_subtype?: unknown;
     city?: unknown;
     district?: unknown;
+    address?: unknown;
     phone?: unknown;
+    additional_locations?: unknown;
     license_details?: {
       number?: unknown;
     };
@@ -1517,6 +1519,17 @@ export default function ParentSchoolsPage() {
               const formattedFee = formatSchoolFee(row, locale, onRequest);
               const schoolId = String(row.school_id || '');
               const isFavorite = schoolId ? favoriteIds.includes(schoolId) : false;
+              const mainAddress = toText(row.basic_info?.address).trim();
+              const branchAddresses = Array.isArray((row.basic_info as any)?.additional_locations)
+                ? ((row.basic_info as any).additional_locations as Array<Record<string, unknown>>)
+                    .map((item) => {
+                      const city = localizeOption(toText(item?.city).trim());
+                      const district = localizeOption(toText(item?.district).trim());
+                      const address = toText(item?.address).trim();
+                      return [city, district, address].filter(Boolean).join(', ');
+                    })
+                    .filter(Boolean)
+                : [];
               return (
                 <Link
                   key={row.school_id || String(index)}
@@ -1558,6 +1571,48 @@ export default function ParentSchoolsPage() {
                           <p className="market-school-price">
                             {priceLabel}:{' '}
                             <span className={guest ? 'guest-price-blur' : ''}>{formattedFee}</span>
+                          </p>
+                        ) : null}
+                        {mainAddress ? (
+                          <div className="market-school-address-list">
+                            <p className="market-school-address-row">
+                              <strong>{locale === 'en' ? 'Address' : locale === 'kk' ? 'Мекенжай' : 'Адрес'}:</strong> {mainAddress}
+                            </p>
+                            {branchAddresses.map((address, addressIndex) => (
+                              <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
+                                <strong>
+                                  {locale === 'en'
+                                    ? `Branch ${addressIndex + 1}`
+                                    : locale === 'kk'
+                                      ? `${addressIndex + 1}-филиал`
+                                      : `Филиал ${addressIndex + 1}`}
+                                  :
+                                </strong>{' '}
+                                {address}
+                              </p>
+                            ))}
+                          </div>
+                        ) : branchAddresses.length ? (
+                          <div className="market-school-address-list">
+                            {branchAddresses.map((address, addressIndex) => (
+                              <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
+                                <strong>
+                                  {locale === 'en'
+                                    ? `Branch ${addressIndex + 1}`
+                                    : locale === 'kk'
+                                      ? `${addressIndex + 1}-филиал`
+                                      : `Филиал ${addressIndex + 1}`}
+                                  :
+                                </strong>{' '}
+                                {address}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+                        {schoolId ? (
+                          <p className="market-school-map-link">
+                            {locale === 'en' ? 'Map:' : locale === 'kk' ? 'Карта:' : 'Карта:'}{' '}
+                            <span>{locale === 'en' ? 'open school map' : locale === 'kk' ? 'мектеп картасын ашу' : 'открыть карту школы'}</span>
                           </p>
                         ) : null}
                       </div>

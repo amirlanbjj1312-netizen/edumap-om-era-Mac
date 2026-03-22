@@ -2218,6 +2218,30 @@ a {
   font-size: 13px;
 }
 
+.market-school-address-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.market-school-address-row {
+  margin: 0;
+  color: #4a5a80;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.market-school-address-row strong {
+  color: #1f2a44;
+}
+
+.market-school-map-link {
+  margin: 8px 0 0;
+  color: #2d62d8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .parent-school-meta {
   margin-top: 10px;
   display: flex;
