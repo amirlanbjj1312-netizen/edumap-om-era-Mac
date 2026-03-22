@@ -624,38 +624,36 @@ export default function ParentSchoolsMapPage() {
             schoolId,
           });
         }
-        if (focusedSchoolId && schoolId === focusedSchoolId) {
-          const additionalLocations = Array.isArray(row.basic_info?.additional_locations)
-            ? row.basic_info.additional_locations
-            : [];
-          additionalLocations.forEach((location, index) => {
-            const coordinates =
-              location?.coordinates && typeof location.coordinates === 'object'
-                ? location.coordinates
-                : {};
-            const branchLat = toFloat((coordinates as { latitude?: unknown }).latitude);
-            const branchLng = toFloat((coordinates as { longitude?: unknown }).longitude);
-            if (!hasValidCoordinates(branchLat, branchLng)) return;
-            const branchCity = localizeOption(
-              toText(location?.city) || toText(location?.district) || '',
-              locale
-            );
-            points.push({
-              id: `${schoolId || schoolName}-branch-${index + 1}`,
-              name:
-                locale === 'en'
-                  ? `${schoolName} - Branch ${index + 1}`
-                  : locale === 'kk'
-                    ? `${schoolName} - ${index + 1}-филиал`
-                    : `${schoolName} - Филиал ${index + 1}`,
-              city: branchCity,
-              lat: branchLat as number,
-              lng: branchLng as number,
-              kind: 'branch',
-              schoolId,
-            });
+        const additionalLocations = Array.isArray(row.basic_info?.additional_locations)
+          ? row.basic_info.additional_locations
+          : [];
+        additionalLocations.forEach((location, index) => {
+          const coordinates =
+            location?.coordinates && typeof location.coordinates === 'object'
+              ? location.coordinates
+              : {};
+          const branchLat = toFloat((coordinates as { latitude?: unknown }).latitude);
+          const branchLng = toFloat((coordinates as { longitude?: unknown }).longitude);
+          if (!hasValidCoordinates(branchLat, branchLng)) return;
+          const branchCity = localizeOption(
+            toText(location?.city) || toText(location?.district) || '',
+            locale
+          );
+          points.push({
+            id: `${schoolId || schoolName}-branch-${index + 1}`,
+            name:
+              locale === 'en'
+                ? `${schoolName} - Branch ${index + 1}`
+                : locale === 'kk'
+                  ? `${schoolName} - ${index + 1}-филиал`
+                  : `${schoolName} - Филиал ${index + 1}`,
+            city: branchCity,
+            lat: branchLat as number,
+            lng: branchLng as number,
+            kind: 'branch',
+            schoolId,
           });
-        }
+        });
         return points;
       })
       .filter(Boolean) as MapSchool[];
@@ -818,7 +816,7 @@ export default function ParentSchoolsMapPage() {
               ×
             </button>
           </div>
-          {!loading ? <p className="muted" style={{ marginTop: -4 }}>{ft('schoolsOnMap')}: {schools.length}</p> : null}
+          {!loading ? <p className="muted" style={{ marginTop: -4 }}>{ft('schoolsOnMap')}: {filteredRows.length}</p> : null}
           <label className="field">
             <span>{ft('city')}</span>
             <select className="input" value={cityFilter} onChange={(e) => {

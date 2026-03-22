@@ -1625,12 +1625,6 @@ export default function ParentSchoolsPage() {
                             ))}
                           </div>
                         ) : null}
-                        {schoolId ? (
-                          <p className="market-school-map-link">
-                            {locale === 'en' ? 'Map:' : locale === 'kk' ? 'Карта:' : 'Карта:'}{' '}
-                            <span>{locale === 'en' ? 'open school map' : locale === 'kk' ? 'мектеп картасын ашу' : 'открыть карту школы'}</span>
-                          </p>
-                        ) : null}
                       </div>
                       <div className="market-school-side-actions">
                         <div className="market-card-action-row">
