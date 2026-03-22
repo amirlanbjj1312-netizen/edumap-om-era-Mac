@@ -1530,6 +1530,8 @@ export default function ParentSchoolsPage() {
                     })
                     .filter(Boolean)
                 : [];
+              const visibleBranchAddresses = branchAddresses.slice(0, 1);
+              const totalAddressCount = (mainAddress ? 1 : 0) + visibleBranchAddresses.length;
               return (
                 <Link
                   key={row.school_id || String(index)}
@@ -1576,9 +1578,23 @@ export default function ParentSchoolsPage() {
                         {mainAddress ? (
                           <div className="market-school-address-list">
                             <p className="market-school-address-row">
-                              <strong>{locale === 'en' ? 'Branch 1' : locale === 'kk' ? '1-филиал' : 'Филиал 1'}:</strong> {mainAddress}
+                              <strong>
+                                {totalAddressCount <= 1
+                                  ? locale === 'en'
+                                    ? 'Address'
+                                    : locale === 'kk'
+                                      ? 'Мекенжай'
+                                      : 'Адрес'
+                                  : locale === 'en'
+                                    ? 'Branch 1'
+                                    : locale === 'kk'
+                                      ? '1-филиал'
+                                      : 'Филиал 1'}
+                                :
+                              </strong>{' '}
+                              {mainAddress}
                             </p>
-                            {branchAddresses.slice(0, 1).map((address, addressIndex) => (
+                            {visibleBranchAddresses.map((address, addressIndex) => (
                               <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
                                 <strong>
                                   {locale === 'en'
@@ -1592,9 +1608,9 @@ export default function ParentSchoolsPage() {
                               </p>
                             ))}
                           </div>
-                        ) : branchAddresses.length ? (
+                        ) : visibleBranchAddresses.length ? (
                           <div className="market-school-address-list">
-                            {branchAddresses.slice(0, 1).map((address, addressIndex) => (
+                            {visibleBranchAddresses.map((address, addressIndex) => (
                               <p key={`${schoolId}-branch-${addressIndex}`} className="market-school-address-row">
                                 <strong>
                                   {locale === 'en'

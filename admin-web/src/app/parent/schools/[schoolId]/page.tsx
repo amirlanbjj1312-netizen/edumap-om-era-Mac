@@ -1020,16 +1020,51 @@ export default function ParentSchoolDetailsPage() {
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
   ].filter((item) => item.value);
-  const contactRows = [
+  const visibleAdditionalAddresses = additionalAddresses.slice(0, 1);
+  const totalAddressCount = (addressLabel ? 1 : 0) + visibleAdditionalAddresses.length;
+  const factAddressRows = [
     ...(addressLabel
       ? [
           {
-            label: locale === 'en' ? 'Branch 1' : locale === 'kk' ? '1-филиал' : 'Филиал 1',
+            label:
+              totalAddressCount <= 1
+                ? ui.address
+                : locale === 'en'
+                  ? 'Branch 1'
+                  : locale === 'kk'
+                    ? '1-филиал'
+                    : 'Филиал 1',
             value: addressLabel,
           },
         ]
       : []),
-    ...additionalAddresses.slice(0, 1).map((value, index) => ({
+    ...visibleAdditionalAddresses.map((value, index) => ({
+      label:
+        locale === 'en'
+          ? `Branch ${index + 2}`
+          : locale === 'kk'
+            ? `${index + 2}-филиал`
+            : `Филиал ${index + 2}`,
+      value,
+    })),
+  ];
+  const contactRows = [
+    ...(addressLabel
+      ? [
+          {
+            label:
+              totalAddressCount <= 1
+                ? ui.address
+                : locale === 'en'
+                  ? 'Branch 1'
+                  : locale === 'kk'
+                    ? '1-филиал'
+                    : 'Филиал 1',
+            value: addressLabel,
+          },
+        ]
+      : []),
+    ...visibleAdditionalAddresses.map((value, index) => ({
       label:
         locale === 'en'
           ? `Branch ${index + 2}`
@@ -1597,7 +1632,14 @@ export default function ParentSchoolDetailsPage() {
             ) : null}
             <FactRow icon="city" label={ui.city} value={cityLabel} />
             {districtLabel ? <FactRow icon="district" label={ui.district} value={districtLabel} /> : null}
-            {addressLabel ? <FactRow icon="address" label={ui.address} value={addressLabel} /> : null}
+            {factAddressRows.map((row, index) => (
+              <FactRow
+                key={`${row.label}-${index}`}
+                icon="address"
+                label={row.label}
+                value={row.value}
+              />
+            ))}
           </section>
 
           {hasMap ? (
