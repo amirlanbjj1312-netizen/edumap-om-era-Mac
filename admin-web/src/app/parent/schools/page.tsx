@@ -382,13 +382,11 @@ const normalizeSchoolIdentity = (value: string): string =>
     .trim();
 
 const buildSchoolDedupeKey = (row: SchoolRow, locale: 'ru' | 'en' | 'kk'): string => {
-  const schoolId = toText(row.school_id).trim().toLowerCase();
-  if (schoolId) return `id:${schoolId}`;
-
   const brand = normalizeSchoolIdentity(getBrandTitle(row, locale));
   const city = normalizeSchoolIdentity(toText(row.basic_info?.city));
   const district = normalizeSchoolIdentity(toText(row.basic_info?.district));
-  return `meta:${brand}|${city}|${district}`;
+  const phone = normalizeSchoolIdentity(toText(row.basic_info?.phone));
+  return `meta:${brand}|${city}|${district}|${phone}`;
 };
 
 const dedupeSchoolRows = (rows: SchoolRow[], locale: 'ru' | 'en' | 'kk'): SchoolRow[] => {
