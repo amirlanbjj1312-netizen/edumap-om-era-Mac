@@ -718,7 +718,9 @@ export default function ParentSchoolsMapPage() {
     const bounds: Array<[number, number]> = [];
 
     schools.forEach((school) => {
-      const isFocused = activeFocusedSchoolId && school.id === activeFocusedSchoolId;
+      const isFocused =
+        Boolean(activeFocusedSchoolId) &&
+        (school.id === activeFocusedSchoolId || school.schoolId === activeFocusedSchoolId);
       const markerIcon =
         isFocused && blueIcon
           ? blueIcon
