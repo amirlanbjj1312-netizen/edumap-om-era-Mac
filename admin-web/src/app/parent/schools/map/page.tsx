@@ -496,7 +496,7 @@ export default function ParentSchoolsMapPage() {
 
   const focusedSchoolId = useMemo(() => searchParams.get('focus') || '', [searchParams]);
   const isEmbed = useMemo(() => searchParams.get('embed') === '1', [searchParams]);
-  const activeFocusedSchoolId = isEmbed ? focusedSchoolId : '';
+  const activeFocusedSchoolId = focusedSchoolId;
   const backHref = useMemo(() => {
     const back = searchParams.get('back') || '';
     return back.startsWith('/parent/') ? back : '/parent/schools';
