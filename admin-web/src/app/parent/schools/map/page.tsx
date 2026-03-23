@@ -496,6 +496,7 @@ export default function ParentSchoolsMapPage() {
 
   const focusedSchoolId = useMemo(() => searchParams.get('focus') || '', [searchParams]);
   const isEmbed = useMemo(() => searchParams.get('embed') === '1', [searchParams]);
+  const activeFocusedSchoolId = isEmbed ? focusedSchoolId : '';
   const backHref = useMemo(() => {
     const back = searchParams.get('back') || '';
     return back.startsWith('/parent/') ? back : '/parent/schools';
@@ -717,7 +718,7 @@ export default function ParentSchoolsMapPage() {
     const bounds: Array<[number, number]> = [];
 
     schools.forEach((school) => {
-      const isFocused = focusedSchoolId && school.id === focusedSchoolId;
+      const isFocused = activeFocusedSchoolId && school.id === activeFocusedSchoolId;
       const markerIcon =
         school.kind === 'branch'
           ? blueIcon
@@ -746,11 +747,11 @@ export default function ParentSchoolsMapPage() {
     } else {
       mapRef.current.setView([48.02, 66.92], 5);
     }
-    if (focusedSchoolId) {
-      const focused = schools.find((item) => item.id === focusedSchoolId || item.schoolId === focusedSchoolId);
+    if (activeFocusedSchoolId) {
+      const focused = schools.find((item) => item.id === activeFocusedSchoolId || item.schoolId === activeFocusedSchoolId);
       if (focused) mapRef.current.setView([focused.lat, focused.lng], 12);
     }
-  }, [ready, schools, focusedSchoolId, noCityText]);
+  }, [ready, schools, activeFocusedSchoolId, noCityText]);
 
   return (
     <div className="schools-map-fullscreen-page">
