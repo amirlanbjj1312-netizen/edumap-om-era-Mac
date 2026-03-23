@@ -28,6 +28,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
       city: '',
       district: '',
       address: { ru: '', en: '', kk: '' },
+      additional_locations: [],
       description: { ru: '', en: '', kk: '' },
       coordinates: {
         latitude: '',
@@ -97,6 +98,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         admission_stages_detail: { ru: '', en: '', kk: '' },
         competition_per_seat: '',
       },
+      admission_rules: [],
       results: {
         average_exam_score: '',
         university_admission_rate: '',

@@ -6,6 +6,11 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { loadSchoolById } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
+import {
+  formatAdmissionGradeLabel,
+  normalizeAdmissionRules,
+  pickLocalizedText,
+} from '@/lib/admission';
 
 type SchoolRow = {
   school_id?: string;
@@ -132,7 +137,14 @@ export default function ParentSchoolAdmissionPage() {
         : locale === 'kk'
           ? 'Қабылдау қалай өтеді'
           : 'Как проходит поступление',
+    ruleTitle: locale === 'en' ? 'Admission scenarios' : locale === 'kk' ? 'Қабылдау сценарийлері' : 'Сценарии поступления',
+    steps: locale === 'en' ? 'What to complete' : locale === 'kk' ? 'Не өту керек' : 'Что нужно пройти',
+    requirements: locale === 'en' ? 'What is assessed' : locale === 'kk' ? 'Не бағаланады' : 'Что оценивают',
+    documents: locale === 'en' ? 'What to submit' : locale === 'kk' ? 'Не тапсыру керек' : 'Что нужно предоставить',
+    note: locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
   };
+
+  const currentLocale = locale as 'ru' | 'en' | 'kk';
 
   const examRequired = Boolean(getIn(school, 'education.entrance_exam.required'));
   const examFormat = localizeOption(
@@ -154,6 +166,7 @@ export default function ParentSchoolAdmissionPage() {
   );
   const schoolName = pickFirstText(school, ['basic_info.display_name', 'basic_info.name'], '');
   const logo = pickImage(school);
+  const admissionRules = useMemo(() => normalizeAdmissionRules(school), [school]);
 
   const chips = [
     { label: ui.exam, value: examRequired ? ui.yes : ui.no },
@@ -196,7 +209,9 @@ export default function ParentSchoolAdmissionPage() {
       </section>
       <section className="school-mobile-photo-card school-admission-card">
         {loading ? <p className="muted">{ui.loading}</p> : null}
-        {!loading && !statCards.length && !stages ? <p className="muted">{ui.empty}</p> : null}
+        {!loading && !statCards.length && !stages && !admissionRules.length ? (
+          <p className="muted">{ui.empty}</p>
+        ) : null}
         {!loading && statCards.length ? (
           <div className="school-admission-grid">
             {statCards.map((item, index) => (
@@ -211,6 +226,58 @@ export default function ParentSchoolAdmissionPage() {
           <div className="school-admission-stage-box">
             <p className="school-admission-stage-label">{ui.stageHint}</p>
             <div className="school-admission-stage-content">{stages}</div>
+          </div>
+        ) : null}
+        {!loading && admissionRules.length ? (
+          <div className="school-admission-rules">
+            <p className="school-admission-stage-label">{ui.ruleTitle}</p>
+            <div className="school-admission-rule-grid">
+              {admissionRules.map((rule, index) => {
+                const steps = pickLocalizedText(rule.stages, currentLocale);
+                const requirements = pickLocalizedText(rule.requirements, currentLocale);
+                const documents = pickLocalizedText(rule.documents, currentLocale);
+                const note = pickLocalizedText(rule.comment, currentLocale);
+                const format = localizeOption(
+                  pickLocalizedText(rule.format_other, currentLocale) || rule.format,
+                  locale
+                );
+                return (
+                  <article key={String(rule.id || `rule-${index}`)} className="school-admission-rule-card">
+                    <div className="school-admission-rule-head">
+                      <h3>{formatAdmissionGradeLabel(rule, currentLocale)}</h3>
+                      <div className="school-admission-rule-meta">
+                        {format ? <span>{format}</span> : null}
+                        {rule.deadline ? <span>{rule.deadline}</span> : null}
+                      </div>
+                    </div>
+                    {steps ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.steps}</p>
+                        <div>{steps}</div>
+                      </div>
+                    ) : null}
+                    {requirements ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.requirements}</p>
+                        <div>{requirements}</div>
+                      </div>
+                    ) : null}
+                    {documents ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.documents}</p>
+                        <div>{documents}</div>
+                      </div>
+                    ) : null}
+                    {note ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.note}</p>
+                        <div>{note}</div>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
           </div>
         ) : null}
         {!loading ? (

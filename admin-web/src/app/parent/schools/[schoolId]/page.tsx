@@ -9,6 +9,10 @@ import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
+import {
+  formatAdmissionGradeLabel,
+  normalizeAdmissionRules,
+} from '@/lib/admission';
 
 type SchoolRow = {
   school_id?: string;
@@ -843,6 +847,8 @@ export default function ParentSchoolDetailsPage() {
       locale === 'en' ? 'Admission' : locale === 'kk' ? 'Қабылдау' : 'Поступление',
     admissionHint:
       locale === 'en' ? 'Exam, dates, stages' : locale === 'kk' ? 'Емтихан, мерзім, кезеңдер' : 'Экзамен, сроки, этапы',
+    admissionBlocks:
+      locale === 'en' ? 'Scenarios' : locale === 'kk' ? 'Сценарийлер' : 'Сценарии',
     pridePage:
       locale === 'en' ? 'Our pride' : locale === 'kk' ? 'Біздің мақтанышымыз' : 'Наша гордость',
     prideHint:
@@ -1195,6 +1201,10 @@ export default function ParentSchoolDetailsPage() {
     )
   );
   const entranceRequired = Boolean(getIn(school, 'education.entrance_exam.required'));
+  const admissionRules = useMemo(
+    () => normalizeAdmissionRules(school),
+    [school]
+  );
   const entranceFormat = localizeOption(
     pickFirstText(
       school,
@@ -1215,6 +1225,16 @@ export default function ParentSchoolDetailsPage() {
     formatGradesSummary(pickFirstText(school, ['education.grades'], '')),
     locale
   );
+  const admissionHintValue = useMemo(() => {
+    if (!admissionRules.length) return ui.admissionHint;
+    const labels = admissionRules
+      .slice(0, 2)
+      .map((rule) => formatAdmissionGradeLabel(rule, locale))
+      .filter(Boolean);
+    const extraCount = Math.max(0, admissionRules.length - labels.length);
+    const suffix = extraCount > 0 ? ` +${extraCount}` : '';
+    return `${ui.admissionBlocks}: ${labels.join(', ')}${suffix}`;
+  }, [admissionRules, locale, ui.admissionBlocks, ui.admissionHint]);
   const shiftMode = localizeOption(
     pickFirstText(school, ['education.learning_conditions.shift_mode'], ''),
     locale
@@ -1801,7 +1821,7 @@ export default function ParentSchoolDetailsPage() {
                       className="school-link-card"
                     >
                       <span className="school-link-card-title">{ui.admissionPage}</span>
-                      <span className="school-link-card-subtitle">{ui.admissionHint}</span>
+                      <span className="school-link-card-subtitle">{admissionHintValue}</span>
                     </Link>
                     <Link
                       href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/success-stories`}
