@@ -720,11 +720,9 @@ export default function ParentSchoolsMapPage() {
     schools.forEach((school) => {
       const isFocused = activeFocusedSchoolId && school.id === activeFocusedSchoolId;
       const markerIcon =
-        school.kind === 'branch'
+        isFocused && blueIcon
           ? blueIcon
-          : isFocused && blueIcon
-            ? blueIcon
-            : orangeIcon;
+          : orangeIcon;
       const marker = markerIcon
         ? (L.marker as unknown as (point: [number, number], options?: { icon?: unknown }) => LeafletMarker)(
             [school.lat, school.lng],
