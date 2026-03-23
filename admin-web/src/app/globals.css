@@ -3434,6 +3434,35 @@ a {
   gap: 10px;
 }
 
+.school-price-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.school-price-meta-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7ff 100%);
+  border: 1px solid #d8e2f3;
+}
+
+.school-price-meta-card span {
+  color: #47689d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.school-price-meta-card strong {
+  color: #1f2a44;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .school-price-rule {
   display: flex;
   align-items: center;

@@ -762,6 +762,54 @@ export default function ParentSchoolDetailsPage() {
     priceFromTo: locale === 'en' ? 'Grades' : locale === 'kk' ? 'Сыныптар' : 'Классы',
     discounts: locale === 'en' ? 'Discounts' : locale === 'kk' ? 'Жеңілдіктер' : 'Скидки',
     grants: locale === 'en' ? 'Grants' : locale === 'kk' ? 'Гранттар' : 'Гранты',
+    registrationFee:
+      locale === 'en'
+        ? 'Registration fee'
+        : locale === 'kk'
+          ? 'Тіркеу жарнасы'
+          : 'Регистрационный взнос',
+    paymentOptions:
+      locale === 'en'
+        ? 'Payment options'
+        : locale === 'kk'
+          ? 'Төлем тәсілдері'
+          : 'Варианты оплаты',
+    includedInTuition:
+      locale === 'en'
+        ? 'Included in tuition'
+        : locale === 'kk'
+          ? 'Құнына кіреді'
+          : 'Что включено в стоимость',
+    extraFees:
+      locale === 'en'
+        ? 'Paid separately'
+        : locale === 'kk'
+          ? 'Бөлек төленеді'
+          : 'Что оплачивается отдельно',
+    freePlaces:
+      locale === 'en'
+        ? 'Free places'
+        : locale === 'kk'
+          ? 'Тегін орындар'
+          : 'Бесплатные места',
+    funding:
+      locale === 'en'
+        ? 'Funding'
+        : locale === 'kk'
+          ? 'Қаржыландыру'
+          : 'Финансирование',
+    stateFunding:
+      locale === 'en'
+        ? 'State funding'
+        : locale === 'kk'
+          ? 'Мемлекеттік қаржыландыру'
+          : 'Госфинансирование',
+    selfFunding:
+      locale === 'en'
+        ? 'Self-funded'
+        : locale === 'kk'
+          ? 'Өзін-өзі қаржыландыру'
+          : 'Самоокупаемость',
     prev: locale === 'en' ? 'Previous' : locale === 'kk' ? 'Алдыңғы' : 'Назад',
     next: locale === 'en' ? 'Next' : locale === 'kk' ? 'Келесі' : 'Вперед',
     entranceExam: locale === 'en' ? 'Entrance exam' : locale === 'kk' ? 'Түсу емтиханы' : 'Вступительный экзамен',
@@ -995,6 +1043,42 @@ export default function ParentSchoolDetailsPage() {
   const financeDiscounts = pickFirstText(school, ['finance.discounts_info'], '');
   const financeGrants = pickFirstText(school, ['finance.grants_info'], '');
   const legacyDiscountsGrants = pickFirstText(school, ['finance.grants_discounts'], '');
+  const registrationFeeRaw = toText(getIn(school, 'finance.registration_fee')).trim();
+  const registrationFeeCurrency =
+    toText(getIn(school, 'finance.registration_fee_currency')).trim() || 'KZT';
+  const registrationFee =
+    registrationFeeRaw && Number(registrationFeeRaw.replace(/\s+/g, '').replace(',', '.'))
+      ? `${Number(registrationFeeRaw.replace(/\s+/g, '').replace(',', '.')).toLocaleString('ru-RU')} ${registrationFeeCurrency === 'KZT' ? '₸' : registrationFeeCurrency === 'USD' ? '$' : registrationFeeCurrency === 'EUR' ? '€' : registrationFeeCurrency}`
+      : registrationFeeRaw
+        ? `${registrationFeeRaw} ${registrationFeeCurrency === 'KZT' ? '₸' : registrationFeeCurrency === 'USD' ? '$' : registrationFeeCurrency === 'EUR' ? '€' : registrationFeeCurrency}`
+        : '';
+  const paymentOptionLabels: Record<string, string> = {
+    'Per month': locale === 'en' ? 'Per month' : locale === 'kk' ? 'Айына' : 'В месяц',
+    'Per semester': locale === 'en' ? 'Per semester' : locale === 'kk' ? 'Семестрге' : 'В семестр',
+    'Per year': locale === 'en' ? 'Per year' : locale === 'kk' ? 'Жылына' : 'В год',
+    'In installments':
+      locale === 'en' ? 'In installments' : locale === 'kk' ? 'Бірнеше траншпен' : 'Несколькими траншами',
+  };
+  const paymentOptions = Array.from(
+    new Set(
+      toList(getIn(school, 'finance.payment_options')).map((item) => paymentOptionLabels[item] || item)
+    )
+  ).filter(Boolean);
+  const includedInTuition = pickFirstText(school, ['finance.included_in_tuition'], '');
+  const extraFees = pickFirstText(school, ['finance.extra_fees'], '');
+  const fundingItems = [
+    getIn(school, 'finance.funding_state') ? ui.stateFunding : '',
+    getIn(school, 'finance.funding_self') ? ui.selfFunding : '',
+  ].filter(Boolean);
+  const hasFreePlaces = getIn(school, 'finance.free_places') === true;
+  const financeMetaCards = [
+    registrationFee ? { label: ui.registrationFee, value: registrationFee } : null,
+    paymentOptions.length ? { label: ui.paymentOptions, value: paymentOptions.join(' • ') } : null,
+    includedInTuition ? { label: ui.includedInTuition, value: includedInTuition } : null,
+    extraFees ? { label: ui.extraFees, value: extraFees } : null,
+    fundingItems.length ? { label: ui.funding, value: fundingItems.join(' • ') } : null,
+    hasFreePlaces ? { label: ui.freePlaces, value: ui.yes } : null,
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
   const image = pickImage(school);
   const lat = toNumber(getIn(school, 'basic_info.coordinates.latitude'));
   const lng = toNumber(getIn(school, 'basic_info.coordinates.longitude'));
@@ -1595,6 +1679,16 @@ export default function ParentSchoolDetailsPage() {
                 onToggle={() => setPriceExpanded((prev) => !prev)}
               >
                 <div className={guest ? 'guest-price-blur' : ''}>
+                  {financeMetaCards.length ? (
+                    <div className="school-price-meta-grid">
+                      {financeMetaCards.map((item) => (
+                        <div key={`${item.label}-${item.value}`} className="school-price-meta-card">
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   {feeRules.length ? (
                     <div className="school-price-rules">
                     {feeRules.map((rule, index) => (
