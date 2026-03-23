@@ -1687,17 +1687,6 @@ export default function ParentSchoolsPage() {
                             </button>
                           ) : null}
                         </div>
-                        {index === 0 ? (
-                          <div className="market-ad-box market-ad-badge-slot">
-                            <span className="school-chip promo">
-                              {locale === 'en'
-                                ? 'Promoted'
-                                : locale === 'kk'
-                                  ? 'Жарнамаланған'
-                                  : 'Продвигаемая'}
-                            </span>
-                          </div>
-                        ) : null}
                       </div>
                     </div>
 
