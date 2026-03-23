@@ -424,7 +424,10 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Цена: { en: 'Price', kk: 'Бағасы' },
   Валюта: { en: 'Currency', kk: 'Валюта' },
   Комментарий: { en: 'Comment', kk: 'Түсініктеме' },
-  'Добавьте хотя бы одну цену.': { en: 'Add at least one fee.', kk: 'Кемінде бір төлем қосыңыз.' },
+  'Цена не обязательна. Можно заполнить позже.': {
+    en: 'Price is optional. You can fill it later.',
+    kk: 'Баға міндетті емес. Кейін толтыруға болады.',
+  },
   'Система оплаты': { en: 'Payment system', kk: 'Төлем жүйесі' },
   'Скидки / гранты': { en: 'Grants / discounts', kk: 'Гранттар / жеңілдіктер' },
   'Логотип URL': { en: 'Logo URL', kk: 'Логотип URL' },
@@ -3154,7 +3157,7 @@ export default function SchoolInfoPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="muted">{t('Добавьте хотя бы одну цену.')}</p>
+                    <p className="muted">{t('Цена не обязательна. Можно заполнить позже.')}</p>
                   )}
                   <TextArea
                     label="Комментарий"
