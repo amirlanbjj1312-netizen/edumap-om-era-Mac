@@ -421,6 +421,9 @@ const buildSchoolsRouter = () => {
   router.post('/analytics/engagement', async (req, res, next) => {
     try {
       const actor = await resolveOptionalActor(req);
+      if (actor.actorType !== 'auth' || !actor.actorUserId) {
+        return res.json({ ok: true });
+      }
       const schoolId = String(req.body?.schoolId || '').trim();
       const eventType = String(req.body?.eventType || '').trim();
       const locale = String(req.body?.locale || '').trim();

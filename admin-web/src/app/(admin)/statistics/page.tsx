@@ -783,7 +783,7 @@ export default function StatisticsPage() {
                         {row.all}
                       </p>
                       <p className="muted" style={{ margin: 0 }}>
-                        Гости: {row.guest} · Вход: {row.auth}
+                        Авторизованные: {row.auth}
                       </p>
                     </div>
                   ))}
@@ -930,8 +930,7 @@ export default function StatisticsPage() {
                             <th style={{ textAlign: 'left', padding: '6px 8px' }}>Школа</th>
                             <th style={{ textAlign: 'left', padding: '6px 8px' }}>Просмотры</th>
                             <th style={{ textAlign: 'left', padding: '6px 8px' }}>Сравнение</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Guest</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Auth</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Авторизованные</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -948,9 +947,6 @@ export default function StatisticsPage() {
                               </td>
                               <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
                                 {row.compare_adds}
-                              </td>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                {row.guest_views}
                               </td>
                               <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
                                 {row.auth_views}

@@ -100,7 +100,8 @@ const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {})
   const { days: lookback, cutoffTs } = pickCutoff(days, resetAt);
   const filtered = events.filter((event) => {
     const ts = new Date(event.createdAt || event.created_at || 0).getTime();
-    return Number.isFinite(ts) && ts >= cutoffTs;
+    const actorType = event.actorType || event.actor_type;
+    return Number.isFinite(ts) && ts >= cutoffTs && actorType === 'auth';
   });
 
   const totalsByType = {};
@@ -110,7 +111,7 @@ const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {})
   for (const event of filtered) {
     const eventType = event.eventType || event.event_type;
     if (!EVENT_TYPES.has(eventType)) continue;
-    const actorType = event.actorType === 'auth' || event.actor_type === 'auth' ? 'auth' : 'guest';
+    const actorType = 'auth';
     const schoolId = cleanString(event.schoolId || event.school_id, 120) || null;
     const dayKey = new Date(event.createdAt || event.created_at || Date.now())
       .toISOString()
@@ -259,10 +260,11 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
         SELECT
           event_type,
           COUNT(*)::INT AS all,
-          COUNT(*) FILTER (WHERE actor_type = 'guest')::INT AS guest,
+          0::INT AS guest,
           COUNT(*) FILTER (WHERE actor_type = 'auth')::INT AS auth
         FROM engagement_analytics_events
         WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
         GROUP BY event_type
       `,
       [cutoffIso]
@@ -273,10 +275,11 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
           school_id,
           COUNT(*) FILTER (WHERE event_type = 'school_card_view')::INT AS views,
           COUNT(*) FILTER (WHERE event_type = 'compare_add')::INT AS compare_adds,
-          COUNT(*) FILTER (WHERE event_type = 'school_card_view' AND actor_type = 'guest')::INT AS guest_views,
+          0::INT AS guest_views,
           COUNT(*) FILTER (WHERE event_type = 'school_card_view' AND actor_type = 'auth')::INT AS auth_views
         FROM engagement_analytics_events
         WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
           AND school_id IS NOT NULL
         GROUP BY school_id
         HAVING COUNT(*) FILTER (WHERE event_type = 'school_card_view') > 0
@@ -298,6 +301,7 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
           COUNT(*) FILTER (WHERE event_type = 'guest_gate_click')::INT AS guest_gate_click
         FROM engagement_analytics_events
         WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
         GROUP BY DATE_TRUNC('day', created_at)
         ORDER BY DATE_TRUNC('day', created_at) ASC
       `,
@@ -308,6 +312,7 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
         SELECT COUNT(*)::INT AS total
         FROM engagement_analytics_events
         WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
       `,
       [cutoffIso]
     ),
