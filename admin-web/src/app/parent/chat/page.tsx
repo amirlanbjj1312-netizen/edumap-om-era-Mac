@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAccessToken, loadSchools, recordEngagementEvent, requestAiSchoolChat } from '@/lib/api';
@@ -207,6 +207,7 @@ export default function ParentChatPage() {
   const [guest] = useState(() => isGuestMode());
   const [left, setLeft] = useState<number>(() => getAiChatLeft(getParentPlan()));
   const previewUnlocked = false;
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const ui = useMemo(
     () =>
@@ -293,6 +294,10 @@ export default function ParentChatPage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, sending]);
 
   const onSend = async () => {
     const body = text.trim();
@@ -428,6 +433,7 @@ export default function ParentChatPage() {
             <p className="parent-ai-chat-text">{message.text}</p>
           </div>
         ))}
+        <div ref={messagesEndRef} />
         </div>
       <div className="parent-ai-chat-compose">
         <input
