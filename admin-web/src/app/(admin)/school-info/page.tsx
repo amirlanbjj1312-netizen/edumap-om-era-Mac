@@ -1384,23 +1384,23 @@ export default function SchoolInfoPage() {
     );
   const discountsValue = useMemo(
     () => getLocalizedFinanceValue('finance.discounts_info') || String(getDeep(profile, 'finance.grants_discounts', '') || ''),
-    [profile]
+    [profile, contentLocale]
   );
   const grantsValue = useMemo(
     () => getLocalizedFinanceValue('finance.grants_info'),
-    [profile]
+    [profile, contentLocale]
   );
   const financeCommentValue = useMemo(
     () => getLocalizedFinanceValue('finance.comment'),
-    [profile]
+    [profile, contentLocale]
   );
   const includedInTuitionValue = useMemo(
     () => getLocalizedFinanceValue('finance.included_in_tuition'),
-    [profile]
+    [profile, contentLocale]
   );
   const extraFeesValue = useMemo(
     () => getLocalizedFinanceValue('finance.extra_fees'),
-    [profile]
+    [profile, contentLocale]
   );
   const additionalLocations = useMemo(() => {
     const raw = getDeep(profile, 'basic_info.additional_locations', []);
@@ -1457,7 +1457,7 @@ export default function SchoolInfoPage() {
           legacyCuratorsValue ||
           ''
       ),
-    [profile, legacyCuratorsValue]
+    [profile, legacyCuratorsValue, contentLocale]
   );
   const personnelMembersValue = useMemo(() => {
     const next: string[] = [];
