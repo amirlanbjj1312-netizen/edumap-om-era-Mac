@@ -302,6 +302,24 @@ const pickFirstText = (source: unknown, paths: string[], fallback = '') => {
   return fallback;
 };
 
+const pickLocalizedText = (
+  source: unknown,
+  pathBase: string,
+  locale: 'ru' | 'en' | 'kk',
+  fallback = ''
+) =>
+  pickFirstText(
+    source,
+    [
+      `${pathBase}.${locale}`,
+      `${pathBase}.ru`,
+      `${pathBase}.kk`,
+      `${pathBase}.en`,
+      pathBase,
+    ],
+    fallback
+  );
+
 const mergeUniqueRows = (
   primary: Array<{ label: string; value: string }>,
   extra: Array<{ label: string; value: string }>
@@ -1039,9 +1057,9 @@ export default function ParentSchoolDetailsPage() {
     tuition_monthly: getIn(school, 'finance.tuition_monthly'),
     price_monthly: getIn(school, 'finance.price_monthly'),
   });
-  const financeComment = pickFirstText(school, ['finance.comment'], '');
-  const financeDiscounts = pickFirstText(school, ['finance.discounts_info'], '');
-  const financeGrants = pickFirstText(school, ['finance.grants_info'], '');
+  const financeComment = pickLocalizedText(school, 'finance.comment', locale, '');
+  const financeDiscounts = pickLocalizedText(school, 'finance.discounts_info', locale, '');
+  const financeGrants = pickLocalizedText(school, 'finance.grants_info', locale, '');
   const legacyDiscountsGrants = pickFirstText(school, ['finance.grants_discounts'], '');
   const registrationFeeRaw = toText(getIn(school, 'finance.registration_fee')).trim();
   const registrationFeeCurrency =
@@ -1064,8 +1082,8 @@ export default function ParentSchoolDetailsPage() {
       toList(getIn(school, 'finance.payment_options')).map((item) => paymentOptionLabels[item] || item)
     )
   ).filter(Boolean);
-  const includedInTuition = pickFirstText(school, ['finance.included_in_tuition'], '');
-  const extraFees = pickFirstText(school, ['finance.extra_fees'], '');
+  const includedInTuition = pickLocalizedText(school, 'finance.included_in_tuition', locale, '');
+  const extraFees = pickLocalizedText(school, 'finance.extra_fees', locale, '');
   const fundingItems = [
     getIn(school, 'finance.funding_state') ? ui.stateFunding : '',
     getIn(school, 'finance.funding_self') ? ui.selfFunding : '',

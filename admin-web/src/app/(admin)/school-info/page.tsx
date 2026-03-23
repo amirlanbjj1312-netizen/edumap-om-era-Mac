@@ -1373,17 +1373,33 @@ export default function SchoolInfoPage() {
     const legacy = String(getDeep(profile, 'finance.payment_system', '') || '').trim();
     return legacy ? [legacy] : [];
   }, [profile]);
+  const getLocalizedFinanceValue = (pathBase: string) =>
+    String(
+      getDeep(profile, `${pathBase}.${contentLocale}`, '') ||
+        getDeep(profile, `${pathBase}.ru`, '') ||
+        getDeep(profile, `${pathBase}.kk`, '') ||
+        getDeep(profile, `${pathBase}.en`, '') ||
+        getDeep(profile, pathBase, '') ||
+        ''
+    );
   const discountsValue = useMemo(
-    () =>
-      String(
-        getDeep(profile, 'finance.discounts_info', '') ||
-          getDeep(profile, 'finance.grants_discounts', '') ||
-          ''
-      ),
+    () => getLocalizedFinanceValue('finance.discounts_info') || String(getDeep(profile, 'finance.grants_discounts', '') || ''),
     [profile]
   );
   const grantsValue = useMemo(
-    () => String(getDeep(profile, 'finance.grants_info', '') || ''),
+    () => getLocalizedFinanceValue('finance.grants_info'),
+    [profile]
+  );
+  const financeCommentValue = useMemo(
+    () => getLocalizedFinanceValue('finance.comment'),
+    [profile]
+  );
+  const includedInTuitionValue = useMemo(
+    () => getLocalizedFinanceValue('finance.included_in_tuition'),
+    [profile]
+  );
+  const extraFeesValue = useMemo(
+    () => getLocalizedFinanceValue('finance.extra_fees'),
     [profile]
   );
   const additionalLocations = useMemo(() => {
@@ -1887,6 +1903,24 @@ export default function SchoolInfoPage() {
       }
     }
   };
+  const normalizeLocalizedFinanceText = (value: unknown) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const raw = value as Record<string, unknown>;
+      return {
+        ru: String(raw.ru || '').trim(),
+        en: String(raw.en || '').trim(),
+        kk: String(raw.kk || '').trim(),
+      };
+    }
+    return String(value || '').trim();
+  };
+  const toLegacyFinanceText = (value: unknown) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const raw = value as Record<string, unknown>;
+      return String(raw.ru || raw.kk || raw.en || '').trim();
+    }
+    return String(value || '').trim();
+  };
 
   const [mediaMessage, setMediaMessage] = useState('');
   const { openImageCropper, cropperModal } = useImageCropper();
@@ -2314,9 +2348,14 @@ export default function SchoolInfoPage() {
       const paymentOptions = normalizeListValue(currentProfile.finance?.payment_options);
       const normalizedPaymentOptions = withCurrentOptions(PAYMENT_SYSTEM_OPTIONS, paymentOptions)
         .filter((item) => paymentOptions.includes(item));
-      const discountsInfo = String(currentProfile.finance?.discounts_info || '').trim();
-      const grantsInfo = String(currentProfile.finance?.grants_info || '').trim();
-      const legacyGrantsDiscounts = [discountsInfo && `Скидки: ${discountsInfo}`, grantsInfo && `Гранты: ${grantsInfo}`]
+      const discountsInfoValue = normalizeLocalizedFinanceText(currentProfile.finance?.discounts_info);
+      const grantsInfoValue = normalizeLocalizedFinanceText(currentProfile.finance?.grants_info);
+      const financeCommentValue = normalizeLocalizedFinanceText(currentProfile.finance?.comment);
+      const includedInTuitionValue = normalizeLocalizedFinanceText(currentProfile.finance?.included_in_tuition);
+      const extraFeesValue = normalizeLocalizedFinanceText(currentProfile.finance?.extra_fees);
+      const discountsInfoLegacy = toLegacyFinanceText(discountsInfoValue);
+      const grantsInfoLegacy = toLegacyFinanceText(grantsInfoValue);
+      const legacyGrantsDiscounts = [discountsInfoLegacy && `Скидки: ${discountsInfoLegacy}`, grantsInfoLegacy && `Гранты: ${grantsInfoLegacy}`]
         .filter(Boolean)
         .join('; ');
       const normalizedClubsUnified = buildUnifiedClubsFromServices(currentProfile.services);
@@ -2337,8 +2376,11 @@ export default function SchoolInfoPage() {
           monthly_fee: derivedMonthlyFee,
           payment_options: normalizedPaymentOptions,
           payment_system: normalizedPaymentOptions[0] || String(currentProfile.finance?.payment_system || ''),
-          discounts_info: discountsInfo,
-          grants_info: grantsInfo,
+          discounts_info: discountsInfoValue,
+          grants_info: grantsInfoValue,
+          comment: financeCommentValue,
+          included_in_tuition: includedInTuitionValue,
+          extra_fees: extraFeesValue,
           grants_discounts: legacyGrantsDiscounts || String(currentProfile.finance?.grants_discounts || ''),
         },
         media: {
@@ -2937,9 +2979,9 @@ export default function SchoolInfoPage() {
                     <TextArea
                       label="Что включено в стоимость"
                       rows={2}
-                      value={getDeep(profile, 'finance.included_in_tuition')}
+                      value={includedInTuitionValue}
                       onChange={(value: string) =>
-                        updateField('finance.included_in_tuition', value)
+                        updateLocalizedField('finance.included_in_tuition', value)
                       }
                     />
                   </FieldRow>
@@ -2947,9 +2989,9 @@ export default function SchoolInfoPage() {
                     <TextArea
                       label="Что оплачивается отдельно"
                       rows={2}
-                      value={getDeep(profile, 'finance.extra_fees')}
+                      value={extraFeesValue}
                       onChange={(value: string) =>
-                        updateField('finance.extra_fees', value)
+                        updateLocalizedField('finance.extra_fees', value)
                       }
                     />
                   </FieldRow>
@@ -3059,9 +3101,9 @@ export default function SchoolInfoPage() {
                   )}
                   <TextArea
                     label="Комментарий"
-                    value={getDeep(profile, 'finance.comment')}
+                    value={financeCommentValue}
                     onChange={(value: string) =>
-                      updateField('finance.comment', value)
+                      updateLocalizedField('finance.comment', value)
                     }
                     rows={3}
                   />
@@ -3070,14 +3112,14 @@ export default function SchoolInfoPage() {
                       label="Скидки"
                       value={discountsValue}
                       onChange={(value: string) =>
-                        updateField('finance.discounts_info', value)
+                        updateLocalizedField('finance.discounts_info', value)
                       }
                     />
                     <Input
                       label="Гранты"
                       value={grantsValue}
                       onChange={(value: string) =>
-                        updateField('finance.grants_info', value)
+                        updateLocalizedField('finance.grants_info', value)
                       }
                     />
                   </FieldRow>
