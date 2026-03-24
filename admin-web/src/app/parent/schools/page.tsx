@@ -253,6 +253,24 @@ const matchesGradeRange = (gradesValue: unknown, filter: string): boolean => {
 const toggleValue = (arr: string[], value: string) =>
   arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
 
+const normalizeOptionLabel = (value: unknown) =>
+  toText(value)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const uniqueOptionValues = (values: string[]) => {
+  const map = new Map<string, string>();
+  values.forEach((value) => {
+    const normalized = normalizeOptionLabel(value);
+    if (!normalized) return;
+    const key = normalized.toLocaleLowerCase('ru-RU');
+    if (!map.has(key)) {
+      map.set(key, normalized);
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'ru'));
+};
+
 const toNumber = (value: unknown): number => {
   const raw = toText(value).replace(',', '.').trim();
   const parsed = Number(raw);
@@ -794,18 +812,21 @@ export default function ParentSchoolsPage() {
   const cityOptions = useMemo(() => {
     const values = rows
       .filter((row) => hasRequiredParentFields(row, locale))
-      .map((row) => toText(row.basic_info?.city).trim())
+      .map((row) => normalizeOptionLabel(row.basic_info?.city))
       .filter(Boolean);
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+    return uniqueOptionValues(values);
   }, [rows, locale]);
 
   const districtOptions = useMemo(() => {
     const values = rows
       .filter((row) => hasRequiredParentFields(row, locale))
-      .filter((row) => !cityFilter || toText(row.basic_info?.city) === cityFilter)
-      .map((row) => toText(row.basic_info?.district).trim())
+      .filter(
+        (row) =>
+          !cityFilter || normalizeOptionLabel(row.basic_info?.city) === normalizeOptionLabel(cityFilter)
+      )
+      .map((row) => normalizeOptionLabel(row.basic_info?.district))
       .filter(Boolean);
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+    return uniqueOptionValues(values);
   }, [rows, cityFilter, locale]);
 
   const typeOptions = useMemo(() => {
