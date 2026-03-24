@@ -57,6 +57,19 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   Exam: { ru: 'Экзамен', en: 'Exam', kk: 'Емтихан' },
   Interview: { ru: 'Собеседование', en: 'Interview', kk: 'Сұхбат' },
   Test: { ru: 'Тест', en: 'Test', kk: 'Тест' },
+  Essay: { ru: 'Эссе', en: 'Essay', kk: 'Эссе' },
+  Portfolio: { ru: 'Портфолио', en: 'Portfolio', kk: 'Портфолио' },
+  'Video intro': { ru: 'Видео-визитка', en: 'Video intro', kk: 'Бейне-визитка' },
+  'Trial day': { ru: 'Пробный день', en: 'Trial day', kk: 'Сынақ күні' },
+  Psychologist: { ru: 'Психолог', en: 'Psychologist', kk: 'Психолог' },
+  Competition: { ru: 'Конкурс', en: 'Competition', kk: 'Байқау' },
+  Other: { ru: 'Другое', en: 'Other', kk: 'Басқа' },
+  'Application form': { ru: 'Заявление', en: 'Application form', kk: 'Өтініш' },
+  Transcript: { ru: 'Табель / выписка', en: 'Transcript', kk: 'Табель / көшірме' },
+  Recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
+  'Medical certificate': { ru: 'Медсправка', en: 'Medical certificate', kk: 'Меданықтама' },
+  'Birth certificate': { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
+  'Parent ID': { ru: 'Документ родителя', en: 'Parent ID', kk: 'Ата-ана құжаты' },
   'No competition': { ru: 'Без конкурса', en: 'No competition', kk: 'Конкурссіз' },
   'April-June': { ru: 'Апрель-июнь', en: 'April-June', kk: 'Сәуір-маусым' },
   'May-August': { ru: 'Май-август', en: 'May-August', kk: 'Мамыр-тамыз' },
@@ -67,6 +80,19 @@ const OPTION_ALIASES: Record<string, string> = {
   exam: 'Exam',
   interview: 'Interview',
   test: 'Test',
+  essay: 'Essay',
+  portfolio: 'Portfolio',
+  video: 'Video intro',
+  trial_day: 'Trial day',
+  psychologist: 'Psychologist',
+  competition: 'Competition',
+  other: 'Other',
+  application_form: 'Application form',
+  transcript: 'Transcript',
+  recommendations: 'Recommendations',
+  medical_certificate: 'Medical certificate',
+  birth_certificate: 'Birth certificate',
+  parent_id: 'Parent ID',
   'no competition': 'No competition',
   'april-june': 'April-June',
   'may-august': 'May-August',
@@ -142,6 +168,7 @@ export default function ParentSchoolAdmissionPage() {
     requirements: locale === 'en' ? 'What is assessed' : locale === 'kk' ? 'Не бағаланады' : 'Что оценивают',
     documents: locale === 'en' ? 'What to submit' : locale === 'kk' ? 'Не тапсыру керек' : 'Что нужно предоставить',
     note: locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
+    selectionTypes: locale === 'en' ? 'Selection types' : locale === 'kk' ? 'Іріктеу түрлері' : 'Типы отбора',
   };
 
   const currentLocale = locale as 'ru' | 'en' | 'kk';
@@ -237,10 +264,24 @@ export default function ParentSchoolAdmissionPage() {
                 const requirements = pickLocalizedText(rule.requirements, currentLocale);
                 const documents = pickLocalizedText(rule.documents, currentLocale);
                 const note = pickLocalizedText(rule.comment, currentLocale);
+                const assessmentOther = pickLocalizedText(rule.assessment_other, currentLocale);
+                const documentOther = pickLocalizedText(rule.documents_other, currentLocale);
                 const format = localizeOption(
                   pickLocalizedText(rule.format_other, currentLocale) || rule.format,
                   locale
                 );
+                const assessmentTypes = [
+                  ...(Array.isArray(rule.assessment_types) ? rule.assessment_types : []),
+                  ...(assessmentOther ? [assessmentOther] : []),
+                ]
+                  .map((item) => localizeOption(String(item), locale))
+                  .filter(Boolean);
+                const documentTypes = [
+                  ...(Array.isArray(rule.required_documents) ? rule.required_documents : []),
+                  ...(documentOther ? [documentOther] : []),
+                ]
+                  .map((item) => localizeOption(String(item), locale))
+                  .filter(Boolean);
                 return (
                   <article key={String(rule.id || `rule-${index}`)} className="school-admission-rule-card">
                     <div className="school-admission-rule-head">
@@ -250,6 +291,18 @@ export default function ParentSchoolAdmissionPage() {
                         {rule.deadline ? <span>{rule.deadline}</span> : null}
                       </div>
                     </div>
+                    {assessmentTypes.length ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.selectionTypes}</p>
+                        <div className="school-admission-tag-row">
+                          {assessmentTypes.map((item) => (
+                            <span key={item} className="school-admission-inline-tag">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     {steps ? (
                       <div className="school-admission-rule-section">
                         <p>{ui.steps}</p>
@@ -266,6 +319,18 @@ export default function ParentSchoolAdmissionPage() {
                       <div className="school-admission-rule-section">
                         <p>{ui.documents}</p>
                         <div>{documents}</div>
+                      </div>
+                    ) : null}
+                    {documentTypes.length ? (
+                      <div className="school-admission-rule-section">
+                        <p>{ui.documents}</p>
+                        <div className="school-admission-tag-row">
+                          {documentTypes.map((item) => (
+                            <span key={item} className="school-admission-inline-tag">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
                     {note ? (

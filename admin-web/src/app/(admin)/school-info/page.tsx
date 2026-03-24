@@ -25,6 +25,8 @@ import {
   SCHOOL_GRADE_OPTIONS,
 } from '@/lib/schoolFinance';
 import {
+  ADMISSION_ASSESSMENT_OPTIONS,
+  ADMISSION_DOCUMENT_OPTIONS,
   createAdmissionRuleEntry,
   formatAdmissionGradeLabel,
   normalizeAdmissionRules,
@@ -413,6 +415,11 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Название блока': { en: 'Block title', kk: 'Блок атауы' },
   'Что нужно пройти': { en: 'What needs to be completed', kk: 'Не өту керек' },
   'Что нужно предоставить': { en: 'What must be submitted', kk: 'Не тапсыру керек' },
+  'Этапы отбора': { en: 'Selection stages', kk: 'Іріктеу кезеңдері' },
+  'Типы отбора': { en: 'Selection types', kk: 'Іріктеу түрлері' },
+  'Документы': { en: 'Documents', kk: 'Құжаттар' },
+  'Другое в этапах': { en: 'Other in stages', kk: 'Кезеңдердегі басқа' },
+  'Другое в документах': { en: 'Other in documents', kk: 'Құжаттардағы басқа' },
   'Что оценивают': { en: 'What is assessed', kk: 'Не бағаланады' },
   'Критерии оценки': { en: 'Evaluation criteria', kk: 'Бағалау критерийлері' },
   'Комментарий для родителей': { en: 'Comment for parents', kk: 'Ата-аналарға түсініктеме' },
@@ -735,6 +742,21 @@ const OPTION_LABELS: Record<
   tutor: { ru: 'Тьютор', en: 'Tutor', kk: 'Тьютор' },
   social_worker: { ru: 'Социальный работник', en: 'Social worker', kk: 'Әлеуметтік қызметкер' },
   nurse: { ru: 'Медсестра', en: 'Nurse', kk: 'Медбике' },
+  test: { ru: 'Тест', en: 'Test', kk: 'Тест' },
+  exam: { ru: 'Экзамен', en: 'Exam', kk: 'Емтихан' },
+  interview: { ru: 'Собеседование', en: 'Interview', kk: 'Сұхбат' },
+  essay: { ru: 'Эссе', en: 'Essay', kk: 'Эссе' },
+  portfolio: { ru: 'Портфолио', en: 'Portfolio', kk: 'Портфолио' },
+  video: { ru: 'Видео-визитка', en: 'Video intro', kk: 'Бейне-визитка' },
+  trial_day: { ru: 'Пробный день', en: 'Trial day', kk: 'Сынақ күні' },
+  competition: { ru: 'Конкурс', en: 'Competition', kk: 'Байқау' },
+  other: { ru: 'Другое', en: 'Other', kk: 'Басқа' },
+  application_form: { ru: 'Заявление', en: 'Application form', kk: 'Өтініш' },
+  transcript: { ru: 'Табель / выписка', en: 'Transcript', kk: 'Табель / көшірме' },
+  recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
+  medical_certificate: { ru: 'Медсправка', en: 'Medical certificate', kk: 'Меданықтама' },
+  birth_certificate: { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
+  parent_id: { ru: 'Документ родителя', en: 'Parent ID', kk: 'Ата-ана құжаты' },
 };
 
 const translateOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
@@ -1885,7 +1907,16 @@ export default function SchoolInfoPage() {
   };
   const updateAdmissionRuleLocalizedField = (
     index: number,
-    field: 'title' | 'format_other' | 'stages' | 'requirements' | 'documents' | 'evaluation' | 'comment',
+    field:
+      | 'title'
+      | 'format_other'
+      | 'assessment_other'
+      | 'stages'
+      | 'requirements'
+      | 'documents'
+      | 'documents_other'
+      | 'evaluation'
+      | 'comment',
     value: string
   ) => {
     const current = admissionRules[index];
@@ -1907,6 +1938,13 @@ export default function SchoolInfoPage() {
       from_grade: patch.from_grade ?? current.from_grade,
       to_grade: patch.to_grade ?? current.to_grade,
     });
+  };
+  const updateAdmissionRuleListField = (
+    index: number,
+    field: 'assessment_types' | 'required_documents',
+    nextValues: string[]
+  ) => {
+    updateAdmissionRule(index, { [field]: nextValues });
   };
   const getStudentSuccessStories = () => {
     const raw = getDeep(profile, 'education.results.student_success_stories', []);
@@ -3634,130 +3672,6 @@ export default function SchoolInfoPage() {
 
           {activeTab === 'admission' && (
             <Section title="Поступление">
-              <Toggle
-                label="Требуется вступительный экзамен"
-                checked={Boolean(getDeep(profile, 'education.entrance_exam.required'))}
-                onChange={(value: boolean) => updateField('education.entrance_exam.required', value)}
-              />
-              <FieldRow>
-                <Select
-                  label="Формат"
-                  value={getDeep(profile, 'education.entrance_exam.format')}
-                  onChange={(value: string) => updateField('education.entrance_exam.format', value)}
-                  options={[
-                    { value: '', label: t('Не выбрано') },
-                    { value: 'test', label: t('Тест') },
-                    { value: 'exam', label: t('Экзамен') },
-                    { value: 'interview', label: t('Собеседование') },
-                    { value: 'none', label: t('Нет') },
-                    { value: 'other', label: t('Другое') },
-                  ]}
-                />
-                <Input
-                  label="Формат (доп.)"
-                  value={getDeep(profile, localePath('education.entrance_exam.format_other'))}
-                  onChange={(value: string) =>
-                    updateField(localePath('education.entrance_exam.format_other'), value)
-                  }
-                />
-              </FieldRow>
-              <FieldRow>
-                <TextArea
-                  label="Этапы"
-                  value={getDeep(profile, localePath('education.entrance_exam.stages'))}
-                  onChange={(value: string) =>
-                    updateField(localePath('education.entrance_exam.stages'), value)
-                  }
-                />
-              </FieldRow>
-              <FieldRow>
-                <Toggle
-                  label="Есть свободные места"
-                  checked={hasAvailableSeats}
-                  onChange={(value: boolean) => {
-                    updateField('education.admission_details.has_available_seats', value);
-                    if (!value) {
-                      updateField('education.admission_details.seats_by_grade', '');
-                    }
-                  }}
-                />
-                <Select
-                  label="Период набора"
-                  value={getDeep(profile, 'education.admission_details.enrollment_period')}
-                  onChange={(value: string) =>
-                    updateField('education.admission_details.enrollment_period', value)
-                  }
-                  options={[
-                    { value: '', label: t('Не выбрано') },
-                    ...withCurrentOption(
-                      ADMISSION_PERIOD_OPTIONS,
-                      String(getDeep(profile, 'education.admission_details.enrollment_period') || '')
-                    ).map((item) => ({
-                      value: item,
-                      label: translateOption(item, contentLocale),
-                    })),
-                  ]}
-                />
-              </FieldRow>
-              {hasAvailableSeats ? (
-                <CheckboxGroup
-                  label="Свободные места по классам"
-                  options={ADMISSION_SEAT_GRADE_OPTIONS}
-                  values={seatGradesValue}
-                  onChange={(next: string[]) =>
-                    updateField(
-                      'education.admission_details.seats_by_grade',
-                      formatSeatGradesValue(next)
-                    )
-                  }
-                />
-              ) : null}
-              <FieldRow>
-                <Input
-                  label="Сроки подачи документов"
-                  type="date"
-                  value={getDeep(profile, 'education.admission_details.document_deadlines')}
-                  onChange={(value: string) =>
-                    updateField('education.admission_details.document_deadlines', value)
-                  }
-                />
-                <Select
-                  label="Конкурс на место"
-                  value={getDeep(profile, 'education.admission_details.competition_per_seat')}
-                  onChange={(value: string) =>
-                    updateField('education.admission_details.competition_per_seat', value)
-                  }
-                  options={[
-                    { value: '', label: t('Не выбрано') },
-                    ...withCurrentOption(
-                      ADMISSION_COMPETITION_OPTIONS,
-                      String(
-                        getDeep(profile, 'education.admission_details.competition_per_seat') || ''
-                      )
-                    ).map((item) => ({
-                      value: item,
-                      label: translateOption(item, contentLocale),
-                    })),
-                  ]}
-                />
-              </FieldRow>
-              <FieldRow>
-                <TextArea
-                  label="Детализация этапов набора"
-                  rows={3}
-                  value={getDeep(
-                    profile,
-                    localePath('education.admission_details.admission_stages_detail')
-                  )}
-                  onChange={(value: string) =>
-                    updateField(
-                      localePath('education.admission_details.admission_stages_detail'),
-                      value
-                    )
-                  }
-                />
-              </FieldRow>
-
               <div className="teacher-actions">
                 <p className="muted">
                   {t(
@@ -3829,27 +3743,6 @@ export default function SchoolInfoPage() {
                         />
                       </FieldRow>
                       <FieldRow>
-                        <Select
-                          label="Формат"
-                          value={String(rule.format || '')}
-                          onChange={(value: string) => updateAdmissionRule(index, { format: value })}
-                          options={[
-                            { value: '', label: t('Не выбрано') },
-                            { value: 'test', label: t('Тест') },
-                            { value: 'exam', label: t('Экзамен') },
-                            { value: 'interview', label: t('Собеседование') },
-                            { value: 'portfolio', label: 'Portfolio' },
-                            { value: 'essay', label: 'Essay' },
-                            { value: 'other', label: t('Другое') },
-                          ]}
-                        />
-                        <Input
-                          label="Формат (доп.)"
-                          value={String(rule?.format_other?.[contentLocale] || '')}
-                          onChange={(value: string) =>
-                            updateAdmissionRuleLocalizedField(index, 'format_other', value)
-                          }
-                        />
                         <Input
                           label="Сроки подачи документов"
                           type="date"
@@ -3859,9 +3752,47 @@ export default function SchoolInfoPage() {
                           }
                         />
                       </FieldRow>
+                      <CheckboxGroup
+                        label="Типы отбора"
+                        options={ADMISSION_ASSESSMENT_OPTIONS}
+                        values={Array.isArray(rule.assessment_types) ? rule.assessment_types : []}
+                        onChange={(next: string[]) =>
+                          updateAdmissionRuleListField(index, 'assessment_types', next)
+                        }
+                      />
+                      {(Array.isArray(rule.assessment_types) ? rule.assessment_types : []).includes('other') ? (
+                        <FieldRow>
+                          <Input
+                            label="Другое в этапах"
+                            value={String(rule?.assessment_other?.[contentLocale] || '')}
+                            onChange={(value: string) =>
+                              updateAdmissionRuleLocalizedField(index, 'assessment_other', value)
+                            }
+                          />
+                        </FieldRow>
+                      ) : null}
+                      <CheckboxGroup
+                        label="Документы"
+                        options={ADMISSION_DOCUMENT_OPTIONS}
+                        values={Array.isArray(rule.required_documents) ? rule.required_documents : []}
+                        onChange={(next: string[]) =>
+                          updateAdmissionRuleListField(index, 'required_documents', next)
+                        }
+                      />
+                      {(Array.isArray(rule.required_documents) ? rule.required_documents : []).includes('other') ? (
+                        <FieldRow>
+                          <Input
+                            label="Другое в документах"
+                            value={String(rule?.documents_other?.[contentLocale] || '')}
+                            onChange={(value: string) =>
+                              updateAdmissionRuleLocalizedField(index, 'documents_other', value)
+                            }
+                          />
+                        </FieldRow>
+                      ) : null}
                       <FieldRow>
                         <TextArea
-                          label="Что нужно пройти"
+                          label="Этапы отбора"
                           rows={3}
                           value={String(rule?.stages?.[contentLocale] || '')}
                           onChange={(value: string) =>

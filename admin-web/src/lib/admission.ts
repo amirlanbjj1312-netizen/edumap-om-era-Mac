@@ -11,6 +11,10 @@ export type AdmissionRule = {
   title: LocalizedText;
   from_grade: string;
   to_grade: string;
+  assessment_types: string[];
+  assessment_other: LocalizedText;
+  required_documents: string[];
+  documents_other: LocalizedText;
   format: string;
   format_other: LocalizedText;
   stages: LocalizedText;
@@ -47,6 +51,32 @@ const OVERVIEW_LABELS: Record<LocaleKey, string> = {
   en: 'General admission flow',
   kk: 'Жалпы қабылдау тәртібі',
 };
+
+export const ADMISSION_ASSESSMENT_OPTIONS = [
+  'test',
+  'exam',
+  'interview',
+  'essay',
+  'portfolio',
+  'video',
+  'trial_day',
+  'psychologist',
+  'competition',
+  'other',
+];
+
+export const ADMISSION_DOCUMENT_OPTIONS = [
+  'application_form',
+  'transcript',
+  'portfolio',
+  'video',
+  'essay',
+  'recommendations',
+  'medical_certificate',
+  'birth_certificate',
+  'parent_id',
+  'other',
+];
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -90,6 +120,10 @@ export const createAdmissionRuleEntry = (
   title: createLocalizedText(''),
   from_grade: '',
   to_grade: '',
+  assessment_types: [],
+  assessment_other: createLocalizedText(''),
+  required_documents: [],
+  documents_other: createLocalizedText(''),
   format: '',
   format_other: createLocalizedText(''),
   stages: createLocalizedText(''),
@@ -108,6 +142,14 @@ export const normalizeAdmissionRule = (value: unknown): AdmissionRule => {
     title: normalizeLocalizedText(raw.title),
     from_grade: text(raw.from_grade),
     to_grade: text(raw.to_grade),
+    assessment_types: Array.isArray(raw.assessment_types)
+      ? raw.assessment_types.map((item) => text(item)).filter(Boolean)
+      : [],
+    assessment_other: normalizeLocalizedText(raw.assessment_other),
+    required_documents: Array.isArray(raw.required_documents)
+      ? raw.required_documents.map((item) => text(item)).filter(Boolean)
+      : [],
+    documents_other: normalizeLocalizedText(raw.documents_other),
     format: text(raw.format),
     format_other: normalizeLocalizedText(raw.format_other),
     stages: normalizeLocalizedText(raw.stages),
@@ -124,6 +166,10 @@ export const admissionRuleHasContent = (rule: AdmissionRule) =>
     pickLocalizedText(rule.title, 'ru') ||
       rule.from_grade ||
       rule.to_grade ||
+      rule.assessment_types.length ||
+      pickLocalizedText(rule.assessment_other, 'ru') ||
+      rule.required_documents.length ||
+      pickLocalizedText(rule.documents_other, 'ru') ||
       rule.format ||
       pickLocalizedText(rule.format_other, 'ru') ||
       pickLocalizedText(rule.stages, 'ru') ||
@@ -179,6 +225,7 @@ const buildLegacyAdmissionRule = (source: unknown): AdmissionRule | null => {
 
   const rule = createAdmissionRuleEntry({
     title,
+    assessment_types: format ? [format] : [],
     format,
     format_other: formatOther,
     stages,

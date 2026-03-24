@@ -3865,6 +3865,24 @@ a {
   white-space: pre-wrap;
 }
 
+.school-admission-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.school-admission-inline-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #edf3ff;
+  color: #2d62d8;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .school-mobile-photo-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
