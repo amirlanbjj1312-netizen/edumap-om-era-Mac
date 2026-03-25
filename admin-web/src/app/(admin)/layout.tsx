@@ -21,7 +21,7 @@ const NAV_ITEMS: Array<{
   { href: '/site-settings', labelKey: 'navSiteSettings', minRole: 'moderator' },
   { href: '/users', labelKey: 'navUsers', minRole: 'moderator' },
   { href: '/requests', labelKey: 'navRequests' },
-  { href: '/statistics', labelKey: 'navStatistics', minRole: 'moderator' },
+  { href: '/statistics', labelKey: 'navStatistics' },
   { href: '/profile', labelKey: 'navProfile' },
 ];
 
