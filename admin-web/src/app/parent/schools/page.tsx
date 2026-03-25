@@ -1691,6 +1691,14 @@ export default function ParentSchoolsPage() {
                               onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
+                                if (!isFavorite) {
+                                  void recordEngagementEvent({
+                                    eventType: 'favorite_add',
+                                    schoolId,
+                                    locale,
+                                    source: 'schools_list',
+                                  }).catch(() => undefined);
+                                }
                                 const result = toggleFavoriteId(schoolId);
                                 setFavoriteIds(result.ids);
                               }}

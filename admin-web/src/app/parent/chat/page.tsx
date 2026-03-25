@@ -343,6 +343,17 @@ export default function ParentChatPage() {
         schoolIds,
       });
       const reply = String(aiResponse?.data?.reply || '').trim();
+      const recommendedSchoolIds = Array.isArray(aiResponse?.data?.recommendedSchoolIds)
+        ? aiResponse.data.recommendedSchoolIds.map((id) => String(id || '').trim()).filter(Boolean)
+        : [];
+      recommendedSchoolIds.forEach((recommendedSchoolId) => {
+        void recordEngagementEvent({
+          eventType: 'ai_school_mention',
+          schoolId: recommendedSchoolId,
+          locale,
+          source: 'ai_chat_results',
+        }).catch(() => undefined);
+      });
       const answer =
         reply ||
         composeAnswer(locale, body, rows);

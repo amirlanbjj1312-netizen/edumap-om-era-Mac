@@ -495,7 +495,21 @@ export async function resetProgramInfoAnalytics(token: string) {
 }
 
 export async function recordEngagementEvent(payload: {
-  eventType: 'school_card_view' | 'compare_add' | 'ai_match_run' | 'ai_chat_open' | 'ai_chat_message' | 'guest_gate_click';
+  eventType:
+    | 'school_card_view'
+    | 'compare_add'
+    | 'favorite_add'
+    | 'school_map_open'
+    | 'contact_phone_click'
+    | 'contact_whatsapp_click'
+    | 'contact_website_click'
+    | 'price_open'
+    | 'admission_open'
+    | 'ai_school_mention'
+    | 'ai_match_run'
+    | 'ai_chat_open'
+    | 'ai_chat_message'
+    | 'guest_gate_click';
   schoolId?: string;
   locale?: 'ru' | 'kk' | 'en';
   source?: string;
@@ -527,16 +541,42 @@ export async function loadEngagementAnalytics(
         guest: number;
         auth: number;
       }>;
+      mode?: 'global' | 'school';
+      school_id?: string;
+      school_name?: string;
+      unique_auth_parents?: number;
+      totals?: {
+        school_card_view: number;
+        unique_auth_parents: number;
+        compare_add: number;
+        favorite_add: number;
+        school_map_open: number;
+        contact_phone_click: number;
+        contact_whatsapp_click: number;
+        contact_website_click: number;
+        contact_click_total: number;
+        price_open: number;
+        admission_open: number;
+        ai_school_mention: number;
+      };
       timeline: Array<{
         date: string;
         school_card_view: number;
         compare_add: number;
+        favorite_add?: number;
+        school_map_open?: number;
+        contact_phone_click?: number;
+        contact_whatsapp_click?: number;
+        contact_website_click?: number;
+        price_open?: number;
+        admission_open?: number;
+        ai_school_mention?: number;
         ai_match_run: number;
         ai_chat_open: number;
         ai_chat_message: number;
         guest_gate_click: number;
       }>;
-      topSchools: Array<{
+      topSchools?: Array<{
         school_id: string;
         school_name: string;
         views: number;

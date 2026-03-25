@@ -15,6 +15,7 @@ const {
 const {
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
+  getSchoolEngagementAnalyticsSummary,
   resetEngagementAnalytics,
 } = require('../services/engagementAnalyticsStore');
 const { buildConfig } = require('../utils/config');
@@ -460,11 +461,48 @@ const buildSchoolsRouter = () => {
 
   router.get('/analytics/engagement', async (req, res, next) => {
     try {
-      const actor = await requireModerator(req, res);
-      if (!actor) return;
+      const actorPayload = await requireAdminOrSuperadmin(req, res);
+      if (!actorPayload) return;
+      const actor = actorPayload.user;
+      const actorRole = actorPayload.role;
 
       const days = Number.parseInt(String(req.query?.days || '30'), 10);
       const limit = Number.parseInt(String(req.query?.limit || '10'), 10);
+
+      if (actorRole === 'admin') {
+        const schools = await readStore();
+        const assignedSchoolId = getActorAssignedSchoolId(actor).toLowerCase();
+        const actorEmail = normalizeEmail(actor?.email);
+        const fallbackSchoolId = buildFallbackSchoolId(actorEmail).toLowerCase();
+        const ownSchool =
+          schools.find(
+            (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
+          ) ||
+          schools.find(
+            (item) => normalizeEmail(item?.basic_info?.email) === actorEmail
+          ) ||
+          schools.find(
+            (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
+          ) ||
+          null;
+
+        const schoolId = String(ownSchool?.school_id || assignedSchoolId || fallbackSchoolId).trim();
+        const schoolName =
+          ownSchool?.basic_info?.display_name?.ru ||
+          ownSchool?.basic_info?.name?.ru ||
+          ownSchool?.basic_info?.display_name?.en ||
+          ownSchool?.basic_info?.name?.en ||
+          schoolId;
+        const summary = await getSchoolEngagementAnalyticsSummary({ schoolId, days });
+        return res.json({
+          data: {
+            ...summary,
+            school_name: schoolName,
+            actor: actor.email || actor.id,
+          },
+        });
+      }
+
       const summary = await getEngagementAnalyticsSummary({ days, limit });
       const schools = await readStore();
       const nameById = schools.reduce((acc, school) => {

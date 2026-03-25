@@ -927,6 +927,8 @@ export default function ParentSchoolDetailsPage() {
     }).catch(() => undefined);
   }, [locale, school?.school_id]);
 
+  const trackedSchoolId = String(school?.school_id || '').trim();
+
   const name = pickFirstText(
     school,
     ['basic_info.display_name', 'basic_info.brand_name', 'basic_info.short_name', 'basic_info.name'],
@@ -1118,9 +1120,20 @@ export default function ParentSchoolDetailsPage() {
     { label: locale === 'en' ? 'Rating' : locale === 'kk' ? 'Рейтинг' : 'Рейтинг', value: rating },
     { label: locale === 'en' ? 'Reviews count' : locale === 'kk' ? 'Пікір саны' : 'Количество отзывов', value: reviews },
   ];
+  const phoneDigits = phone.replaceAll(/[^\d]/g, '');
+  const whatsappValue = formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone']));
+  const whatsappDigits = whatsappValue.replaceAll(/[^\d]/g, '');
   const contactItems: ContactItem[] = [
-    { label: locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон', value: phone },
-    { label: 'WhatsApp', value: formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone'])) },
+    {
+      label: locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон',
+      value: phone,
+      href: phoneDigits ? `tel:${phoneDigits}` : undefined,
+    },
+    {
+      label: 'WhatsApp',
+      value: whatsappValue,
+      href: whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined,
+    },
     { label: 'Email', value: pickFirstText(school, ['basic_info.email']) },
     {
       label: locale === 'en' ? 'Website' : locale === 'kk' ? 'Сайт' : 'Сайт',
@@ -1714,7 +1727,19 @@ export default function ParentSchoolDetailsPage() {
                 label={ui.price}
                 value={<span className={guest ? 'guest-price-blur' : ''}>{price}</span>}
                 open={priceExpanded}
-                onToggle={() => setPriceExpanded((prev) => !prev)}
+                onToggle={() =>
+                  setPriceExpanded((prev) => {
+                    if (!prev && trackedSchoolId) {
+                      void recordEngagementEvent({
+                        eventType: 'price_open',
+                        schoolId: trackedSchoolId,
+                        locale,
+                        source: 'school_card_price',
+                      }).catch(() => undefined);
+                    }
+                    return !prev;
+                  })
+                }
               >
                 <div className={guest ? 'guest-price-blur' : ''}>
                   {financeMetaCards.length ? (
@@ -1783,7 +1808,19 @@ export default function ParentSchoolDetailsPage() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              <Link href={fullMapHref} className="school-mobile-map-cta">
+              <Link
+                href={fullMapHref}
+                className="school-mobile-map-cta"
+                onClick={() => {
+                  if (!trackedSchoolId) return;
+                  void recordEngagementEvent({
+                    eventType: 'school_map_open',
+                    schoolId: trackedSchoolId,
+                    locale,
+                    source: 'school_card_map',
+                  }).catch(() => undefined);
+                }}
+              >
                 Нажмите, чтобы раскрыть карту
               </Link>
             </section>
@@ -1819,6 +1856,15 @@ export default function ParentSchoolDetailsPage() {
                     <Link
                       href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/admission`}
                       className="school-link-card"
+                      onClick={() => {
+                        if (!trackedSchoolId) return;
+                        void recordEngagementEvent({
+                          eventType: 'admission_open',
+                          schoolId: trackedSchoolId,
+                          locale,
+                          source: 'school_card_admission',
+                        }).catch(() => undefined);
+                      }}
                     >
                       <span className="school-link-card-title">{ui.admissionPage}</span>
                       <span className="school-link-card-subtitle">{admissionHintValue}</span>
@@ -1980,6 +2026,24 @@ export default function ParentSchoolDetailsPage() {
                                   }
                                   target="_blank"
                                   rel="noreferrer"
+                                  onClick={() => {
+                                    if (!trackedSchoolId) return;
+                                    const matchedItem = contactItems.find(
+                                      (item) => item.label === row.label && item.value === row.value
+                                    );
+                                    const href = String(matchedItem?.href || '');
+                                    const eventType = href.startsWith('tel:')
+                                      ? 'contact_phone_click'
+                                      : href.includes('wa.me')
+                                        ? 'contact_whatsapp_click'
+                                        : 'contact_website_click';
+                                    void recordEngagementEvent({
+                                      eventType,
+                                      schoolId: trackedSchoolId,
+                                      locale,
+                                      source: 'school_card_contacts',
+                                    }).catch(() => undefined);
+                                  }}
                                 >
                                   {row.value}
                                 </a>

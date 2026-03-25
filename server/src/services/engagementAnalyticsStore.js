@@ -8,14 +8,24 @@ const STORAGE_DIR = path.resolve(__dirname, '../data');
 const STORAGE_PATH = path.join(STORAGE_DIR, 'engagement-analytics.json');
 const MAX_FILE_EVENTS = 100000;
 
-const EVENT_TYPES = new Set([
+const EVENT_TYPE_LIST = [
   'school_card_view',
   'compare_add',
+  'favorite_add',
+  'school_map_open',
+  'contact_phone_click',
+  'contact_whatsapp_click',
+  'contact_website_click',
+  'price_open',
+  'admission_open',
+  'ai_school_mention',
   'ai_match_run',
   'ai_chat_open',
   'ai_chat_message',
   'guest_gate_click',
-]);
+];
+
+const EVENT_TYPES = new Set(EVENT_TYPE_LIST);
 
 const ensureStorage = async () => {
   await fs.mkdir(STORAGE_DIR, { recursive: true });
@@ -95,6 +105,39 @@ const buildEmptyTotals = () => ({
   auth: 0,
 });
 
+const createTimelineRow = (date) => ({
+  date,
+  school_card_view: 0,
+  compare_add: 0,
+  favorite_add: 0,
+  school_map_open: 0,
+  contact_phone_click: 0,
+  contact_whatsapp_click: 0,
+  contact_website_click: 0,
+  price_open: 0,
+  admission_open: 0,
+  ai_school_mention: 0,
+  ai_match_run: 0,
+  ai_chat_open: 0,
+  ai_chat_message: 0,
+  guest_gate_click: 0,
+});
+
+const buildSchoolTotals = () => ({
+  school_card_view: 0,
+  unique_auth_parents: 0,
+  compare_add: 0,
+  favorite_add: 0,
+  school_map_open: 0,
+  contact_phone_click: 0,
+  contact_whatsapp_click: 0,
+  contact_website_click: 0,
+  contact_click_total: 0,
+  price_open: 0,
+  admission_open: 0,
+  ai_school_mention: 0,
+});
+
 const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {}) => {
   const maxRows = Math.max(1, Math.min(50, Number(limit) || 10));
   const { days: lookback, cutoffTs } = pickCutoff(days, resetAt);
@@ -124,15 +167,7 @@ const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {})
     totalsByType[eventType][actorType] += 1;
 
     if (!timelineMap.has(dayKey)) {
-      timelineMap.set(dayKey, {
-        date: dayKey,
-        school_card_view: 0,
-        compare_add: 0,
-        ai_match_run: 0,
-        ai_chat_open: 0,
-        ai_chat_message: 0,
-        guest_gate_click: 0,
-      });
+      timelineMap.set(dayKey, createTimelineRow(dayKey));
     }
     timelineMap.get(dayKey)[eventType] += 1;
 
@@ -156,7 +191,7 @@ const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {})
     }
   }
 
-  const topEvents = Array.from(EVENT_TYPES).map((eventType) => ({
+  const topEvents = EVENT_TYPE_LIST.map((eventType) => ({
     event_type: eventType,
     ...(totalsByType[eventType] || buildEmptyTotals()),
   }));
@@ -175,6 +210,89 @@ const aggregateEvents = (events, { days = 30, limit = 10, resetAt = null } = {})
     topEvents,
     topSchools,
     timeline,
+  };
+};
+
+const aggregateSchoolEvents = (events, { schoolId, days = 30, resetAt = null } = {}) => {
+  const normalizedSchoolId = cleanString(schoolId, 120);
+  if (!normalizedSchoolId) {
+    return {
+      mode: 'school',
+      school_id: '',
+      days: Math.max(1, Math.min(365, Number(days) || 30)),
+      reset_at: resetAt,
+      sampled_events: 0,
+      unique_auth_parents: 0,
+      totals: buildSchoolTotals(),
+      topEvents: EVENT_TYPE_LIST.map((eventType) => ({
+        event_type: eventType,
+        ...buildEmptyTotals(),
+      })),
+      timeline: [],
+    };
+  }
+
+  const { days: lookback, cutoffTs } = pickCutoff(days, resetAt);
+  const filtered = events.filter((event) => {
+    const ts = new Date(event.createdAt || event.created_at || 0).getTime();
+    const actorType = event.actorType || event.actor_type;
+    const eventSchoolId = cleanString(event.schoolId || event.school_id, 120);
+    return (
+      Number.isFinite(ts) &&
+      ts >= cutoffTs &&
+      actorType === 'auth' &&
+      eventSchoolId === normalizedSchoolId
+    );
+  });
+
+  const totalsByType = {};
+  const timelineMap = new Map();
+  const actorIds = new Set();
+
+  for (const event of filtered) {
+    const eventType = event.eventType || event.event_type;
+    if (!EVENT_TYPES.has(eventType)) continue;
+    const actorUserId = cleanString(event.actorUserId || event.actor_user_id, 120);
+    const dayKey = new Date(event.createdAt || event.created_at || Date.now())
+      .toISOString()
+      .slice(0, 10);
+
+    if (!totalsByType[eventType]) {
+      totalsByType[eventType] = buildEmptyTotals();
+    }
+    totalsByType[eventType].all += 1;
+    totalsByType[eventType].auth += 1;
+
+    if (!timelineMap.has(dayKey)) {
+      timelineMap.set(dayKey, createTimelineRow(dayKey));
+    }
+    timelineMap.get(dayKey)[eventType] += 1;
+
+    if (actorUserId) actorIds.add(actorUserId);
+  }
+
+  const totals = buildSchoolTotals();
+  Object.keys(totals).forEach((key) => {
+    if (key === 'unique_auth_parents' || key === 'contact_click_total') return;
+    totals[key] = Number(totalsByType[key]?.all || 0);
+  });
+  totals.unique_auth_parents = actorIds.size;
+  totals.contact_click_total =
+    totals.contact_phone_click + totals.contact_whatsapp_click + totals.contact_website_click;
+
+  return {
+    mode: 'school',
+    school_id: normalizedSchoolId,
+    days: lookback,
+    reset_at: resetAt,
+    sampled_events: filtered.length,
+    unique_auth_parents: actorIds.size,
+    totals,
+    topEvents: EVENT_TYPE_LIST.map((eventType) => ({
+      event_type: eventType,
+      ...(totalsByType[eventType] || buildEmptyTotals()),
+    })),
+    timeline: Array.from(timelineMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
   };
 };
 
@@ -334,7 +452,7 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
     days: lookback,
     reset_at: resetAt,
     sampled_events: Number(sampledRes.rows[0]?.total || 0),
-    topEvents: Array.from(EVENT_TYPES).map((eventType) => ({
+    topEvents: EVENT_TYPE_LIST.map((eventType) => ({
       event_type: eventType,
       ...(topEventsMap.get(eventType) || buildEmptyTotals()),
     })),
@@ -349,6 +467,143 @@ const getEngagementAnalyticsSummary = async ({ days = 30, limit = 10 } = {}) => 
       date: row.date,
       school_card_view: Number(row.school_card_view || 0),
       compare_add: Number(row.compare_add || 0),
+      ai_match_run: Number(row.ai_match_run || 0),
+      ai_chat_open: Number(row.ai_chat_open || 0),
+      ai_chat_message: Number(row.ai_chat_message || 0),
+      guest_gate_click: Number(row.guest_gate_click || 0),
+    })),
+  };
+};
+
+const getSchoolEngagementAnalyticsSummary = async ({ schoolId, days = 30 } = {}) => {
+  const resetAt = await getLastResetAt();
+  const normalizedSchoolId = cleanString(schoolId, 120);
+  if (!config.databaseUrl) {
+    const state = await readState();
+    return aggregateSchoolEvents(state.events, {
+      schoolId: normalizedSchoolId,
+      days,
+      resetAt: state.resetAt || resetAt,
+    });
+  }
+
+  const db = getPool();
+  await ensureEngagementAnalyticsTables();
+  const { days: lookback, cutoffTs } = pickCutoff(days, resetAt);
+  const cutoffIso = new Date(cutoffTs).toISOString();
+
+  const [topEventsRes, timelineRes, sampledRes, uniqueRes] = await Promise.all([
+    db.query(
+      `
+        SELECT
+          event_type,
+          COUNT(*)::INT AS all,
+          0::INT AS guest,
+          COUNT(*) FILTER (WHERE actor_type = 'auth')::INT AS auth
+        FROM engagement_analytics_events
+        WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
+          AND school_id = $2
+        GROUP BY event_type
+      `,
+      [cutoffIso, normalizedSchoolId]
+    ),
+    db.query(
+      `
+        SELECT
+          TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS date,
+          COUNT(*) FILTER (WHERE event_type = 'school_card_view')::INT AS school_card_view,
+          COUNT(*) FILTER (WHERE event_type = 'compare_add')::INT AS compare_add,
+          COUNT(*) FILTER (WHERE event_type = 'favorite_add')::INT AS favorite_add,
+          COUNT(*) FILTER (WHERE event_type = 'school_map_open')::INT AS school_map_open,
+          COUNT(*) FILTER (WHERE event_type = 'contact_phone_click')::INT AS contact_phone_click,
+          COUNT(*) FILTER (WHERE event_type = 'contact_whatsapp_click')::INT AS contact_whatsapp_click,
+          COUNT(*) FILTER (WHERE event_type = 'contact_website_click')::INT AS contact_website_click,
+          COUNT(*) FILTER (WHERE event_type = 'price_open')::INT AS price_open,
+          COUNT(*) FILTER (WHERE event_type = 'admission_open')::INT AS admission_open,
+          COUNT(*) FILTER (WHERE event_type = 'ai_school_mention')::INT AS ai_school_mention,
+          COUNT(*) FILTER (WHERE event_type = 'ai_match_run')::INT AS ai_match_run,
+          COUNT(*) FILTER (WHERE event_type = 'ai_chat_open')::INT AS ai_chat_open,
+          COUNT(*) FILTER (WHERE event_type = 'ai_chat_message')::INT AS ai_chat_message,
+          COUNT(*) FILTER (WHERE event_type = 'guest_gate_click')::INT AS guest_gate_click
+        FROM engagement_analytics_events
+        WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
+          AND school_id = $2
+        GROUP BY DATE_TRUNC('day', created_at)
+        ORDER BY DATE_TRUNC('day', created_at) ASC
+      `,
+      [cutoffIso, normalizedSchoolId]
+    ),
+    db.query(
+      `
+        SELECT COUNT(*)::INT AS total
+        FROM engagement_analytics_events
+        WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
+          AND school_id = $2
+      `,
+      [cutoffIso, normalizedSchoolId]
+    ),
+    db.query(
+      `
+        SELECT COUNT(DISTINCT actor_user_id)::INT AS unique_auth_parents
+        FROM engagement_analytics_events
+        WHERE created_at >= $1::timestamptz
+          AND actor_type = 'auth'
+          AND school_id = $2
+          AND actor_user_id IS NOT NULL
+      `,
+      [cutoffIso, normalizedSchoolId]
+    ),
+  ]);
+
+  const topEventsMap = new Map(
+    topEventsRes.rows.map((row) => [
+      row.event_type,
+      {
+        event_type: row.event_type,
+        all: Number(row.all || 0),
+        guest: Number(row.guest || 0),
+        auth: Number(row.auth || 0),
+      },
+    ])
+  );
+
+  const totals = buildSchoolTotals();
+  EVENT_TYPE_LIST.forEach((eventType) => {
+    if (eventType in totals) {
+      totals[eventType] = Number(topEventsMap.get(eventType)?.all || 0);
+    }
+  });
+  totals.unique_auth_parents = Number(uniqueRes.rows[0]?.unique_auth_parents || 0);
+  totals.contact_click_total =
+    totals.contact_phone_click + totals.contact_whatsapp_click + totals.contact_website_click;
+
+  return {
+    mode: 'school',
+    school_id: normalizedSchoolId,
+    days: lookback,
+    reset_at: resetAt,
+    sampled_events: Number(sampledRes.rows[0]?.total || 0),
+    unique_auth_parents: totals.unique_auth_parents,
+    totals,
+    topEvents: EVENT_TYPE_LIST.map((eventType) => ({
+      event_type: eventType,
+      ...(topEventsMap.get(eventType) || buildEmptyTotals()),
+    })),
+    timeline: timelineRes.rows.map((row) => ({
+      date: row.date,
+      school_card_view: Number(row.school_card_view || 0),
+      compare_add: Number(row.compare_add || 0),
+      favorite_add: Number(row.favorite_add || 0),
+      school_map_open: Number(row.school_map_open || 0),
+      contact_phone_click: Number(row.contact_phone_click || 0),
+      contact_whatsapp_click: Number(row.contact_whatsapp_click || 0),
+      contact_website_click: Number(row.contact_website_click || 0),
+      price_open: Number(row.price_open || 0),
+      admission_open: Number(row.admission_open || 0),
+      ai_school_mention: Number(row.ai_school_mention || 0),
       ai_match_run: Number(row.ai_match_run || 0),
       ai_chat_open: Number(row.ai_chat_open || 0),
       ai_chat_message: Number(row.ai_chat_message || 0),
@@ -380,5 +635,6 @@ const resetEngagementAnalytics = async ({ actorEmail } = {}) => {
 module.exports = {
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
+  getSchoolEngagementAnalyticsSummary,
   resetEngagementAnalytics,
 };

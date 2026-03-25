@@ -407,6 +407,14 @@ export default function ParentAiMatchPage() {
       const recommended = Array.isArray(payload?.recommendedSchoolIds)
         ? payload.recommendedSchoolIds.map((id) => String(id || '').trim()).filter(Boolean)
         : [];
+      recommended.forEach((recommendedSchoolId) => {
+        void recordEngagementEvent({
+          eventType: 'ai_school_mention',
+          schoolId: recommendedSchoolId,
+          locale,
+          source: 'ai_match_results',
+        }).catch(() => undefined);
+      });
       const sorted = recommended
         .map((id) => rows.find((row) => String(row.school_id || '') === id))
         .filter(Boolean) as SchoolRow[];

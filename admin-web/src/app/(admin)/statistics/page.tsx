@@ -75,8 +75,26 @@ type ReviewModerationRow = {
 
 type EngagementSummaryPayload = {
   days: number;
+  mode?: 'global' | 'school';
+  school_id?: string;
+  school_name?: string;
   reset_at?: string | null;
   sampled_events: number;
+  unique_auth_parents?: number;
+  totals?: {
+    school_card_view: number;
+    unique_auth_parents: number;
+    compare_add: number;
+    favorite_add: number;
+    school_map_open: number;
+    contact_phone_click: number;
+    contact_whatsapp_click: number;
+    contact_website_click: number;
+    contact_click_total: number;
+    price_open: number;
+    admission_open: number;
+    ai_school_mention: number;
+  };
   topEvents: Array<{
     event_type: string;
     all: number;
@@ -87,12 +105,20 @@ type EngagementSummaryPayload = {
     date: string;
     school_card_view: number;
     compare_add: number;
+    favorite_add?: number;
+    school_map_open?: number;
+    contact_phone_click?: number;
+    contact_whatsapp_click?: number;
+    contact_website_click?: number;
+    price_open?: number;
+    admission_open?: number;
+    ai_school_mention?: number;
     ai_match_run: number;
     ai_chat_open: number;
     ai_chat_message: number;
     guest_gate_click: number;
   }>;
-  topSchools: Array<{
+  topSchools?: Array<{
     school_id: string;
     school_name: string;
     views: number;
@@ -105,6 +131,14 @@ type EngagementSummaryPayload = {
 const ENGAGEMENT_LABELS: Record<string, string> = {
   school_card_view: 'Открытия карточек школ',
   compare_add: 'Добавления в сравнение',
+  favorite_add: 'Добавления в избранное',
+  school_map_open: 'Открытия карты',
+  contact_phone_click: 'Клики по телефону',
+  contact_whatsapp_click: 'Клики по WhatsApp',
+  contact_website_click: 'Клики по сайту',
+  price_open: 'Переходы в цену',
+  admission_open: 'Переходы в поступление',
+  ai_school_mention: 'Попадания в AI',
   ai_match_run: 'Запуски AI подбора',
   ai_chat_open: 'Открытия AI чата',
   ai_chat_message: 'Сообщения в AI чате',
@@ -210,11 +244,12 @@ export default function StatisticsPage() {
     setMessage('');
     try {
       if (isSchoolAdmin) {
-        const [consultationsResponse, schoolsResponse] = await Promise.all([
+        const [consultationsResponse, schoolsResponse, engagementResponse] = await Promise.all([
           requestJson<{ data?: ConsultationRequest[] }>('/consultations', {
             headers: { Authorization: `Bearer ${token}` },
           }),
           requestJson<{ data?: any[] }>('/schools?include_inactive=1&include_hidden=1'),
+          loadEngagementAnalytics(token, { days, limit: 12 }),
         ]);
         const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
         const email = normalizeEmail(actorEmail);
@@ -230,7 +265,7 @@ export default function StatisticsPage() {
           Array.isArray(consultationsResponse?.data) ? consultationsResponse.data : []
         );
         setSummary(null);
-        setEngagementSummary(null);
+        setEngagementSummary(engagementResponse?.data || null);
       } else {
         const [programResponse, engagementResponse] = await Promise.all([
           loadProgramInfoAnalytics(token, { days, limit: 12 }),
@@ -340,6 +375,81 @@ export default function StatisticsPage() {
         )
         .slice(0, 10),
     [consultations]
+  );
+
+  const schoolEngagementTotals = useMemo(
+    () => ({
+      school_card_view: Number(engagementSummary?.totals?.school_card_view || 0),
+      unique_auth_parents:
+        Number(engagementSummary?.totals?.unique_auth_parents || 0) ||
+        Number(engagementSummary?.unique_auth_parents || 0),
+      compare_add: Number(engagementSummary?.totals?.compare_add || 0),
+      favorite_add: Number(engagementSummary?.totals?.favorite_add || 0),
+      school_map_open: Number(engagementSummary?.totals?.school_map_open || 0),
+      contact_phone_click: Number(engagementSummary?.totals?.contact_phone_click || 0),
+      contact_whatsapp_click: Number(engagementSummary?.totals?.contact_whatsapp_click || 0),
+      contact_website_click: Number(engagementSummary?.totals?.contact_website_click || 0),
+      contact_click_total: Number(engagementSummary?.totals?.contact_click_total || 0),
+      price_open: Number(engagementSummary?.totals?.price_open || 0),
+      admission_open: Number(engagementSummary?.totals?.admission_open || 0),
+      ai_school_mention: Number(engagementSummary?.totals?.ai_school_mention || 0),
+    }),
+    [engagementSummary]
+  );
+
+  const schoolEngagementCards = useMemo(
+    () => [
+      { key: 'school_card_view', label: 'Просмотры карточки', value: schoolEngagementTotals.school_card_view },
+      { key: 'unique_auth_parents', label: 'Уникальные родители', value: schoolEngagementTotals.unique_auth_parents },
+      { key: 'compare_add', label: 'Добавления в сравнение', value: schoolEngagementTotals.compare_add },
+      { key: 'favorite_add', label: 'Добавления в избранное', value: schoolEngagementTotals.favorite_add },
+      { key: 'school_map_open', label: 'Открытия карты', value: schoolEngagementTotals.school_map_open },
+      { key: 'contact_click_total', label: 'Клики в контакты', value: schoolEngagementTotals.contact_click_total },
+      { key: 'price_open', label: 'Переходы в цену', value: schoolEngagementTotals.price_open },
+      { key: 'admission_open', label: 'Переходы в поступление', value: schoolEngagementTotals.admission_open },
+      { key: 'ai_school_mention', label: 'Попадания в AI', value: schoolEngagementTotals.ai_school_mention },
+    ],
+    [schoolEngagementTotals]
+  );
+
+  const schoolTimelinePeak = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...(engagementSummary?.timeline || []).map(
+          (row) =>
+            Number(row.school_card_view || 0) +
+            Number(row.price_open || 0) +
+            Number(row.admission_open || 0) +
+            Number(row.compare_add || 0) +
+            Number(row.favorite_add || 0) +
+            Number(row.contact_phone_click || 0) +
+            Number(row.contact_whatsapp_click || 0) +
+            Number(row.contact_website_click || 0) +
+            Number(row.ai_school_mention || 0)
+        )
+      ),
+    [engagementSummary]
+  );
+
+  const schoolActionRows = useMemo(
+    () => [
+      { key: 'price_open', label: 'Цена', value: schoolEngagementTotals.price_open },
+      { key: 'admission_open', label: 'Поступление', value: schoolEngagementTotals.admission_open },
+      { key: 'school_map_open', label: 'Карта', value: schoolEngagementTotals.school_map_open },
+      { key: 'compare_add', label: 'Сравнение', value: schoolEngagementTotals.compare_add },
+      { key: 'favorite_add', label: 'Избранное', value: schoolEngagementTotals.favorite_add },
+      { key: 'contact_phone_click', label: 'Телефон', value: schoolEngagementTotals.contact_phone_click },
+      { key: 'contact_whatsapp_click', label: 'WhatsApp', value: schoolEngagementTotals.contact_whatsapp_click },
+      { key: 'contact_website_click', label: 'Сайт', value: schoolEngagementTotals.contact_website_click },
+      { key: 'ai_school_mention', label: 'AI', value: schoolEngagementTotals.ai_school_mention },
+    ].filter((item) => item.value > 0),
+    [schoolEngagementTotals]
+  );
+
+  const schoolActionPeak = useMemo(
+    () => Math.max(1, ...schoolActionRows.map((item) => item.value)),
+    [schoolActionRows]
   );
 
   const canManageSurveys = actorRole === 'moderator' || actorRole === 'superadmin';
@@ -676,6 +786,234 @@ export default function StatisticsPage() {
             <>
               {ownSchool ? (
                 <>
+                  <div className="card" style={{ marginBottom: 16 }}>
+                    <div className="requests-head" style={{ marginBottom: 12 }}>
+                      <h3 style={{ margin: 0 }}>
+                        Аналитика интереса к школе
+                        {engagementSummary?.school_name ? `: ${engagementSummary.school_name}` : ''}
+                      </h3>
+                      {engagementSummary?.reset_at ? (
+                        <span className="muted">
+                          Считаем с {new Date(engagementSummary.reset_at).toLocaleString()}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="schools-admin-list">
+                      {schoolEngagementCards.map((item) => (
+                        <div key={item.key} className="schools-admin-card">
+                          <p className="request-title">{item.label}</p>
+                          <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 16,
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(320px, 1.5fr) minmax(280px, 1fr)',
+                        gap: 16,
+                      }}
+                    >
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <div className="requests-head" style={{ marginBottom: 8 }}>
+                          <h3 style={{ margin: 0 }}>Динамика по дням</h3>
+                          <p className="muted" style={{ margin: 0 }}>
+                            Просмотры, цена, поступление, сравнение и контакты
+                          </p>
+                        </div>
+                        {(engagementSummary?.timeline || []).length ? (
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: `repeat(${Math.min(
+                                Math.max((engagementSummary?.timeline || []).length, 1),
+                                14
+                              )}, minmax(28px, 1fr))`,
+                              gap: 8,
+                              alignItems: 'end',
+                            }}
+                          >
+                            {(engagementSummary?.timeline || []).map((row) => {
+                              const total =
+                                Number(row.school_card_view || 0) +
+                                Number(row.price_open || 0) +
+                                Number(row.admission_open || 0) +
+                                Number(row.compare_add || 0) +
+                                Number(row.favorite_add || 0) +
+                                Number(row.contact_phone_click || 0) +
+                                Number(row.contact_whatsapp_click || 0) +
+                                Number(row.contact_website_click || 0) +
+                                Number(row.ai_school_mention || 0);
+                              const height = Math.max(
+                                10,
+                                Math.round((total / schoolTimelinePeak) * 140)
+                              );
+                              return (
+                                <div key={row.date} style={{ display: 'grid', gap: 6 }}>
+                                  <div
+                                    title={`${row.date}: ${total}`}
+                                    style={{
+                                      height,
+                                      borderRadius: 10,
+                                      background:
+                                        'linear-gradient(180deg, rgba(79,95,255,0.92) 0%, rgba(255,164,30,0.88) 100%)',
+                                    }}
+                                  />
+                                  <span className="muted" style={{ fontSize: 11, textAlign: 'center' }}>
+                                    {row.date.slice(5)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="muted" style={{ marginBottom: 0 }}>
+                            Событий пока нет.
+                          </p>
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <h3 style={{ marginTop: 0 }}>Воронка интереса</h3>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {[
+                            { label: 'Просмотры карточки', value: schoolEngagementTotals.school_card_view },
+                            { label: 'Переходы в цену', value: schoolEngagementTotals.price_open },
+                            { label: 'Переходы в поступление', value: schoolEngagementTotals.admission_open },
+                            { label: 'Добавления в сравнение', value: schoolEngagementTotals.compare_add },
+                            { label: 'Добавления в избранное', value: schoolEngagementTotals.favorite_add },
+                            { label: 'Клики в контакты', value: schoolEngagementTotals.contact_click_total },
+                          ].map((item, index) => (
+                            <div
+                              key={item.label}
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: 14,
+                                background: `rgba(79,95,255,${Math.max(0.14, 0.42 - index * 0.05)})`,
+                                color: index < 3 ? '#23314d' : '#1d2840',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                                <span>{item.label}</span>
+                                <strong>{item.value}</strong>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 16,
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(320px, 1.2fr) minmax(260px, 0.8fr)',
+                        gap: 16,
+                      }}
+                    >
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <h3 style={{ marginTop: 0 }}>Что интересует родителей</h3>
+                        {schoolActionRows.length ? (
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            {schoolActionRows.map((row) => (
+                              <div key={row.key}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  <span>{row.label}</span>
+                                  <strong>{row.value}</strong>
+                                </div>
+                                <div
+                                  style={{
+                                    height: 10,
+                                    borderRadius: 999,
+                                    background: 'rgba(120,106,255,0.12)',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${Math.max(6, Math.round((row.value / schoolActionPeak) * 100))}%`,
+                                      height: '100%',
+                                      background: '#4f5fff',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="muted" style={{ marginBottom: 0 }}>
+                            Пока нет действий, связанных с карточкой школы.
+                          </p>
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <h3 style={{ marginTop: 0 }}>Контакты и AI</h3>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <div className="schools-admin-card" style={{ margin: 0 }}>
+                            <p className="request-title">Телефон</p>
+                            <p className="muted">{schoolEngagementTotals.contact_phone_click}</p>
+                          </div>
+                          <div className="schools-admin-card" style={{ margin: 0 }}>
+                            <p className="request-title">WhatsApp</p>
+                            <p className="muted">{schoolEngagementTotals.contact_whatsapp_click}</p>
+                          </div>
+                          <div className="schools-admin-card" style={{ margin: 0 }}>
+                            <p className="request-title">Сайт</p>
+                            <p className="muted">{schoolEngagementTotals.contact_website_click}</p>
+                          </div>
+                          <div className="schools-admin-card" style={{ margin: 0 }}>
+                            <p className="request-title">AI-попадания</p>
+                            <p className="muted">{schoolEngagementTotals.ai_school_mention}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="muted" style={{ margin: '12px 0 0' }}>
+                      Всего событий в выборке: {engagementSummary?.sampled_events || 0}
+                    </p>
+                  </div>
+
                   <div className="schools-admin-list">
                     <div className="schools-admin-card">
                       <p className="request-title">Заявки всего</p>
