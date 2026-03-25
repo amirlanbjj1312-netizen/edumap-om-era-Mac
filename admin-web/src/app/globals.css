@@ -5192,11 +5192,23 @@ a {
   }
 
   .market-school-side-actions {
-    display: contents;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 52px;
+    min-width: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
   }
 
   .market-card-action-row {
-    display: contents;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 8px;
+    width: 52px;
   }
 
   .parent-school-name {
@@ -5266,9 +5278,7 @@ a {
   }
 
   .market-card-action-row .school-favorite-btn.inline {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+    position: static;
     width: 38px;
     height: 38px;
     min-width: 38px;
@@ -5277,9 +5287,15 @@ a {
   }
 
   .market-card-action-row .compare-card-button {
-    min-height: 42px;
+    width: 52px;
+    min-width: 52px;
+    min-height: 58px;
     border-radius: 14px;
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.05;
+    padding: 6px 4px;
+    white-space: normal;
+    text-align: center;
   }
 
   .market-ad-box {

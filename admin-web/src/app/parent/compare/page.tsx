@@ -26,6 +26,7 @@ type SchoolRow = {
   };
   education?: {
     languages?: unknown;
+    grades?: unknown;
     curricula?: {
       national?: unknown;
       international?: unknown;
@@ -45,6 +46,9 @@ type SchoolRow = {
       security?: unknown;
       cameras?: unknown;
       access_control?: unknown;
+    };
+    teaching_staff?: {
+      members?: unknown;
     };
     medical_office?: unknown;
     clubs_count?: unknown;
@@ -447,35 +451,31 @@ export default function ParentComparePage() {
             '—'
           );
         }
-        case 'subtype':
-          return localizeSchoolSubtype(toText(school.basic_info?.school_subtype), locale) || '—';
         case 'address':
           return toText(school.basic_info?.address).trim() || '—';
-        case 'phone':
-          return toText(school.basic_info?.phone).trim() || '—';
-        case 'email':
-          return toText(school.basic_info?.email).trim() || '—';
-        case 'website':
-          return toText(school.basic_info?.website).trim() || '—';
         case 'languages':
           return localizeUniqueList(school.education?.languages, locale).join(', ') || '—';
+        case 'grades':
+          return toText(getIn(school, 'education.grades')).trim() || '—';
         case 'curricula': {
           const items = [
-            getIn(school, 'education.curricula.national'),
-            getIn(school, 'education.curricula.international'),
-            getIn(school, 'education.curricula.additional'),
-            getIn(school, 'education.curricula.other'),
+            ...localizeUniqueList(getIn(school, 'education.curricula.national'), locale),
+            ...localizeUniqueList(getIn(school, 'education.curricula.international'), locale),
+            ...localizeUniqueList(getIn(school, 'education.curricula.additional'), locale),
+            ...localizeUniqueList(getIn(school, 'education.curricula.other'), locale),
           ]
-            .map((v) => toText(v).trim())
+            .map((v) => String(v).trim())
             .filter(Boolean);
-          return items.length ? items.join(' · ') : '—';
+          return items.length ? Array.from(new Set(items)).join(' · ') : '—';
         }
-        case 'advancedSubjects':
-          return localizeUniqueList(getIn(school, 'education.advanced_subjects'), locale).join(', ') || '—';
-        case 'entranceExam':
+        case 'admission':
           return asBoolText(getIn(school, 'education.entrance_exam.required'), locale);
         case 'avgClassSize':
           return toText(getIn(school, 'education.average_class_size')).trim() || '—';
+        case 'staffCount': {
+          const members = getIn(school, 'services.teaching_staff.members');
+          return Array.isArray(members) ? String(members.length) : '—';
+        }
         case 'clubsCount':
           return toText(getIn(school, 'services.clubs_count')).trim() || '—';
         case 'afterSchool':
@@ -487,13 +487,36 @@ export default function ParentComparePage() {
         case 'inclusive':
           return asBoolText(getIn(school, 'services.inclusive_education'), locale);
         case 'security':
-          return asBoolText(getIn(school, 'services.safety.security'), locale);
-        case 'cameras':
-          return asBoolText(getIn(school, 'services.safety.cameras'), locale);
-        case 'accessControl':
-          return asBoolText(getIn(school, 'services.safety.access_control'), locale);
-        case 'medicalOffice':
-          return asBoolText(getIn(school, 'services.medical_office'), locale);
+          return [
+            getIn(school, 'services.safety.security')
+              ? locale === 'en'
+                ? 'Security'
+                : locale === 'kk'
+                  ? 'Күзет'
+                  : 'Охрана'
+              : '',
+            getIn(school, 'services.safety.cameras')
+              ? locale === 'en'
+                ? 'Cameras'
+                : locale === 'kk'
+                  ? 'Камералар'
+                  : 'Камеры'
+              : '',
+            getIn(school, 'services.safety.access_control')
+              ? locale === 'en'
+                ? 'Access control'
+                : locale === 'kk'
+                  ? 'Кіруді бақылау'
+                  : 'Контроль доступа'
+              : '',
+            getIn(school, 'services.medical_office')
+              ? locale === 'en'
+                ? 'Medical office'
+                : locale === 'kk'
+                  ? 'Медкабинет'
+                  : 'Медкабинет'
+              : '',
+          ].filter(Boolean).join(' · ') || '—';
         case 'monthly':
           return formatSchoolFee(
             {
@@ -503,62 +526,34 @@ export default function ParentComparePage() {
             locale,
             '—'
           );
-        case 'monthlyByGrade':
-          return formatGradeFees(school.finance, locale);
-        case 'discounts':
-          return toText(getIn(school, 'finance.discounts')).trim() || '—';
-        case 'grants':
-          return toText(getIn(school, 'admissions.grants')).trim() || toText(getIn(school, 'admissions.scholarships')).trim() || '—';
         case 'rating':
           return String(getIn(school, 'system.rating') ?? '0.0');
         case 'reviews':
           return String(getIn(school, 'system.reviews_count') ?? 0);
-        case 'accreditation':
-          return toText(getIn(school, 'media.accreditation')).trim() || toText(getIn(school, 'media.certificates')).trim() || '—';
-        case 'photos':
-          return toText(getIn(school, 'media.photos')).trim() || '—';
-        case 'videos':
-          return toText(getIn(school, 'media.videos')).trim() || '—';
-        case 'description':
-          return toText(getIn(school, 'basic_info.description')).trim() || '—';
         default:
           return '—';
       }
     };
     const defs = [
-      ['name', criteriaLabel('Название', 'Name', 'Атауы')],
       ['city', criteriaLabel('Город', 'City', 'Қала')],
       ['district', criteriaLabel('Район', 'District', 'Аудан')],
       ['type', criteriaLabel('Тип школы', 'School type', 'Мектеп түрі')],
-      ['subtype', criteriaLabel('Подтип', 'Subtype', 'Ішкі түрі')],
       ['address', criteriaLabel('Адрес', 'Address', 'Мекенжай')],
-      ['phone', criteriaLabel('Телефон', 'Phone', 'Телефон')],
-      ['email', criteriaLabel('Email', 'Email', 'Email')],
-      ['website', criteriaLabel('Сайт', 'Website', 'Сайт')],
+      ['monthly', criteriaLabel('Стоимость обучения', 'Tuition fee', 'Оқу құны')],
       ['languages', criteriaLabel('Языки обучения', 'Languages', 'Оқыту тілдері')],
+      ['grades', criteriaLabel('Классы', 'Grades', 'Сыныптар')],
       ['curricula', criteriaLabel('Программы', 'Curricula', 'Бағдарламалар')],
-      ['advancedSubjects', criteriaLabel('Углублённые предметы', 'Advanced subjects', 'Тереңдетілген пәндер')],
-      ['entranceExam', criteriaLabel('Вступительный экзамен', 'Entrance exam', 'Қабылдау емтиханы')],
+      ['admission', criteriaLabel('Поступление', 'Admission', 'Қабылдау')],
       ['avgClassSize', criteriaLabel('Средний размер класса', 'Average class size', 'Орташа сынып көлемі')],
-      ['clubsCount', criteriaLabel('Количество кружков', 'Clubs count', 'Үйірмелер саны')],
+      ['staffCount', criteriaLabel('Преподавательский состав', 'Teaching staff', 'Оқытушылар құрамы')],
       ['afterSchool', criteriaLabel('Продлёнка', 'After school', 'Ұзартылған күн')],
       ['meals', criteriaLabel('Питание', 'Meals', 'Тамақтану')],
-      ['transport', criteriaLabel('Транспорт', 'Transport', 'Тасымал')],
+      ['transport', criteriaLabel('Трансфер', 'Transport', 'Тасымал')],
+      ['clubsCount', criteriaLabel('Количество кружков', 'Clubs count', 'Үйірмелер саны')],
       ['inclusive', criteriaLabel('Инклюзия', 'Inclusive education', 'Инклюзия')],
       ['security', criteriaLabel('Охрана', 'Security', 'Күзет')],
-      ['cameras', criteriaLabel('Камеры', 'Cameras', 'Камералар')],
-      ['accessControl', criteriaLabel('Контроль доступа', 'Access control', 'Кіру бақылауы')],
-      ['medicalOffice', criteriaLabel('Медпункт', 'Medical office', 'Медпункт')],
-      ['monthly', criteriaLabel('Стоимость обучения', 'Tuition fee', 'Оқу құны')],
-      ['monthlyByGrade', criteriaLabel('Стоимость по классам', 'Fee by grade', 'Сыныптар бойынша төлем')],
-      ['discounts', criteriaLabel('Скидки', 'Discounts', 'Жеңілдіктер')],
-      ['grants', criteriaLabel('Гранты/Стипендии', 'Grants/Scholarships', 'Гранттар/Стипендиялар')],
       ['rating', criteriaLabel('Рейтинг', 'Rating', 'Рейтинг')],
       ['reviews', criteriaLabel('Отзывы', 'Reviews', 'Пікірлер')],
-      ['accreditation', criteriaLabel('Аккредитация', 'Accreditation', 'Аккредитация')],
-      ['photos', criteriaLabel('Фото', 'Photos', 'Фотолар')],
-      ['videos', criteriaLabel('Видео', 'Videos', 'Бейнелер')],
-      ['description', criteriaLabel('Описание', 'Description', 'Сипаттама')],
     ] as Array<[string, string]>;
     return defs.map(([key, label]) => ({
       key,
