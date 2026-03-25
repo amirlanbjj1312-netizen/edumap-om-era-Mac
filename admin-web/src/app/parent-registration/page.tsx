@@ -82,7 +82,8 @@ export default function ParentRegistrationPage() {
     <div className="page">
       <div className="container">
         <div className="card" style={{ maxWidth: 560, margin: '40px auto' }}>
-          <div className="locale-toggle" style={{ marginBottom: 8 }}>
+          <h1 style={{ marginTop: 0 }}>{t('parent_reg_title')}</h1>
+          <div className="locale-toggle" style={{ marginTop: 8, marginBottom: 20, justifyContent: 'flex-start' }}>
             {localeOptions.map((item) => (
               <button
                 key={item.value}
@@ -94,8 +95,6 @@ export default function ParentRegistrationPage() {
               </button>
             ))}
           </div>
-          <h1 style={{ marginTop: 0 }}>{t('parent_reg_title')}</h1>
-          <p className="muted">{t('parent_reg_subtitle')}</p>
 
           <form onSubmit={handleSubmit}>
             <div className="field">
