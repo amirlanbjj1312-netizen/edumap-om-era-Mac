@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { setGuestMode } from '@/lib/guestMode';
 import { localeOptions, useParentLocale } from '@/lib/parentLocale';
+import type { ParentLocale } from '@/lib/parentLocale';
 
 function EyeOpenIcon() {
   return (
@@ -56,6 +57,42 @@ function EyeOffIcon() {
     </svg>
   );
 }
+
+const translateAuthError = (message: string, locale: ParentLocale) => {
+  const normalized = String(message || '').trim().toLowerCase();
+
+  if (normalized.includes('new password should be different from the old password')) {
+    if (locale === 'en') return 'New password must be different from the old password.';
+    if (locale === 'kk') return 'Жаңа құпиясөз бұрынғы құпиясөзден өзгеше болуы керек.';
+    return 'Новый пароль должен отличаться от старого.';
+  }
+
+  if (normalized.includes('passwords do not match')) {
+    if (locale === 'en') return 'Passwords do not match.';
+    if (locale === 'kk') return 'Құпиясөздер сәйкес емес.';
+    return 'Пароли не совпадают.';
+  }
+
+  if (normalized.includes('invalid login credentials')) {
+    if (locale === 'en') return 'Invalid email or password.';
+    if (locale === 'kk') return 'Email немесе құпиясөз қате.';
+    return 'Неверный email или пароль.';
+  }
+
+  if (normalized.includes('password should be at least')) {
+    if (locale === 'en') return 'Password is too short.';
+    if (locale === 'kk') return 'Құпиясөз тым қысқа.';
+    return 'Пароль слишком короткий.';
+  }
+
+  if (normalized.includes('unable to validate email address') || normalized.includes('email not confirmed')) {
+    if (locale === 'en') return 'Confirm your email first.';
+    if (locale === 'kk') return 'Алдымен email-ді растаңыз.';
+    return 'Сначала подтвердите email.';
+  }
+
+  return message;
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -134,7 +171,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (signInError) {
-      setError(signInError.message);
+      setError(translateAuthError(signInError.message, locale));
       return;
     }
     setGuestMode(false);
@@ -163,7 +200,7 @@ export default function LoginPage() {
     });
     setResetLoading(false);
     if (resetError) {
-      setError(resetError.message);
+      setError(translateAuthError(resetError.message, locale));
       return;
     }
     setResetMessage(t('reset_email_sent'));
@@ -191,7 +228,7 @@ export default function LoginPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
     setUpdatePasswordLoading(false);
     if (updateError) {
-      setError(updateError.message);
+      setError(translateAuthError(updateError.message, locale));
       return;
     }
     setResetMessage(
