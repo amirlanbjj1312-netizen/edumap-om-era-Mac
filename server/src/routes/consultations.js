@@ -44,6 +44,16 @@ const POST_RATE_LIMITS = {
 };
 const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
 const postBuckets = new Map();
+const CRM_STATUSES = new Set([
+  'new',
+  'in_progress',
+  'contacted',
+  'consultation_scheduled',
+  'waiting',
+  'enrolled',
+  'closed',
+  'rejected',
+]);
 
 const exceedsLimit = (value, limit) => String(value || '').trim().length > limit;
 const validatePayload = (body = {}) => {
@@ -139,6 +149,10 @@ const buildConsultationsRouter = (config) => {
   const hasMinRole = (role, minRole) =>
     (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[minRole] || 0);
   const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+  const getActorAssignedSchoolId = (actor) =>
+    String(actor?.app_metadata?.school_id || actor?.user_metadata?.school_id || '')
+      .trim()
+      .toLowerCase();
   const buildFallbackSchoolId = (email) => {
     const base = normalizeEmail(email)
       .split('@')[0]
@@ -184,13 +198,14 @@ const buildConsultationsRouter = (config) => {
       if (role === 'admin') {
         const actorEmail = normalizeEmail(user?.email);
         const fallbackSchoolId = buildFallbackSchoolId(actorEmail);
+        const assignedSchoolId = getActorAssignedSchoolId(user);
         const schools = await readStore();
         const allowedSchoolIds = new Set(
           (schools || [])
             .filter((school) => {
               const schoolEmail = normalizeEmail(school?.basic_info?.email);
               const schoolId = String(school?.school_id || '').trim().toLowerCase();
-              return schoolEmail === actorEmail || schoolId === fallbackSchoolId;
+              return schoolEmail === actorEmail || schoolId === fallbackSchoolId || schoolId === assignedSchoolId;
             })
             .map((school) => String(school?.school_id || '').trim())
             .filter(Boolean)
@@ -276,6 +291,74 @@ const buildConsultationsRouter = (config) => {
       }
 
       res.status(201).json({ data: record });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch('/:id', async (req, res, next) => {
+    try {
+      const actorPayload = await requireAdminAccess(req, res);
+      if (!actorPayload) return;
+      const { user, role } = actorPayload;
+      const id = String(req.params?.id || '').trim();
+      if (!id) {
+        return res.status(400).json({ error: 'Consultation id is required.' });
+      }
+
+      const allItems = await store.list();
+      const target = allItems.find((item) => String(item?.id || '').trim() === id);
+      if (!target) {
+        return res.status(404).json({ error: 'Consultation request not found.' });
+      }
+
+      if (role === 'admin') {
+        const actorEmail = normalizeEmail(user?.email);
+        const fallbackSchoolId = buildFallbackSchoolId(actorEmail);
+        const assignedSchoolId = getActorAssignedSchoolId(user);
+        const targetSchoolId = String(target?.schoolId || '').trim().toLowerCase();
+        const schools = await readStore();
+        const canAccess = (schools || []).some((school) => {
+          const schoolEmail = normalizeEmail(school?.basic_info?.email);
+          const schoolId = String(school?.school_id || '').trim().toLowerCase();
+          return (
+            schoolId === targetSchoolId &&
+            (schoolEmail === actorEmail || schoolId === fallbackSchoolId || schoolId === assignedSchoolId)
+          );
+        });
+        if (!canAccess) {
+          return res.status(403).json({ error: 'Admin can update only own school requests.' });
+        }
+      }
+
+      const nextStatus = String(req.body?.status || '').trim();
+      const internalNote = String(req.body?.internalNote || '').trim();
+      const assignedTo = String(req.body?.assignedTo || '').trim();
+      const followUpAt = String(req.body?.followUpAt || '').trim();
+
+      if (nextStatus && !CRM_STATUSES.has(nextStatus)) {
+        return res.status(400).json({ error: 'Unsupported consultation status.' });
+      }
+      if (internalNote.length > 3000) {
+        return res.status(400).json({ error: 'internalNote is too long.' });
+      }
+      if (assignedTo.length > 160) {
+        return res.status(400).json({ error: 'assignedTo is too long.' });
+      }
+      if (followUpAt && !Number.isFinite(new Date(followUpAt).getTime())) {
+        return res.status(400).json({ error: 'followUpAt must be a valid datetime.' });
+      }
+
+      const updated = await store.updateById(id, {
+        status: nextStatus || target.status || 'new',
+        internalNote,
+        assignedTo,
+        followUpAt,
+        updatedAt: new Date().toISOString(),
+        updatedBy: normalizeEmail(user?.email) || String(user?.id || ''),
+      });
+
+      return res.json({ data: updated });
     } catch (error) {
       next(error);
     }

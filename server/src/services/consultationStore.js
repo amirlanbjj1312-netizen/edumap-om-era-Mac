@@ -39,11 +39,33 @@ class ConsultationStore {
     const record = {
       id: payload.id || randomUUID(),
       createdAt: new Date().toISOString(),
+      status: payload.status || 'new',
+      internalNote: payload.internalNote || '',
+      assignedTo: payload.assignedTo || '',
+      followUpAt: payload.followUpAt || '',
+      updatedAt: payload.updatedAt || '',
+      updatedBy: payload.updatedBy || '',
       ...payload,
     };
     current.unshift(record);
     await writeJSON(this.filePath, current);
     return record;
+  }
+
+  async updateById(id, patch) {
+    const current = await this.list();
+    const next = current.map((item) =>
+      String(item?.id || '') === String(id || '')
+        ? {
+            ...item,
+            ...patch,
+            id: item.id,
+            createdAt: item.createdAt,
+          }
+        : item
+    );
+    await writeJSON(this.filePath, next);
+    return next.find((item) => String(item?.id || '') === String(id || '')) || null;
   }
 }
 
