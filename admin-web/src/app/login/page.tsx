@@ -61,15 +61,35 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nextPassword, setNextPassword] = useState('');
+  const [confirmNextPassword, setConfirmNextPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetMessage, setResetMessage] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const { locale, setLocale, t } = useParentLocale();
 
+  const getRecoveryModeFromUrl = () => {
+    if (typeof window === 'undefined') return false;
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return search.get('mode') === 'recovery' || hash.get('type') === 'recovery';
+  };
+
   useEffect(() => {
+    const recoveryMode = getRecoveryModeFromUrl();
+    if (recoveryMode) {
+      setIsRecoveryMode(true);
+    }
     supabase.auth.getSession().then(({ data }) => {
+      const activeRecoveryMode = getRecoveryModeFromUrl();
+      if (activeRecoveryMode) {
+        setIsRecoveryMode(true);
+        return;
+      }
       if (data.session) {
         setGuestMode(false);
         const role = resolvePortalRole(
@@ -78,6 +98,30 @@ export default function LoginPage() {
         router.replace(portalHomeByRole(role));
       }
     });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+        setError('');
+        setResetMessage('');
+        return;
+      }
+      if (getRecoveryModeFromUrl()) {
+        setIsRecoveryMode(true);
+        return;
+      }
+      if (session) {
+        setGuestMode(false);
+        const role = resolvePortalRole(
+          session.user?.user_metadata?.role || session.user?.app_metadata?.role
+        );
+        router.replace(portalHomeByRole(role));
+      }
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,7 +156,7 @@ export default function LoginPage() {
     setResetLoading(true);
     const redirectTo =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/login`
+        ? `${window.location.origin}/login?mode=recovery`
         : undefined;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo,
@@ -125,11 +169,60 @@ export default function LoginPage() {
     setResetMessage(t('reset_email_sent'));
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setResetMessage('');
+    if (!nextPassword.trim()) {
+      setError(locale === 'en' ? 'Enter a new password.' : locale === 'kk' ? 'Жаңа құпиясөзді енгізіңіз.' : 'Введите новый пароль.');
+      return;
+    }
+    if (nextPassword !== confirmNextPassword) {
+      setError(
+        locale === 'en'
+          ? 'Passwords do not match.'
+          : locale === 'kk'
+            ? 'Құпиясөздер сәйкес емес.'
+            : 'Пароли не совпадают.'
+      );
+      return;
+    }
+    setUpdatePasswordLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
+    setUpdatePasswordLoading(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    setResetMessage(
+      locale === 'en'
+        ? 'Password updated. Sign in with the new password.'
+        : locale === 'kk'
+          ? 'Құпиясөз жаңартылды. Енді жаңа құпиясөзбен кіріңіз.'
+          : 'Пароль обновлен. Теперь войдите с новым паролем.'
+    );
+    setNextPassword('');
+    setConfirmNextPassword('');
+    await supabase.auth.signOut();
+    setIsRecoveryMode(false);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/login');
+    }
+  };
+
   return (
     <div className="page">
       <div className="container">
         <div className="card" style={{ maxWidth: 520, margin: '40px auto' }}>
-          <h1 style={{ marginTop: 0 }}>{t('login_title')}</h1>
+          <h1 style={{ marginTop: 0 }}>
+            {isRecoveryMode
+              ? locale === 'en'
+                ? 'Set a new password'
+                : locale === 'kk'
+                  ? 'Жаңа құпиясөз орнату'
+                  : 'Установите новый пароль'
+              : t('login_title')}
+          </h1>
           <div className="locale-toggle" style={{ marginTop: 8, marginBottom: 20, justifyContent: 'flex-start' }}>
             {localeOptions.map((item) => (
               <button
@@ -142,66 +235,129 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label>{t('email')}</label>
-              <input
-                className="input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                placeholder={t('login_email_placeholder')}
-                required
-              />
-            </div>
-            <div className="field">
-              <label>{t('password')}</label>
-              <div className="input-wrap">
-                <input
-                  className="input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  className="input-eye"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? t('hide_password') : t('show_password')}
-                >
-                  {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
-                </button>
-              </div>
-            </div>
-            <div style={{ marginTop: -2, marginBottom: 10 }}>
-              <button
-                type="button"
-                className="muted"
-                onClick={handleForgotPassword}
-                disabled={resetLoading}
-                style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
-              >
-                {resetLoading ? t('sending_reset') : t('forgot_password')}
-              </button>
-            </div>
+          <form onSubmit={isRecoveryMode ? handleUpdatePassword : handleSubmit}>
+            {isRecoveryMode ? (
+              <>
+                <div className="field">
+                  <label>
+                    {locale === 'en' ? 'New password' : locale === 'kk' ? 'Жаңа құпиясөз' : 'Новый пароль'}
+                  </label>
+                  <div className="input-wrap">
+                    <input
+                      className="input"
+                      value={nextPassword}
+                      onChange={(e) => setNextPassword(e.target.value)}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="input-eye"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? t('hide_password') : t('show_password')}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>
+                    {locale === 'en'
+                      ? 'Confirm new password'
+                      : locale === 'kk'
+                        ? 'Жаңа құпиясөзді растаңыз'
+                        : 'Подтвердите новый пароль'}
+                  </label>
+                  <input
+                    className="input"
+                    value={confirmNextPassword}
+                    onChange={(e) => setConfirmNextPassword(e.target.value)}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="field">
+                  <label>{t('email')}</label>
+                  <input
+                    className="input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    placeholder={t('login_email_placeholder')}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label>{t('password')}</label>
+                  <div className="input-wrap">
+                    <input
+                      className="input"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="input-eye"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? t('hide_password') : t('show_password')}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ marginTop: -2, marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    className="muted"
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading}
+                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+                  >
+                    {resetLoading ? t('sending_reset') : t('forgot_password')}
+                  </button>
+                </div>
+              </>
+            )}
             {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
             {resetMessage ? <p style={{ color: '#166534' }}>{resetMessage}</p> : null}
-            <button className="button" type="submit" disabled={loading}>
-              {loading ? t('signing_in') : t('sign_in')}
+            <button className="button" type="submit" disabled={isRecoveryMode ? updatePasswordLoading : loading}>
+              {isRecoveryMode
+                ? updatePasswordLoading
+                  ? locale === 'en'
+                    ? 'Saving...'
+                    : locale === 'kk'
+                      ? 'Сақталуда...'
+                      : 'Сохраняем...'
+                  : locale === 'en'
+                    ? 'Save new password'
+                    : locale === 'kk'
+                      ? 'Жаңа құпиясөзді сақтау'
+                      : 'Сохранить новый пароль'
+                : loading
+                  ? t('signing_in')
+                  : t('sign_in')}
             </button>
-            <button
-              className="button secondary"
-              type="button"
-              style={{ marginLeft: 10 }}
-              onClick={() => {
-                setGuestMode(true);
-                router.replace('/parent/news');
-              }}
-            >
-              {t('guest_mode')}
-            </button>
+            {!isRecoveryMode ? (
+              <button
+                className="button secondary"
+                type="button"
+                style={{ marginLeft: 10 }}
+                onClick={() => {
+                  setGuestMode(true);
+                  router.replace('/parent/news');
+                }}
+              >
+                {t('guest_mode')}
+              </button>
+            ) : null}
           </form>
           <div style={{ marginTop: 16 }}>
             <a className="muted" href="/parent-registration">
