@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
@@ -173,7 +174,10 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
     <div className="page">
       <div className="container">
         <header className="topbar">
-          <div className="brand">EDUMAP Admin</div>
+          <div className="brand brand-with-icon">
+            <Image src="/admin-brand-logo.png" alt="EDUMAP" width={42} height={42} className="brand-logo" priority />
+            <span>EDUMAP Admin</span>
+          </div>
           <div className="topbar-actions">
             <nav className="topnav">
               {visibleNavItems.map((item) => (
