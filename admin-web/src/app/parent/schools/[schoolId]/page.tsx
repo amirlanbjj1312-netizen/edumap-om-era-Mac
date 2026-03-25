@@ -895,6 +895,7 @@ export default function ParentSchoolDetailsPage() {
   const [activeMedia, setActiveMedia] = useState<MediaViewerState | null>(null);
   const [activeProgram, setActiveProgram] = useState('');
   const [typeInfoOpen, setTypeInfoOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -913,6 +914,19 @@ export default function ParentSchoolDetailsPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobileViewport(media.matches);
+    update();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update);
+      return () => media.removeEventListener('change', update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
   }, []);
 
   useEffect(() => {
@@ -1127,7 +1141,7 @@ export default function ParentSchoolDetailsPage() {
     {
       label: locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон',
       value: phone,
-      href: phoneDigits ? `tel:${phoneDigits}` : undefined,
+      href: isMobileViewport && phoneDigits ? `tel:${phoneDigits}` : undefined,
     },
     {
       label: 'WhatsApp',
