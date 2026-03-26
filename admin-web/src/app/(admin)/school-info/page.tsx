@@ -2629,10 +2629,6 @@ export default function SchoolInfoPage() {
       setMessage(detail);
     }
   };
-  if (!profile) {
-    return <div className="card">{t('Загрузка...')}</div>;
-  }
-
   const subscriptionStatus = String(getDeep(profile, 'monetization.subscription_status') || 'inactive');
   const subscriptionPlan = String(getDeep(profile, 'monetization.plan_name') || '').trim() || '—';
   const normalizedSubscriptionPlan = subscriptionPlan.toLowerCase();
@@ -2828,7 +2824,7 @@ export default function SchoolInfoPage() {
             reviews: 'Пікірлер',
             views: 'Қаралымдар',
             popularity: 'Танымалдық ұпайы',
-          }
+        }
         : {
             title: 'Сводка школы',
             subscription: 'Подписка',
@@ -2840,6 +2836,10 @@ export default function SchoolInfoPage() {
             views: 'Просмотры',
             popularity: 'Popularity score',
           };
+
+  if (!profile) {
+    return <div className="card">{t('Загрузка...')}</div>;
+  }
 
   return (
     <LocaleContext.Provider value={contentLocale}>
