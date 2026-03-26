@@ -80,6 +80,14 @@ type SchoolRow = {
     price_monthly?: unknown;
     monthly_fee_by_grade?: unknown;
   };
+  monetization?: {
+    is_promoted?: unknown;
+    subscription_status?: unknown;
+    priority_weight?: unknown;
+    starts_at?: unknown;
+    ends_at?: unknown;
+    plan_name?: unknown;
+  };
   system?: {
     rating?: number;
     reviews_count?: number;
@@ -277,6 +285,12 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toTimestamp = (value: unknown): number | null => {
+  if (!value) return null;
+  const ts = new Date(String(value)).getTime();
+  return Number.isFinite(ts) ? ts : null;
+};
+
 const isPrivateType = (value: string): boolean => {
   const normalized = normalizePrimaryTypeKey(value);
   if (normalized) return normalized === 'Private';
@@ -392,6 +406,28 @@ const getSchoolProgramsCount = (row: SchoolRow): number =>
 const getSchoolPhotoCount = (row: SchoolRow): number => extractMediaUrls(row.media?.photos).length;
 
 const getSchoolUpdatedAt = (row: SchoolRow): number => Date.parse(toText(row.updated_at) || '') || 0;
+
+const isPromotionActive = (row: SchoolRow): boolean => {
+  const monetization = row.monetization || {};
+  const status = toText(monetization.subscription_status).trim().toLowerCase();
+  if (monetization.is_promoted !== true || status !== 'active') return false;
+  const now = Date.now();
+  const startsAt = toTimestamp(monetization.starts_at);
+  const endsAt = toTimestamp(monetization.ends_at);
+  const startsOk = !startsAt || startsAt <= now;
+  const endsOk = !endsAt || endsAt >= now;
+  return startsOk && endsOk;
+};
+
+const getPromotionPriority = (row: SchoolRow): number => {
+  if (!isPromotionActive(row)) return 0;
+  const explicitWeight = toNumber(row.monetization?.priority_weight);
+  if (explicitWeight > 0) return explicitWeight;
+  const planName = toText(row.monetization?.plan_name).trim().toLowerCase();
+  if (planName === 'pro') return 50;
+  if (planName === 'growth') return 25;
+  return 0;
+};
 
 const normalizeSchoolIdentity = (value: string): string =>
   value
@@ -1044,6 +1080,9 @@ export default function ParentSchoolsPage() {
       return next;
     }
     next.sort((a, b) => {
+      const promotionDiff = getPromotionPriority(b) - getPromotionPriority(a);
+      if (promotionDiff !== 0) return promotionDiff;
+
       const qualityDiff = getSchoolQualityScore(b) - getSchoolQualityScore(a);
       if (qualityDiff !== 0) return qualityDiff;
 
