@@ -77,6 +77,13 @@ type ReviewModerationRow = {
   source?: string;
 };
 
+type ReviewAiAssessment = {
+  summary: string;
+  recommendation: 'publish' | 'review' | 'reject';
+  labels: string[];
+  reasons: string[];
+};
+
 type EngagementSummaryPayload = {
   days: number;
   mode?: 'global' | 'school';
@@ -178,6 +185,86 @@ const hasValue = (value: unknown): boolean => {
     return Object.values(value as Record<string, unknown>).some((item) => hasValue(item));
   }
   return Boolean(String(value || '').trim());
+};
+
+const REVIEW_SPAM_MARKERS = [
+  'http://',
+  'https://',
+  'telegram',
+  'whatsapp',
+  'скидка',
+  'звоните',
+  'переходите',
+];
+
+const REVIEW_TOXIC_MARKERS = [
+  'ужас',
+  'кошмар',
+  'мошен',
+  'ненавиж',
+  'туп',
+  'идиот',
+  'развод',
+];
+
+const REVIEW_BALANCED_MARKERS = [
+  'понрав',
+  'не понрав',
+  'стоит знать',
+  'совет',
+  'рекоменд',
+  'коммуникац',
+  'учител',
+  'безопас',
+];
+
+const buildReviewAiAssessment = (review: ReviewModerationRow): ReviewAiAssessment => {
+  const text = String(review.text || '').trim();
+  const normalized = text.toLowerCase();
+  const labels: string[] = [];
+  const reasons: string[] = [];
+  let recommendation: ReviewAiAssessment['recommendation'] = 'publish';
+
+  if (text.length < 20) {
+    labels.push('Слишком короткий');
+    reasons.push('Мало содержательного контекста.');
+    recommendation = 'review';
+  }
+  if (REVIEW_SPAM_MARKERS.some((marker) => normalized.includes(marker))) {
+    labels.push('Похоже на спам');
+    reasons.push('Есть рекламные или внешние ссылки/призывы.');
+    recommendation = 'reject';
+  }
+  if (REVIEW_TOXIC_MARKERS.some((marker) => normalized.includes(marker))) {
+    labels.push('Токсичный тон');
+    reasons.push('Есть эмоционально-агрессивные формулировки.');
+    recommendation = recommendation === 'reject' ? 'reject' : 'review';
+  }
+  if (/(.)\1{5,}/.test(normalized) || /[!?]{4,}/.test(text)) {
+    labels.push('Эмоциональный шум');
+    reasons.push('Много повторов или перегруженная пунктуация.');
+    recommendation = recommendation === 'reject' ? 'reject' : 'review';
+  }
+  if (!labels.length && REVIEW_BALANCED_MARKERS.some((marker) => normalized.includes(marker))) {
+    labels.push('Есть полезный контекст');
+    reasons.push('Отзыв похож на содержательный опыт родителя.');
+  }
+  if (!labels.length) {
+    labels.push('Нейтрально');
+    reasons.push('Явных рисков не найдено.');
+  }
+
+  const summary =
+    text.length > 180
+      ? `${text.slice(0, 177).trim()}...`
+      : text || 'Текст отсутствует.';
+
+  return {
+    summary,
+    recommendation,
+    labels,
+    reasons,
+  };
 };
 
 export default function StatisticsPage() {
@@ -2112,6 +2199,21 @@ export default function StatisticsPage() {
                     {allReviews.length ? (
                       <div style={{ display: 'grid', gap: 10 }}>
                         {allReviews.slice(0, 20).map((review) => (
+                          (() => {
+                            const ai = buildReviewAiAssessment(review);
+                            const recommendationLabel =
+                              ai.recommendation === 'publish'
+                                ? 'Можно публиковать'
+                                : ai.recommendation === 'review'
+                                  ? 'Нужна ручная проверка'
+                                  : 'Лучше отклонить';
+                            const recommendationColor =
+                              ai.recommendation === 'publish'
+                                ? '#1f9d55'
+                                : ai.recommendation === 'review'
+                                  ? '#d97706'
+                                  : '#d14343';
+                            return (
                           <div
                             key={review.id}
                             style={{
@@ -2132,6 +2234,57 @@ export default function StatisticsPage() {
                             <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
                               {review.text || '—'}
                             </p>
+                            <div
+                              style={{
+                                marginTop: 10,
+                                padding: 10,
+                                borderRadius: 10,
+                                background: 'rgba(120,106,255,0.06)',
+                                border: '1px solid rgba(120,106,255,0.14)',
+                                display: 'grid',
+                                gap: 8,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <strong>AI-помощник модератора</strong>
+                                <span style={{ color: recommendationColor, fontWeight: 700 }}>
+                                  {recommendationLabel}
+                                </span>
+                              </div>
+                              <p className="muted" style={{ margin: 0 }}>
+                                {ai.summary}
+                              </p>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {ai.labels.map((label) => (
+                                  <span
+                                    key={`${review.id}-${label}`}
+                                    style={{
+                                      borderRadius: 999,
+                                      padding: '4px 10px',
+                                      background: '#fff',
+                                      border: '1px solid rgba(120,106,255,0.16)',
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                              <ul style={{ margin: 0, paddingLeft: 18, color: '#5c6783' }}>
+                                {ai.reasons.map((reason) => (
+                                  <li key={`${review.id}-${reason}`}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
                             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                               {review.status === 'pending' ? (
                                 <>
@@ -2163,6 +2316,8 @@ export default function StatisticsPage() {
                               </button>
                             </div>
                           </div>
+                            );
+                          })()
                         ))}
                       </div>
                     ) : (
