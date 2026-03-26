@@ -491,53 +491,53 @@ export default function StatisticsPage() {
     const hasReviews = reviews.length > 0;
     const hasStrongReviews = reviews.length >= 5;
 
-    if (hasLogo) strengths.push('Есть логотип, карточка выглядит узнаваемо.');
-    if (hasEnoughPhotos) strengths.push(`Загружено достаточно фото: ${schoolStats.photosCount}.`);
-    if (hasPrograms) strengths.push(`Заполнены учебные программы: ${schoolStats.programsCount}.`);
-    if (hasTeachers) strengths.push(`Есть карточки преподавателей: ${schoolStats.staffCount}.`);
-    if (hasFinance) strengths.push('Заполнен финансовый блок.');
-    if (hasAdmission) strengths.push('Есть информация о поступлении.');
-    if (hasStrongReviews) strengths.push(`Накоплены отзывы: ${reviews.length}.`);
+    if (hasLogo) strengths.push('У школы есть узнаваемый визуальный якорь: логотип загружен.');
+    if (hasEnoughPhotos) strengths.push(`Фото уже работают на доверие: в карточке ${schoolStats.photosCount} изображений.`);
+    if (hasPrograms) strengths.push(`Учебное предложение раскрыто: заполнено программ ${schoolStats.programsCount}.`);
+    if (hasTeachers) strengths.push(`Команда школы видна родителям: карточек преподавателей ${schoolStats.staffCount}.`);
+    if (hasFinance) strengths.push('Финансовый блок заполнен, барьер неопределенности по цене снижен.');
+    if (hasAdmission) strengths.push('Блок поступления заполнен и снижает трение перед обращением.');
+    if (hasStrongReviews) strengths.push(`Социальное доказательство уже есть: отзывов ${reviews.length}.`);
     if (schoolEngagementTotals.contact_click_total > 0) {
-      strengths.push(`Родители уже кликают в контакты: ${schoolEngagementTotals.contact_click_total}.`);
+      strengths.push(`Карточка уже доводит родителей до контакта: кликов ${schoolEngagementTotals.contact_click_total}.`);
     }
 
-    if (!hasLogo) critical.push('Добавьте логотип школы.');
-    if (!hasDescription) critical.push('Заполните описание школы.');
-    if (!hasPrograms) critical.push('Добавьте учебные программы и направления.');
-    if (!hasTeachers) critical.push('Добавьте карточки преподавателей.');
-    if (!hasPhotos) critical.push('Загрузите фотографии школы.');
-    else if (!hasEnoughPhotos) critical.push('Добавьте больше фото: сейчас их мало для сильной карточки.');
-    if (!hasFinance) critical.push('Заполните стоимость обучения или fee rules.');
-    if (!hasAdmission) critical.push('Заполните блок поступления: этапы, сроки, требования.');
-    if (!hasContacts) critical.push('Дозаполните контакты: телефон, email и сайт.');
-    if (!hasCoordinates) critical.push('Добавьте координаты, чтобы школа полноценно работала на карте.');
-    if (clubsCount === 0) critical.push('Добавьте кружки и секции.');
+    if (!hasLogo) critical.push('Нет логотипа: карточка выглядит незавершенной и теряет узнаваемость.');
+    if (!hasDescription) critical.push('Нет описания школы: родитель не понимает позиционирование и сильные стороны.');
+    if (!hasPrograms) critical.push('Не раскрыты учебные программы: карточка не отвечает на главный вопрос “чему здесь учат”.');
+    if (!hasTeachers) critical.push('Нет карточек преподавателей: падает доверие к качеству обучения.');
+    if (!hasPhotos) critical.push('Нет фото школы: карточка выглядит пустой и хуже конвертирует в интерес.');
+    else if (!hasEnoughPhotos) critical.push('Фото мало: визуального материала недостаточно для сильной карточки.');
+    if (!hasFinance) critical.push('Не заполнена стоимость: родитель уходит с карточки с ключевым вопросом без ответа.');
+    if (!hasAdmission) critical.push('Не раскрыт блок поступления: неясны этапы, сроки и правила входа.');
+    if (!hasContacts) critical.push('Контакты заполнены не полностью: школа теряет часть теплых обращений.');
+    if (!hasCoordinates) critical.push('Нет координат: школа теряет полноту на карте и локальный контекст.');
+    if (clubsCount === 0) critical.push('Не показаны кружки и секции: карточка выглядит слабее конкурентов по наполнению.');
 
     if (critical.length === 0) {
       if (!hasStrongReviews) {
-        growth.push('Соберите минимум 5 отзывов, чтобы карточка вызывала больше доверия.');
+        growth.push('Доберите минимум 5 отзывов: сейчас карточке не хватает социального доказательства.');
       }
       if (schoolEngagementTotals.price_open === 0 && hasFinance) {
-        growth.push('Упростите блок цены: родители не открывают стоимость, значит она подана неочевидно.');
+        growth.push('Цена не открывается: перепакуйте блок стоимости в более понятный и быстрый для считывания формат.');
       }
       if (schoolEngagementTotals.admission_open === 0 && hasAdmission) {
-        growth.push('Сделайте блок поступления конкретнее: сроки, экзамены, документы и CTA.');
+        growth.push('Блок поступления не дожимает интерес: добавьте четкие сроки, экзамены, документы и CTA.');
       }
       if (schoolEngagementTotals.contact_click_total === 0) {
-        growth.push('Усильте CTA и контакты: карточку смотрят, но в контакты не переходят.');
+        growth.push('Есть просмотры без переходов в контакт: усилите CTA и вынесите способ связи в более заметную точку.');
       }
       if (schoolEngagementTotals.compare_add === 0 && schoolEngagementTotals.school_card_view > 20) {
-        growth.push('Добавьте более четкие преимущества школы, чтобы ее чаще брали в сравнение.');
+        growth.push('Школу почти не добавляют в сравнение: не хватает четко сформулированных преимуществ на первом экране.');
       }
       if (schoolEngagementTotals.favorite_add === 0 && schoolEngagementTotals.school_card_view > 20) {
-        growth.push('Добавьте короткий список сильных сторон школы на первом экране карточки.');
+        growth.push('Школу почти не сохраняют: добавьте короткий блок “почему выбрать нас” в верхнюю часть карточки.');
       }
       if (clubsCount < 3) {
-        growth.push('Расширьте список кружков: это повышает ценность карточки для родителей.');
+        growth.push('Блок внеучебки слабый: расширьте список кружков и секций, чтобы увеличить perceived value.');
       }
       if (schoolStats.photosCount < 15) {
-        growth.push('Добавьте еще фото живой школьной среды, а не только общие кадры.');
+        growth.push('Добавьте больше живых фото учебной среды, а не только общих или фасадных кадров.');
       }
     }
 
