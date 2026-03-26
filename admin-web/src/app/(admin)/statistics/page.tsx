@@ -1077,22 +1077,26 @@ export default function StatisticsPage() {
                   </div>
 
                   <div className="schools-admin-list">
-                    <div className="schools-admin-card">
-                      <p className="request-title">Заявки всего</p>
-                      <p className="muted">{schoolStats?.requestsTotal || 0}</p>
-                    </div>
-                    <div className="schools-admin-card">
-                      <p className="request-title">Заявки за сегодня</p>
-                      <p className="muted">{schoolStats?.requestsToday || 0}</p>
-                    </div>
-                    <div className="schools-admin-card">
-                      <p className="request-title">Заявки за 7 дней</p>
-                      <p className="muted">{schoolStats?.requestsWeek || 0}</p>
-                    </div>
-                    <div className="schools-admin-card">
-                      <p className="request-title">Заявки за 30 дней</p>
-                      <p className="muted">{schoolStats?.requestsMonth || 0}</p>
-                    </div>
+                    {hasGrowthAnalytics ? (
+                      <>
+                        <div className="schools-admin-card">
+                          <p className="request-title">Заявки всего</p>
+                          <p className="muted">{schoolStats?.requestsTotal || 0}</p>
+                        </div>
+                        <div className="schools-admin-card">
+                          <p className="request-title">Заявки за сегодня</p>
+                          <p className="muted">{schoolStats?.requestsToday || 0}</p>
+                        </div>
+                        <div className="schools-admin-card">
+                          <p className="request-title">Заявки за 7 дней</p>
+                          <p className="muted">{schoolStats?.requestsWeek || 0}</p>
+                        </div>
+                        <div className="schools-admin-card">
+                          <p className="request-title">Заявки за 30 дней</p>
+                          <p className="muted">{schoolStats?.requestsMonth || 0}</p>
+                        </div>
+                      </>
+                    ) : null}
                     <div className="schools-admin-card">
                       <p className="request-title">Средний рейтинг</p>
                       <p className="muted">{schoolStats?.ratingAvg || '0.0'}</p>
