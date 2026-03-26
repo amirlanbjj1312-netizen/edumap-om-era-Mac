@@ -2632,6 +2632,12 @@ export default function SchoolInfoPage() {
   const subscriptionStatus = String(getDeep(profile, 'monetization.subscription_status') || 'inactive');
   const subscriptionPlan = String(getDeep(profile, 'monetization.plan_name') || '').trim() || '—';
   const normalizedSubscriptionPlan = subscriptionPlan.toLowerCase();
+  const subscriptionEndsAt = String(getDeep(profile, 'monetization.ends_at') || '').trim();
+  const subscriptionEndsDate = subscriptionEndsAt ? new Date(subscriptionEndsAt) : null;
+  const subscriptionDaysLeft =
+    subscriptionEndsDate && !Number.isNaN(subscriptionEndsDate.getTime())
+      ? Math.max(0, Math.ceil((subscriptionEndsDate.getTime() - Date.now()) / 86400000))
+      : null;
   const ratingValue = String(getDeep(profile, 'system.rating') || '0');
   const reviewsCountValue = String(getDeep(profile, 'system.reviews_count') || '0');
   const viewsCountValue = String(getDeep(profile, 'system.views_count') || '0');
@@ -2646,6 +2652,9 @@ export default function SchoolInfoPage() {
           autoApply: 'The tariff is applied to the current school automatically.',
           currentPlan: 'Current plan',
           currentStatus: 'Subscription status',
+          daysLeft: 'Days left',
+          noExpiry: 'No end date',
+          disablePaid: 'Switch to Starter',
           monthly: 'Monthly',
           yearly: 'Yearly',
           perMonth: '/mo',
@@ -2670,6 +2679,9 @@ export default function SchoolInfoPage() {
             autoApply: 'Тариф автоматты түрде ағымдағы мектепке қолданылады.',
             currentPlan: 'Ағымдағы тариф',
             currentStatus: 'Жазылым күйі',
+            daysLeft: 'Қалған күндер',
+            noExpiry: 'Аяқталу күні жоқ',
+            disablePaid: 'Starter-ге ауыстыру',
             monthly: 'Ай сайын',
             yearly: 'Жыл сайын',
             perMonth: '/ай',
@@ -2693,6 +2705,9 @@ export default function SchoolInfoPage() {
             autoApply: 'Тариф применяется к текущей школе автоматически.',
             currentPlan: 'Текущий тариф',
             currentStatus: 'Статус подписки',
+            daysLeft: 'Осталось дней',
+            noExpiry: 'Дата окончания не указана',
+            disablePaid: 'Отключить платный тариф',
             monthly: 'Ежемесячно',
             yearly: 'Ежегодно',
             perMonth: '/мес',
@@ -2927,6 +2942,12 @@ export default function SchoolInfoPage() {
               <span>{schoolTariffUi.currentStatus}</span>
               <strong>{subscriptionStatus}</strong>
             </div>
+            <div className="school-tariff-summary-item">
+              <span>{schoolTariffUi.daysLeft}</span>
+              <strong>
+                {subscriptionDaysLeft == null ? schoolTariffUi.noExpiry : subscriptionDaysLeft}
+              </strong>
+            </div>
             <div className="school-tariff-summary-item school-tariff-summary-note">
               <span>{schoolTariffUi.autoApply}</span>
             </div>
@@ -2962,11 +2983,24 @@ export default function SchoolInfoPage() {
                     ))}
                   </ul>
                   {isStarter ? (
-                    <div className="school-tariff-card-footer">
-                      <span className="school-tariff-starter-hint">
-                        {isCurrentPlan ? schoolTariffUi.starterCurrent : schoolTariffUi.starterHint}
-                      </span>
-                    </div>
+                    isCurrentPlan ? (
+                      <div className="school-tariff-card-footer">
+                        <span className="school-tariff-starter-hint">
+                          {schoolTariffUi.starterCurrent}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pricing-action-btn school-tariff-action school-tariff-secondary-action"
+                        onClick={() => applyTariff(plan.id)}
+                        disabled={Boolean(savingTariffPlanId)}
+                      >
+                        {savingTariffPlanId === plan.id
+                          ? schoolTariffUi.saving
+                          : schoolTariffUi.disablePaid}
+                      </button>
+                    )
                   ) : (
                     <button
                       type="button"

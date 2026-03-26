@@ -5090,6 +5090,11 @@ a {
   font-size: 20px;
 }
 
+.school-tariff-secondary-action {
+  background: linear-gradient(90deg, #dfe7ff, #c7d7ff);
+  color: #27439a;
+}
+
 @media (max-width: 960px) {
   .pricing-page {
     padding: 24px 18px;
