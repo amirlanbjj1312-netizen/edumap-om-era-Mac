@@ -365,6 +365,10 @@ export default function StatisticsPage() {
       requestsMonth,
     };
   }, [consultations, ownSchool]);
+  const schoolPlan = String(ownSchool?.monetization?.plan_name || 'Starter').trim() || 'Starter';
+  const normalizedSchoolPlan = schoolPlan.toLowerCase();
+  const hasGrowthAnalytics = normalizedSchoolPlan === 'growth' || normalizedSchoolPlan === 'pro';
+  const hasProAnalytics = normalizedSchoolPlan === 'pro';
 
   const recentConsultations = useMemo(
     () =>
@@ -787,6 +791,20 @@ export default function StatisticsPage() {
               {ownSchool ? (
                 <>
                   <div className="card" style={{ marginBottom: 16 }}>
+                    <div className="requests-head" style={{ marginBottom: 8 }}>
+                      <h3 style={{ margin: 0 }}>Доступ к статистике по тарифу</h3>
+                      <strong>{schoolPlan}</strong>
+                    </div>
+                    <p className="muted" style={{ margin: 0 }}>
+                      {normalizedSchoolPlan === 'starter'
+                        ? 'На Starter доступна только базовая сводка по заявкам, рейтингу и наполнению карточки.'
+                        : normalizedSchoolPlan === 'growth'
+                          ? 'Growth открывает базовую аналитику интереса родителей. Расширенная динамика и AI-инсайты доступны на Pro.'
+                          : 'На Pro доступна полная аналитика интереса родителей, динамика, воронка и AI-показатели.'}
+                    </p>
+                  </div>
+
+                  <div className="card" style={{ marginBottom: 16 }}>
                     <div className="requests-head" style={{ marginBottom: 12 }}>
                       <h3 style={{ margin: 0 }}>
                         Аналитика интереса к школе
@@ -799,219 +817,263 @@ export default function StatisticsPage() {
                       ) : null}
                     </div>
 
-                    <div className="schools-admin-list">
-                      {schoolEngagementCards.map((item) => (
-                        <div key={item.key} className="schools-admin-card">
-                          <p className="request-title">{item.label}</p>
-                          <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
-                            {item.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                    {hasGrowthAnalytics ? (
+                      <div className="schools-admin-list">
+                        {schoolEngagementCards.map((item) => (
+                          <div key={item.key} className="schools-admin-card">
+                            <p className="request-title">{item.label}</p>
+                            <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
 
-                    <div
-                      style={{
-                        marginTop: 16,
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(320px, 1.5fr) minmax(280px, 1fr)',
-                        gap: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          border: '1px solid rgba(120,106,255,0.18)',
-                          borderRadius: 16,
-                          padding: 16,
-                          background: '#fff',
-                        }}
-                      >
-                        <div className="requests-head" style={{ marginBottom: 8 }}>
-                          <h3 style={{ margin: 0 }}>Динамика по дням</h3>
-                          <p className="muted" style={{ margin: 0 }}>
-                            Просмотры, цена, поступление, сравнение и контакты
-                          </p>
-                        </div>
-                        {(engagementSummary?.timeline || []).length ? (
+                    {hasGrowthAnalytics ? (
+                      hasProAnalytics ? (
+                        <>
                           <div
                             style={{
+                              marginTop: 16,
                               display: 'grid',
-                              gridTemplateColumns: `repeat(${Math.min(
-                                Math.max((engagementSummary?.timeline || []).length, 1),
-                                14
-                              )}, minmax(28px, 1fr))`,
-                              gap: 8,
-                              alignItems: 'end',
+                              gridTemplateColumns: 'minmax(320px, 1.5fr) minmax(280px, 1fr)',
+                              gap: 16,
                             }}
                           >
-                            {(engagementSummary?.timeline || []).map((row) => {
-                              const total =
-                                Number(row.school_card_view || 0) +
-                                Number(row.price_open || 0) +
-                                Number(row.admission_open || 0) +
-                                Number(row.compare_add || 0) +
-                                Number(row.favorite_add || 0) +
-                                Number(row.contact_phone_click || 0) +
-                                Number(row.contact_whatsapp_click || 0) +
-                                Number(row.contact_website_click || 0) +
-                                Number(row.ai_school_mention || 0);
-                              const height = Math.max(
-                                10,
-                                Math.round((total / schoolTimelinePeak) * 140)
-                              );
-                              return (
-                                <div key={row.date} style={{ display: 'grid', gap: 6 }}>
-                                  <div
-                                    title={`${row.date}: ${total}`}
-                                    style={{
-                                      height,
-                                      borderRadius: 10,
-                                      background:
-                                        'linear-gradient(180deg, rgba(79,95,255,0.92) 0%, rgba(255,164,30,0.88) 100%)',
-                                    }}
-                                  />
-                                  <span className="muted" style={{ fontSize: 11, textAlign: 'center' }}>
-                                    {row.date.slice(5)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="muted" style={{ marginBottom: 0 }}>
-                            Событий пока нет.
-                          </p>
-                        )}
-                      </div>
-
-                      <div
-                        style={{
-                          border: '1px solid rgba(120,106,255,0.18)',
-                          borderRadius: 16,
-                          padding: 16,
-                          background: '#fff',
-                        }}
-                      >
-                        <h3 style={{ marginTop: 0 }}>Воронка интереса</h3>
-                        <div style={{ display: 'grid', gap: 10 }}>
-                          {[
-                            { label: 'Просмотры карточки', value: schoolEngagementTotals.school_card_view },
-                            { label: 'Переходы в цену', value: schoolEngagementTotals.price_open },
-                            { label: 'Переходы в поступление', value: schoolEngagementTotals.admission_open },
-                            { label: 'Добавления в сравнение', value: schoolEngagementTotals.compare_add },
-                            { label: 'Добавления в избранное', value: schoolEngagementTotals.favorite_add },
-                            { label: 'Клики в контакты', value: schoolEngagementTotals.contact_click_total },
-                          ].map((item, index) => (
                             <div
-                              key={item.label}
                               style={{
-                                padding: '12px 14px',
-                                borderRadius: 14,
-                                background: `rgba(79,95,255,${Math.max(0.14, 0.42 - index * 0.05)})`,
-                                color: index < 3 ? '#23314d' : '#1d2840',
+                                border: '1px solid rgba(120,106,255,0.18)',
+                                borderRadius: 16,
+                                padding: 16,
+                                background: '#fff',
                               }}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                                <span>{item.label}</span>
-                                <strong>{item.value}</strong>
+                              <div className="requests-head" style={{ marginBottom: 8 }}>
+                                <h3 style={{ margin: 0 }}>Динамика по дням</h3>
+                                <p className="muted" style={{ margin: 0 }}>
+                                  Просмотры, цена, поступление, сравнение и контакты
+                                </p>
+                              </div>
+                              {(engagementSummary?.timeline || []).length ? (
+                                <div
+                                  style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${Math.min(
+                                      Math.max((engagementSummary?.timeline || []).length, 1),
+                                      14
+                                    )}, minmax(28px, 1fr))`,
+                                    gap: 8,
+                                    alignItems: 'end',
+                                  }}
+                                >
+                                  {(engagementSummary?.timeline || []).map((row) => {
+                                    const total =
+                                      Number(row.school_card_view || 0) +
+                                      Number(row.price_open || 0) +
+                                      Number(row.admission_open || 0) +
+                                      Number(row.compare_add || 0) +
+                                      Number(row.favorite_add || 0) +
+                                      Number(row.contact_phone_click || 0) +
+                                      Number(row.contact_whatsapp_click || 0) +
+                                      Number(row.contact_website_click || 0) +
+                                      Number(row.ai_school_mention || 0);
+                                    const height = Math.max(
+                                      10,
+                                      Math.round((total / schoolTimelinePeak) * 140)
+                                    );
+                                    return (
+                                      <div key={row.date} style={{ display: 'grid', gap: 6 }}>
+                                        <div
+                                          title={`${row.date}: ${total}`}
+                                          style={{
+                                            height,
+                                            borderRadius: 10,
+                                            background:
+                                              'linear-gradient(180deg, rgba(79,95,255,0.92) 0%, rgba(255,164,30,0.88) 100%)',
+                                          }}
+                                        />
+                                        <span className="muted" style={{ fontSize: 11, textAlign: 'center' }}>
+                                          {row.date.slice(5)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="muted" style={{ marginBottom: 0 }}>
+                                  Событий пока нет.
+                                </p>
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                border: '1px solid rgba(120,106,255,0.18)',
+                                borderRadius: 16,
+                                padding: 16,
+                                background: '#fff',
+                              }}
+                            >
+                              <h3 style={{ marginTop: 0 }}>Воронка интереса</h3>
+                              <div style={{ display: 'grid', gap: 10 }}>
+                                {[
+                                  { label: 'Просмотры карточки', value: schoolEngagementTotals.school_card_view },
+                                  { label: 'Переходы в цену', value: schoolEngagementTotals.price_open },
+                                  { label: 'Переходы в поступление', value: schoolEngagementTotals.admission_open },
+                                  { label: 'Добавления в сравнение', value: schoolEngagementTotals.compare_add },
+                                  { label: 'Добавления в избранное', value: schoolEngagementTotals.favorite_add },
+                                  { label: 'Клики в контакты', value: schoolEngagementTotals.contact_click_total },
+                                ].map((item, index) => (
+                                  <div
+                                    key={item.label}
+                                    style={{
+                                      padding: '12px 14px',
+                                      borderRadius: 14,
+                                      background: `rgba(79,95,255,${Math.max(0.14, 0.42 - index * 0.05)})`,
+                                      color: index < 3 ? '#23314d' : '#1d2840',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                                      <span>{item.label}</span>
+                                      <strong>{item.value}</strong>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                          </div>
 
-                    <div
-                      style={{
-                        marginTop: 16,
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(320px, 1.2fr) minmax(260px, 0.8fr)',
-                        gap: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          border: '1px solid rgba(120,106,255,0.18)',
-                          borderRadius: 16,
-                          padding: 16,
-                          background: '#fff',
-                        }}
-                      >
-                        <h3 style={{ marginTop: 0 }}>Что интересует родителей</h3>
-                        {schoolActionRows.length ? (
-                          <div style={{ display: 'grid', gap: 12 }}>
-                            {schoolActionRows.map((row) => (
-                              <div key={row.key}>
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    gap: 10,
-                                    marginBottom: 4,
-                                  }}
-                                >
-                                  <span>{row.label}</span>
-                                  <strong>{row.value}</strong>
+                          <div
+                            style={{
+                              marginTop: 16,
+                              display: 'grid',
+                              gridTemplateColumns: 'minmax(320px, 1.2fr) minmax(260px, 0.8fr)',
+                              gap: 16,
+                            }}
+                          >
+                            <div
+                              style={{
+                                border: '1px solid rgba(120,106,255,0.18)',
+                                borderRadius: 16,
+                                padding: 16,
+                                background: '#fff',
+                              }}
+                            >
+                              <h3 style={{ marginTop: 0 }}>Что интересует родителей</h3>
+                              {schoolActionRows.length ? (
+                                <div style={{ display: 'grid', gap: 12 }}>
+                                  {schoolActionRows.map((row) => (
+                                    <div key={row.key}>
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          gap: 10,
+                                          marginBottom: 4,
+                                        }}
+                                      >
+                                        <span>{row.label}</span>
+                                        <strong>{row.value}</strong>
+                                      </div>
+                                      <div
+                                        style={{
+                                          height: 10,
+                                          borderRadius: 999,
+                                          background: 'rgba(120,106,255,0.12)',
+                                          overflow: 'hidden',
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: `${Math.max(6, Math.round((row.value / schoolActionPeak) * 100))}%`,
+                                            height: '100%',
+                                            background: '#4f5fff',
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                                <div
-                                  style={{
-                                    height: 10,
-                                    borderRadius: 999,
-                                    background: 'rgba(120,106,255,0.12)',
-                                    overflow: 'hidden',
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      width: `${Math.max(6, Math.round((row.value / schoolActionPeak) * 100))}%`,
-                                      height: '100%',
-                                      background: '#4f5fff',
-                                    }}
-                                  />
+                              ) : (
+                                <p className="muted" style={{ marginBottom: 0 }}>
+                                  Пока нет действий, связанных с карточкой школы.
+                                </p>
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                border: '1px solid rgba(120,106,255,0.18)',
+                                borderRadius: 16,
+                                padding: 16,
+                                background: '#fff',
+                              }}
+                            >
+                              <h3 style={{ marginTop: 0 }}>Контакты и AI</h3>
+                              <div style={{ display: 'grid', gap: 10 }}>
+                                <div className="schools-admin-card" style={{ margin: 0 }}>
+                                  <p className="request-title">Телефон</p>
+                                  <p className="muted">{schoolEngagementTotals.contact_phone_click}</p>
+                                </div>
+                                <div className="schools-admin-card" style={{ margin: 0 }}>
+                                  <p className="request-title">WhatsApp</p>
+                                  <p className="muted">{schoolEngagementTotals.contact_whatsapp_click}</p>
+                                </div>
+                                <div className="schools-admin-card" style={{ margin: 0 }}>
+                                  <p className="request-title">Сайт</p>
+                                  <p className="muted">{schoolEngagementTotals.contact_website_click}</p>
+                                </div>
+                                <div className="schools-admin-card" style={{ margin: 0 }}>
+                                  <p className="request-title">AI-попадания</p>
+                                  <p className="muted">{schoolEngagementTotals.ai_school_mention}</p>
                                 </div>
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        ) : (
+                        </>
+                      ) : (
+                        <div
+                          style={{
+                            marginTop: 16,
+                            border: '1px solid rgba(120,106,255,0.18)',
+                            borderRadius: 16,
+                            padding: 16,
+                            background: '#fff',
+                          }}
+                        >
+                          <h3 style={{ marginTop: 0 }}>Расширенная аналитика Pro</h3>
                           <p className="muted" style={{ marginBottom: 0 }}>
-                            Пока нет действий, связанных с карточкой школы.
+                            На Growth доступна базовая аналитика интереса и сводные метрики выше.
+                            Динамика по дням, воронка интереса, разрез по действиям и AI-инсайты
+                            открываются на тарифе Pro.
                           </p>
-                        )}
-                      </div>
-
+                        </div>
+                      )
+                    ) : (
                       <div
                         style={{
+                          marginTop: 16,
                           border: '1px solid rgba(120,106,255,0.18)',
                           borderRadius: 16,
                           padding: 16,
                           background: '#fff',
                         }}
                       >
-                        <h3 style={{ marginTop: 0 }}>Контакты и AI</h3>
-                        <div style={{ display: 'grid', gap: 10 }}>
-                          <div className="schools-admin-card" style={{ margin: 0 }}>
-                            <p className="request-title">Телефон</p>
-                            <p className="muted">{schoolEngagementTotals.contact_phone_click}</p>
-                          </div>
-                          <div className="schools-admin-card" style={{ margin: 0 }}>
-                            <p className="request-title">WhatsApp</p>
-                            <p className="muted">{schoolEngagementTotals.contact_whatsapp_click}</p>
-                          </div>
-                          <div className="schools-admin-card" style={{ margin: 0 }}>
-                            <p className="request-title">Сайт</p>
-                            <p className="muted">{schoolEngagementTotals.contact_website_click}</p>
-                          </div>
-                          <div className="schools-admin-card" style={{ margin: 0 }}>
-                            <p className="request-title">AI-попадания</p>
-                            <p className="muted">{schoolEngagementTotals.ai_school_mention}</p>
-                          </div>
-                        </div>
+                        <h3 style={{ marginTop: 0 }}>Аналитика интереса доступна на Growth</h3>
+                        <p className="muted" style={{ marginBottom: 0 }}>
+                          На Starter доступна только базовая сводка по заявкам, рейтингу и
+                          наполнению карточки. Чтобы видеть интерес родителей к карточке школы,
+                          откройте Growth или выше.
+                        </p>
                       </div>
-                    </div>
+                    )}
 
-                    <p className="muted" style={{ margin: '12px 0 0' }}>
-                      Всего событий в выборке: {engagementSummary?.sampled_events || 0}
-                    </p>
+                    {hasGrowthAnalytics ? (
+                      <p className="muted" style={{ margin: '12px 0 0' }}>
+                        Всего событий в выборке: {engagementSummary?.sampled_events || 0}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="schools-admin-list">
