@@ -423,6 +423,20 @@ export async function deleteReviewById(token: string, reviewId: string) {
   );
 }
 
+export async function approveReviewById(token: string, reviewId: string) {
+  return authRequestJson<{ ok: true }>(
+    `/schools/reviews/${encodeURIComponent(reviewId)}/approve`,
+    { token, method: 'POST' }
+  );
+}
+
+export async function rejectReviewById(token: string, reviewId: string) {
+  return authRequestJson<{ ok: true }>(
+    `/schools/reviews/${encodeURIComponent(reviewId)}/reject`,
+    { token, method: 'POST' }
+  );
+}
+
 export async function resetSchoolRating(token: string, schoolId: string) {
   return authRequestJson<{ ok: true }>(
     `/schools/reviews/reset-school/${encodeURIComponent(schoolId)}`,

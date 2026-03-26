@@ -7,6 +7,9 @@ const {
   upsertSchool,
   deleteSchool,
 } = require('../services/schoolsStore');
+const { ConsultationStore } = require('../services/consultationStore');
+const { readSurveyStore, listSurveyResponses } = require('../services/ratingSurveyStore');
+const { calculateCompositeRating } = require('../services/schoolRating');
 const {
   recordProgramAnalyticsEvent,
   getProgramAnalyticsSummary,
@@ -25,6 +28,7 @@ const { ValidationError, validateSchoolPayload } = require('../validation');
 const buildSchoolsRouter = () => {
   const router = express.Router();
   const config = buildConfig();
+  const consultationsStore = new ConsultationStore(config.dataFilePath);
   const supabaseAdmin =
     config.supabase?.url && config.supabase?.serviceRoleKey
       ? createClient(config.supabase.url, config.supabase.serviceRoleKey, {
@@ -197,6 +201,48 @@ const buildSchoolsRouter = () => {
     } catch (_error) {
       return { actorType: 'guest', actorUserId: null, actorRole: 'guest' };
     }
+  };
+  const recalculateSchoolRating = async (school) => {
+    if (!school) return school;
+    const schoolId = String(school?.school_id || '').trim();
+    const [surveyStore, allResponses, consultations] = await Promise.all([
+      readSurveyStore(),
+      listSurveyResponses(),
+      consultationsStore.list(),
+    ]);
+    const questionById = new Map(
+      (surveyStore?.config?.questions || []).map((question) => [String(question?.id || '').trim(), question])
+    );
+    const schoolResponses = allResponses.filter((item) => String(item?.school_id || '').trim() === schoolId);
+    const formula = calculateCompositeRating({
+      school,
+      surveyResponses: schoolResponses,
+      consultations,
+      questionById,
+      popularityCount: Number(school?.system?.popularity || 0),
+      schoolId,
+    });
+    return {
+      ...school,
+      system: {
+        ...(school.system || {}),
+        rating: formula.rating,
+        reviews_count: Array.isArray(school?.reviews?.items) ? school.reviews.items.length : 0,
+        feedback_count: formula.breakdown?.feedback_count || schoolResponses.length,
+        rating_breakdown: formula.breakdown,
+        rating_formula: {
+          survey_average: formula.survey_average,
+          total_points: formula.total_points,
+          points: formula.points,
+          consultations_count: consultations.filter(
+            (item) => String(item?.schoolId || '').trim() === schoolId
+          ).length,
+          popularity_count: Number(school?.system?.popularity || 0),
+          survey_responses_count: schoolResponses.length,
+          updated_at: new Date().toISOString(),
+        },
+      },
+    };
   };
 
   const TEST_BILLING_TARIFFS = [
@@ -819,11 +865,151 @@ const buildSchoolsRouter = () => {
             ].slice(0, 100),
           },
         };
+        updatedProfile = await recalculateSchoolRating(updatedProfile);
         break;
       }
 
       if (!updatedProfile) {
         return res.status(404).json({ error: 'Review not found' });
+      }
+
+      await upsertSchool(updatedProfile);
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/reviews/:reviewId/approve', async (req, res, next) => {
+    try {
+      const actor = await requireModerator(req, res);
+      if (!actor) return;
+      const reviewId = String(req.params?.reviewId || '').trim();
+      if (!reviewId) {
+        return res.status(400).json({ error: 'reviewId is required' });
+      }
+
+      const schools = await readStore();
+      let updatedProfile = null;
+
+      for (const school of schools) {
+        const reviews = Array.isArray(school?.reviews?.items) ? school.reviews.items : [];
+        const pendingReviews = Array.isArray(school?.reviews?.pending_items)
+          ? school.reviews.pending_items
+          : [];
+        const pendingReview = pendingReviews.find((item) => String(item?.id || '') === reviewId);
+        if (!pendingReview) continue;
+
+        const approvedReview = {
+          ...pendingReview,
+          status: 'published',
+          source: pendingReview?.source || 'direct_card',
+          approved_at: new Date().toISOString(),
+          approved_by: actor.email || actor.id,
+        };
+        const nextPendingReviews = pendingReviews.filter(
+          (item) => String(item?.id || '') !== reviewId
+        );
+        const nextReviews = [approvedReview, ...reviews].slice(0, 200);
+        const highlightText = nextReviews[0]?.text || '';
+        const auditLog = Array.isArray(school?.system?.audit_log)
+          ? school.system.audit_log
+          : [];
+
+        updatedProfile = {
+          ...school,
+          reviews: {
+            ...(school.reviews || {}),
+            items: nextReviews,
+            pending_items: nextPendingReviews,
+            count: nextReviews.length,
+            average_rating: school?.reviews?.average_rating ?? null,
+            highlight: highlightText,
+          },
+          system: {
+            ...(school.system || {}),
+            reviews_count: nextReviews.length,
+            highlight_review: highlightText,
+            updated_at: new Date().toISOString(),
+            audit_log: [
+              {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                at: new Date().toISOString(),
+                action: 'approve_review',
+                actor: actor.email || actor.id,
+                review_id: reviewId,
+              },
+              ...auditLog,
+            ].slice(0, 100),
+          },
+        };
+        updatedProfile = await recalculateSchoolRating(updatedProfile);
+        break;
+      }
+
+      if (!updatedProfile) {
+        return res.status(404).json({ error: 'Pending review not found' });
+      }
+
+      await upsertSchool(updatedProfile);
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/reviews/:reviewId/reject', async (req, res, next) => {
+    try {
+      const actor = await requireModerator(req, res);
+      if (!actor) return;
+      const reviewId = String(req.params?.reviewId || '').trim();
+      if (!reviewId) {
+        return res.status(400).json({ error: 'reviewId is required' });
+      }
+
+      const schools = await readStore();
+      let updatedProfile = null;
+
+      for (const school of schools) {
+        const pendingReviews = Array.isArray(school?.reviews?.pending_items)
+          ? school.reviews.pending_items
+          : [];
+        const hasPending = pendingReviews.some((item) => String(item?.id || '') === reviewId);
+        if (!hasPending) continue;
+
+        const nextPendingReviews = pendingReviews.filter(
+          (item) => String(item?.id || '') !== reviewId
+        );
+        const auditLog = Array.isArray(school?.system?.audit_log)
+          ? school.system.audit_log
+          : [];
+        updatedProfile = {
+          ...school,
+          reviews: {
+            ...(school.reviews || {}),
+            pending_items: nextPendingReviews,
+          },
+          system: {
+            ...(school.system || {}),
+            updated_at: new Date().toISOString(),
+            audit_log: [
+              {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                at: new Date().toISOString(),
+                action: 'reject_review',
+                actor: actor.email || actor.id,
+                review_id: reviewId,
+              },
+              ...auditLog,
+            ].slice(0, 100),
+          },
+        };
+        updatedProfile = await recalculateSchoolRating(updatedProfile);
+        break;
+      }
+
+      if (!updatedProfile) {
+        return res.status(404).json({ error: 'Pending review not found' });
       }
 
       await upsertSchool(updatedProfile);
@@ -984,7 +1170,7 @@ const buildSchoolsRouter = () => {
         ...(Array.isArray(school?.reviews?.pending_items) ? school.reviews.pending_items : []),
       ].slice(0, 200);
 
-      const updatedProfile = {
+      let updatedProfile = {
         ...school,
         reviews: {
           ...(school.reviews || {}),
@@ -995,7 +1181,7 @@ const buildSchoolsRouter = () => {
           updated_at: new Date().toISOString(),
         },
       };
-
+      updatedProfile = await recalculateSchoolRating(updatedProfile);
       await upsertSchool(updatedProfile);
       res.status(201).json({ ok: true });
     } catch (error) {

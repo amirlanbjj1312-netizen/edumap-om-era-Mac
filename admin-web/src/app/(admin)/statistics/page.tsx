@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  approveReviewById,
   createRatingSurveyCampaign,
   closeRatingSurveyCampaign,
   deleteReviewById,
@@ -13,6 +14,7 @@ import {
   loadRatingSurveyConfig,
   resetProgramInfoAnalytics,
   resetSchoolRating,
+  rejectReviewById,
   resetEngagementAnalytics,
   updateRatingSurveyConfig,
 } from '@/lib/api';
@@ -835,6 +837,40 @@ export default function StatisticsPage() {
       setMessage('Отзыв удален.');
     } catch (error) {
       setMessage((error as Error)?.message || 'Не удалось удалить отзыв');
+    } finally {
+      setSurveyLoading(false);
+    }
+  };
+
+  const handleApproveReview = async (reviewId: string) => {
+    if (!token || !reviewId) return;
+    setSurveyLoading(true);
+    setMessage('');
+    try {
+      await approveReviewById(token, reviewId);
+      await Promise.all([reload(), loadSurveyControlData()]);
+      setMessage('Отзыв опубликован.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось опубликовать отзыв');
+    } finally {
+      setSurveyLoading(false);
+    }
+  };
+
+  const handleRejectReview = async (reviewId: string) => {
+    if (!token || !reviewId) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Отклонить этот отзыв? Он не будет опубликован.');
+      if (!confirmed) return;
+    }
+    setSurveyLoading(true);
+    setMessage('');
+    try {
+      await rejectReviewById(token, reviewId);
+      await Promise.all([reload(), loadSurveyControlData()]);
+      setMessage('Отзыв отклонен.');
+    } catch (error) {
+      setMessage((error as Error)?.message || 'Не удалось отклонить отзыв');
     } finally {
       setSurveyLoading(false);
     }
@@ -2097,6 +2133,26 @@ export default function StatisticsPage() {
                               {review.text || '—'}
                             </p>
                             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                              {review.status === 'pending' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="button"
+                                    onClick={() => handleApproveReview(review.id)}
+                                    disabled={surveyLoading}
+                                  >
+                                    Одобрить
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button secondary"
+                                    onClick={() => handleRejectReview(review.id)}
+                                    disabled={surveyLoading}
+                                  >
+                                    Отклонить
+                                  </button>
+                                </>
+                              ) : null}
                               <button
                                 type="button"
                                 className="button secondary"
