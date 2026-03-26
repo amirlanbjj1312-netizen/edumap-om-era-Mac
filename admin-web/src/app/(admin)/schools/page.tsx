@@ -60,11 +60,25 @@ const normalizeLocalizedText = (value: unknown) => {
   }
   return '';
 };
+const hasListItems = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean).length > 0;
+  }
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some((item) => hasListItems(item));
+  }
+  return Boolean(value);
+};
 const hasPrivatePrice = (profile: any) =>
   Boolean(
     normalizeText(profile?.finance?.monthly_fee) ||
       normalizeText(profile?.finance?.tuition_monthly) ||
-      normalizeText(profile?.finance?.price_monthly)
+      normalizeText(profile?.finance?.price_monthly) ||
+      (Array.isArray(profile?.finance?.fee_rules) && profile.finance.fee_rules.length > 0)
   );
 const isSchoolProfileFilled = (profile: any) => {
   const logo = normalizeText(profile?.media?.logo);
@@ -84,6 +98,66 @@ const isSchoolProfileFilled = (profile: any) => {
   }
   if (isPrivate && !hasPrivatePrice(profile)) return false;
   return true;
+};
+const buildSchoolDetailChecklist = (profile: any) => {
+  const schoolType = normalizeText(profile?.basic_info?.type);
+  const isPrivate =
+    schoolType.toLowerCase().includes('private') ||
+    schoolType.toLowerCase().includes('част') ||
+    schoolType.toLowerCase().includes('жеке');
+  const checks = [
+    {
+      label: 'Название школы',
+      done: Boolean(
+        normalizeLocalizedText(profile?.basic_info?.display_name) ||
+          normalizeLocalizedText(profile?.basic_info?.name)
+      ),
+    },
+    { label: 'Логотип', done: Boolean(normalizeText(profile?.media?.logo)) },
+    { label: 'Тип школы', done: Boolean(schoolType) },
+    { label: 'Город', done: Boolean(normalizeText(profile?.basic_info?.city)) },
+    { label: 'Район', done: Boolean(normalizeText(profile?.basic_info?.district)) },
+    { label: 'Адрес', done: Boolean(normalizeLocalizedText(profile?.basic_info?.address)) },
+    {
+      label: 'Координаты на карте',
+      done: Boolean(
+        normalizeText(profile?.basic_info?.coordinates?.latitude) &&
+          normalizeText(profile?.basic_info?.coordinates?.longitude)
+      ),
+    },
+    { label: 'Телефон', done: Boolean(normalizeText(profile?.basic_info?.phone)) },
+    { label: 'Email', done: Boolean(normalizeText(profile?.basic_info?.email)) },
+    { label: 'Сайт', done: Boolean(normalizeText(profile?.basic_info?.website)) },
+    { label: 'Языки обучения', done: Boolean(hasListItems(profile?.education?.languages)) },
+    { label: 'Классы', done: Boolean(hasListItems(profile?.education?.grades)) },
+    { label: 'Программы', done: Boolean(hasListItems(profile?.education?.programs)) },
+    {
+      label: 'Фото галереи',
+      done: Boolean(
+        normalizeText(profile?.media?.photos) ||
+          (Array.isArray(profile?.media?.photos) && profile.media.photos.length > 0)
+      ),
+    },
+    {
+      label: 'Кружки / секции',
+      done: Boolean(
+        (Array.isArray(profile?.services?.clubs_catalog) && profile.services.clubs_catalog.length > 0) ||
+          (Array.isArray(profile?.services?.clubs_unified) && profile.services.clubs_unified.length > 0)
+      ),
+    },
+    {
+      label: isPrivate ? 'Стоимость обучения' : 'Финансовый блок',
+      done: isPrivate ? hasPrivatePrice(profile) : true,
+    },
+  ];
+  const completed = checks.filter((item) => item.done);
+  const missing = checks.filter((item) => !item.done);
+  return {
+    checks,
+    completed,
+    missing,
+    completionPercent: checks.length ? Math.round((completed.length / checks.length) * 100) : 0,
+  };
 };
 const toLocalSchoolIdFromEmail = (email: string) => {
   const localPart = String(email || '')
@@ -250,6 +324,7 @@ export default function SchoolsPage() {
   const [savingLogPasswordId, setSavingLogPasswordId] = useState('');
   const [logPasswordDrafts, setLogPasswordDrafts] = useState<Record<string, string>>({});
   const [loadStatus, setLoadStatus] = useState('');
+  const [detailsRow, setDetailsRow] = useState<SchoolAccessLogItem | null>(null);
   const isSuperadmin = actorRole === 'superadmin';
 
   useEffect(() => {
@@ -799,6 +874,20 @@ export default function SchoolsPage() {
       ),
     [items]
   );
+  const detailsProfile = useMemo(() => {
+    if (!detailsRow) return null;
+    const schoolId = normalizeText(detailsRow.schoolId);
+    const email = normalizeText(detailsRow.email).toLowerCase();
+    return (
+      items.find((item) => normalizeText(item?.school_id) === schoolId) ||
+      items.find((item) => normalizeText(item?.basic_info?.email).toLowerCase() === email) ||
+      null
+    );
+  }, [detailsRow, items]);
+  const detailsChecklist = useMemo(
+    () => (detailsProfile ? buildSchoolDetailChecklist(detailsProfile) : null),
+    [detailsProfile]
+  );
   const hasSchoolDetails = useCallback(
     (schoolId: string) =>
       items.some((item) => normalizeText(item?.school_id) === normalizeText(schoolId)),
@@ -944,6 +1033,124 @@ export default function SchoolsPage() {
                 {accessLogUi.loadError}: {schoolAccessLogError}
               </p>
             ) : null}
+            {detailsRow ? (
+              <div
+                className="card"
+                style={{ marginBottom: 12, border: '1px solid var(--line)', background: '#fff' }}
+              >
+                <div className="requests-head" style={{ marginBottom: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>
+                      Сводка по школе:{' '}
+                      {detailsProfile
+                        ? normalizeLocalizedText(detailsProfile?.basic_info?.display_name) ||
+                          normalizeLocalizedText(detailsProfile?.basic_info?.name) ||
+                          detailsRow.schoolId
+                        : detailsRow.schoolId || detailsRow.email}
+                    </h3>
+                    <p className="muted" style={{ margin: '6px 0 0' }}>
+                      {detailsRow.email} · {detailsRow.schoolId || 'School ID не задан'}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {detailsProfile ? (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => editSchool(detailsProfile.school_id)}
+                      >
+                        Открыть профиль школы
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => setDetailsRow(null)}
+                    >
+                      Закрыть
+                    </button>
+                  </div>
+                </div>
+                {detailsProfile && detailsChecklist ? (
+                  <>
+                    <div className="schools-admin-list" style={{ marginBottom: 16 }}>
+                      <div className="schools-admin-card">
+                        <p className="request-title">Заполнено</p>
+                        <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
+                          {detailsChecklist.completed.length}/{detailsChecklist.checks.length}
+                        </p>
+                      </div>
+                      <div className="schools-admin-card">
+                        <p className="request-title">Процент готовности</p>
+                        <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
+                          {detailsChecklist.completionPercent}%
+                        </p>
+                      </div>
+                      <div className="schools-admin-card">
+                        <p className="request-title">Не хватает</p>
+                        <p className="muted" style={{ fontSize: 28, margin: '8px 0 0' }}>
+                          {detailsChecklist.missing.length}
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)',
+                        gap: 16,
+                      }}
+                    >
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <h4 style={{ marginTop: 0 }}>Чего не хватает</h4>
+                        {detailsChecklist.missing.length ? (
+                          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 8 }}>
+                            {detailsChecklist.missing.map((item) => (
+                              <li key={item.label}>{item.label}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="muted" style={{ marginBottom: 0 }}>
+                            Основные поля заполнены.
+                          </p>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          border: '1px solid rgba(120,106,255,0.18)',
+                          borderRadius: 16,
+                          padding: 16,
+                          background: '#fff',
+                        }}
+                      >
+                        <h4 style={{ marginTop: 0 }}>Что уже заполнено</h4>
+                        {detailsChecklist.completed.length ? (
+                          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 8 }}>
+                            {detailsChecklist.completed.map((item) => (
+                              <li key={item.label}>{item.label}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="muted" style={{ marginBottom: 0 }}>
+                            Пока почти ничего не заполнено.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="muted" style={{ marginBottom: 0 }}>
+                    Профиль школы пока не найден в каталоге. Есть только выданный доступ.
+                  </p>
+                )}
+              </div>
+            ) : null}
             {!schoolAccessLog.length ? (
               <p className="muted" style={{ marginTop: 0 }}>
                 {accessLogUi.empty}
@@ -1038,68 +1245,58 @@ export default function SchoolsPage() {
                         })()}
                       </td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
-                        {(() => {
-                          const effectiveStatus = getEffectiveLogStatus(row);
-                          const detailsEnabled =
-                            effectiveStatus === 'заполнен' &&
-                            normalizeText(row.schoolId) &&
-                            hasSchoolDetails(row.schoolId);
-                          return (
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <button
-                                type="button"
-                                className="button secondary"
-                                disabled={!detailsEnabled}
-                                onClick={() => editSchool(row.schoolId)}
-                              >
-                                {accessLogUi.details}
-                              </button>
-                              <button
-                                type="button"
-                                className="button secondary"
-                                disabled={deletingLogId === row.id}
-                                onClick={async () => {
-                                  if (!sessionToken) return;
-                                  if (!window.confirm(accessLogUi.deleteConfirm)) return;
-                                  setDeletingLogId(row.id);
-                                  const deletedEmail = normalizeText(row.email).toLowerCase();
-                                  const deletedSchoolId = normalizeText(row.schoolId);
-                                  const previousLog = schoolAccessLog;
-                                  setSchoolAccessLog((prev) =>
-                                    prev.filter((item) => {
-                                      const sameId = item.id === row.id;
-                                      const sameEmail =
-                                        deletedEmail &&
-                                        normalizeText(item.email).toLowerCase() === deletedEmail;
-                                      const sameSchool =
-                                        deletedSchoolId &&
-                                        normalizeText(item.schoolId) === deletedSchoolId;
-                                      return !(sameId || sameEmail || sameSchool);
-                                    })
-                                  );
-                                  try {
-                                    await deleteSchoolAccessLogEntryFull(sessionToken, {
-                                      id: row.id,
-                                      email: row.email,
-                                      schoolId: row.schoolId,
-                                    });
-                                  } catch (error) {
-                                    setSchoolAccessLog(previousLog);
-                                    const message =
-                                      error instanceof Error && error.message
-                                        ? error.message
-                                        : accessLogUi.deleteError;
-                                    setSchoolAccessLogError(message);
-                                  } finally {
-                                    setDeletingLogId('');
-                                  }
-                                }}
-                              >
-                                {accessLogUi.delete}
-                              </button>
-                            </div>
-                          );
-                        })()}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => setDetailsRow(row)}
+                          >
+                            {accessLogUi.details}
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={deletingLogId === row.id}
+                            onClick={async () => {
+                              if (!sessionToken) return;
+                              if (!window.confirm(accessLogUi.deleteConfirm)) return;
+                              setDeletingLogId(row.id);
+                              const deletedEmail = normalizeText(row.email).toLowerCase();
+                              const deletedSchoolId = normalizeText(row.schoolId);
+                              const previousLog = schoolAccessLog;
+                              setSchoolAccessLog((prev) =>
+                                prev.filter((item) => {
+                                  const sameId = item.id === row.id;
+                                  const sameEmail =
+                                    deletedEmail &&
+                                    normalizeText(item.email).toLowerCase() === deletedEmail;
+                                  const sameSchool =
+                                    deletedSchoolId &&
+                                    normalizeText(item.schoolId) === deletedSchoolId;
+                                  return !(sameId || sameEmail || sameSchool);
+                                })
+                              );
+                              try {
+                                await deleteSchoolAccessLogEntryFull(sessionToken, {
+                                  id: row.id,
+                                  email: row.email,
+                                  schoolId: row.schoolId,
+                                });
+                              } catch (error) {
+                                setSchoolAccessLog(previousLog);
+                                const message =
+                                  error instanceof Error && error.message
+                                    ? error.message
+                                    : accessLogUi.deleteError;
+                                setSchoolAccessLogError(message);
+                              } finally {
+                                setDeletingLogId('');
+                              }
+                            }}
+                          >
+                            {accessLogUi.delete}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
