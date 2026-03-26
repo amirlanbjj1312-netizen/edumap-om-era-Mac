@@ -370,17 +370,6 @@ export default function StatisticsPage() {
   const hasGrowthAnalytics = normalizedSchoolPlan === 'growth' || normalizedSchoolPlan === 'pro';
   const hasProAnalytics = normalizedSchoolPlan === 'pro';
 
-  const recentConsultations = useMemo(
-    () =>
-      [...consultations]
-        .sort(
-          (a, b) =>
-            new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime()
-        )
-        .slice(0, 10),
-    [consultations]
-  );
-
   const schoolEngagementTotals = useMemo(
     () => ({
       school_card_view: Number(engagementSummary?.totals?.school_card_view || 0),
@@ -1119,33 +1108,6 @@ export default function StatisticsPage() {
                     </div>
                   </div>
 
-                  <div className="card" style={{ marginTop: 16 }}>
-                    <h3 style={{ marginTop: 0 }}>Последние заявки</h3>
-                    {recentConsultations.length ? (
-                      <div className="requests-list">
-                        {recentConsultations.map((request) => (
-                          <div key={request.id} className="request-card">
-                            <div className="request-body">
-                              <p className="request-title">
-                                {request.parentName || '—'} {'→'} {request.childName || '—'}
-                              </p>
-                              <p className="muted">
-                                {request.consultationType || 'First meeting'} ·{' '}
-                                {request.createdAt
-                                  ? new Date(request.createdAt).toLocaleString()
-                                  : '—'}
-                              </p>
-                              <p>
-                                <strong>Телефон:</strong> {formatKzPhone(request.parentPhone) || '—'}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="muted">Заявок пока нет.</p>
-                    )}
-                  </div>
                 </>
               ) : (
                 <p className="muted">
