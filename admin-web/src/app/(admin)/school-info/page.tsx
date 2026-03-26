@@ -2794,6 +2794,16 @@ export default function SchoolInfoPage() {
       setProfile((prev: SchoolProfile | null) =>
         prev ? setDeep(prev, 'monetization', savedMonetization) : prev
       );
+      if (typeof window !== 'undefined') {
+        const nextPlan = String(savedMonetization?.plan_name || planId).trim().toLowerCase();
+        window.dispatchEvent(
+          new CustomEvent('edumap:school-lead-access-changed', {
+            detail: {
+              hasLeadAccess: nextPlan === 'growth' || nextPlan === 'pro',
+            },
+          })
+        );
+      }
       setTariffMessage(
         contentLocale === 'en'
           ? `${schoolTariffUi.plans[planId]} plan applied to the school.`

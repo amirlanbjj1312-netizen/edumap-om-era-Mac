@@ -155,6 +155,18 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleLeadAccessChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ hasLeadAccess?: boolean }>;
+      setHasLeadAccess(Boolean(customEvent.detail?.hasLeadAccess));
+    };
+    window.addEventListener('edumap:school-lead-access-changed', handleLeadAccessChange);
+    return () => {
+      window.removeEventListener('edumap:school-lead-access-changed', handleLeadAccessChange);
+    };
+  }, []);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.replace('/login');
