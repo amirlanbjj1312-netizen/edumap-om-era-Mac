@@ -386,6 +386,20 @@ a {
   white-space: nowrap;
 }
 
+.brand-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
 .parent-brand {
   color: #5667fd;
 }
@@ -4645,8 +4659,13 @@ a {
   background: radial-gradient(70% 65% at 50% 20%, rgba(170, 196, 255, 0.45), rgba(117, 134, 255, 0.92)),
     linear-gradient(180deg, #7c7dff 0%, #44c3ff 100%);
   box-shadow: 0 28px 65px rgba(28, 65, 140, 0.25);
-  padding: 42px 34px 34px;
+  padding: 34px 30px 30px;
   color: #f8fbff;
+}
+
+.pricing-hero {
+  max-width: 940px;
+  margin: 0 auto 22px;
 }
 
 .pricing-hero h1 {
@@ -4658,14 +4677,14 @@ a {
 }
 
 .pricing-hero p {
-  margin: 14px 0 24px;
+  margin: 12px 0 18px;
   text-align: center;
-  font-size: clamp(16px, 2.2vw, 30px);
-  opacity: 0.94;
+  font-size: clamp(16px, 2vw, 26px);
+  opacity: 0.9;
 }
 
 .pricing-switch {
-  margin: 0 auto 30px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -4708,26 +4727,82 @@ a {
 }
 
 .pricing-toolbar {
-  margin: 0 auto 18px;
+  margin: 0 auto 24px;
   max-width: 980px;
 }
 
-.pricing-toolbar .field {
-  margin-bottom: 6px;
+.pricing-context-card {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(17, 27, 58, 0.28);
+  border: 1px solid rgba(223, 233, 255, 0.2);
+  backdrop-filter: blur(10px);
 }
 
-.pricing-toolbar .field span {
+.pricing-context-label {
+  margin-bottom: 10px;
   color: #eef3ff;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.pricing-toolbar .field select {
+.pricing-school-field {
+  margin: 0;
+}
+
+.pricing-school-field select {
   background: rgba(12, 23, 48, 0.72);
   color: #fff;
   border-color: rgba(192, 211, 255, 0.32);
+  min-width: min(100%, 580px);
 }
 
-.pricing-toolbar .muted {
-  color: rgba(239, 246, 255, 0.88);
+.pricing-context-school {
+  display: grid;
+  gap: 6px;
+}
+
+.pricing-context-school strong {
+  font-size: clamp(20px, 2vw, 30px);
+  line-height: 1.1;
+}
+
+.pricing-context-school span {
+  color: rgba(239, 246, 255, 0.84);
+  font-size: 15px;
+}
+
+.pricing-context-plan {
+  min-width: 180px;
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  text-align: right;
+}
+
+.pricing-context-plan span {
+  color: rgba(239, 246, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pricing-context-plan strong {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.pricing-toolbar-note {
+  margin: 10px 6px 0;
+  color: rgba(239, 246, 255, 0.86);
+  font-size: 14px;
 }
 
 .pricing-card {
@@ -4841,8 +4916,208 @@ a {
   color: #ffe0e0;
 }
 
+.school-tariff-panel {
+  margin-bottom: 16px;
+  background:
+    radial-gradient(100% 120% at 0% 0%, rgba(112, 144, 255, 0.14), transparent 45%),
+    linear-gradient(180deg, #fafcff 0%, #f2f7ff 100%);
+  border: 1px solid rgba(111, 135, 255, 0.18);
+}
+
+.school-tariff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.school-tariff-header h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.school-tariff-header p {
+  margin: 0;
+  max-width: 780px;
+  color: #5e6b85;
+  line-height: 1.5;
+}
+
+.school-tariff-header .pricing-switch {
+  margin: 0;
+  color: #24408e;
+}
+
+.school-tariff-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.school-tariff-summary-item {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(130, 150, 255, 0.14);
+}
+
+.school-tariff-summary-item span {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a7594;
+}
+
+.school-tariff-summary-item strong {
+  font-size: 24px;
+  color: #1f2a44;
+}
+
+.school-tariff-summary-note {
+  align-content: center;
+}
+
+.school-tariff-summary-note span {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 15px;
+  color: #465372;
+}
+
+.school-tariff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.school-tariff-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid rgba(119, 140, 255, 0.18);
+  background: #fff;
+  color: #1f2a44;
+  box-shadow: 0 14px 34px rgba(49, 72, 133, 0.08);
+}
+
+.school-tariff-card.current {
+  border-color: rgba(61, 99, 255, 0.36);
+  box-shadow: 0 18px 38px rgba(61, 99, 255, 0.14);
+}
+
+.school-tariff-card.highlighted {
+  transform: translateY(-4px);
+}
+
+.school-tariff-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.school-tariff-card-top h3 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.school-tariff-price {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.school-tariff-price strong {
+  font-size: 42px;
+  line-height: 1;
+  color: #2159ff;
+}
+
+.school-tariff-price span {
+  font-size: 20px;
+  color: #4874df;
+  font-weight: 700;
+}
+
+.school-tariff-card ul {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.school-tariff-card li {
+  position: relative;
+  padding-left: 24px;
+  font-size: 18px;
+  line-height: 1.45;
+  color: #31415f;
+}
+
+.school-tariff-card li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #5c3cff;
+  font-weight: 900;
+}
+
+.school-tariff-card-footer {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.school-tariff-starter-hint {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #eef3ff;
+  color: #3451a8;
+  font-weight: 700;
+}
+
+.school-tariff-action {
+  margin-top: auto;
+  font-size: 20px;
+}
+
 @media (max-width: 960px) {
+  .pricing-page {
+    padding: 24px 18px;
+  }
+
   .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-context-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pricing-context-plan {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .school-tariff-header {
+    flex-direction: column;
+  }
+
+  .school-tariff-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .school-tariff-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4877,6 +5152,16 @@ a {
 
   .brand {
     font-size: 25px;
+  }
+
+  .brand-with-icon {
+    gap: 10px;
+  }
+
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
   }
 
   .topnav {
