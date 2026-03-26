@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadSchools } from '@/lib/api';
+import { loadParentFooterSettings, loadSchools } from '@/lib/api';
 import { buildFallbackSchoolId } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
@@ -59,6 +59,13 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState('user');
   const [hasLeadAccess, setHasLeadAccess] = useState(false);
+  const [footerSettings, setFooterSettings] = useState<any>(null);
+
+  useEffect(() => {
+    loadParentFooterSettings()
+      .then((payload) => setFooterSettings(payload?.data || null))
+      .catch(() => setFooterSettings(null));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -204,11 +211,9 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
           instagram: 'Instagram',
           telegram: 'Telegram',
           whatsapp: 'WhatsApp',
-          phonePrimary: '+7 747 550 0012',
-          phoneSecondary: '+7 701 536 4689',
-          email: 'info@edumap.kz',
           privacy: 'Privacy policy',
           terms: 'Terms of use',
+          faq: 'FAQ',
           rights: 'All rights reserved.',
         }
       : locale === 'kk'
@@ -225,11 +230,9 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
             instagram: 'Instagram',
             telegram: 'Telegram',
             whatsapp: 'WhatsApp',
-            phonePrimary: '+7 747 550 0012',
-            phoneSecondary: '+7 701 536 4689',
-            email: 'info@edumap.kz',
             privacy: 'Құпиялық саясаты',
             terms: 'Платформа ережелері',
+            faq: 'FAQ',
             rights: 'Барлық құқықтар қорғалған.',
           }
         : {
@@ -245,11 +248,9 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
             instagram: 'Instagram',
             telegram: 'Telegram',
             whatsapp: 'WhatsApp',
-            phonePrimary: '+7 747 550 0012',
-            phoneSecondary: '+7 701 536 4689',
-            email: 'info@edumap.kz',
             privacy: 'Политика конфиденциальности',
             terms: 'Правила пользования',
+            faq: 'FAQ',
             rights: 'Все права защищены.',
           };
 
@@ -298,37 +299,70 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
                 <Link href="/news">{footerUi.news}</Link>
                 <Link href="/users">{footerUi.users}</Link>
               </div>
-              <div className="app-footer-col">
-                <p className="app-footer-title">{footerUi.socialsTitle}</p>
-                <a href="#" aria-disabled="true">
-                  {footerUi.instagram}
-                </a>
-                <a href="#" aria-disabled="true">
-                  {footerUi.telegram}
-                </a>
-                <a href="#" aria-disabled="true">
-                  {footerUi.whatsapp}
-                </a>
-              </div>
-              <div className="app-footer-col">
-                <p className="app-footer-title">{footerUi.contactsTitle}</p>
-                <a href={`tel:${footerUi.phonePrimary.replace(/\s+/g, '')}`}>
-                  {footerUi.phonePrimary}
-                </a>
-                <a href={`tel:${footerUi.phoneSecondary.replace(/\s+/g, '')}`}>
-                  {footerUi.phoneSecondary}
-                </a>
-                <a href={`mailto:${footerUi.email}`}>{footerUi.email}</a>
-              </div>
-              <div className="app-footer-col">
-                <p className="app-footer-title">{footerUi.legalTitle}</p>
-                <a href="#" aria-disabled="true">
-                  {footerUi.privacy}
-                </a>
-                <a href="#" aria-disabled="true">
-                  {footerUi.terms}
-                </a>
-              </div>
+              {(footerSettings?.socials?.instagram_url ||
+                footerSettings?.socials?.telegram_url ||
+                footerSettings?.socials?.whatsapp_url) ? (
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.socialsTitle}</p>
+                  {footerSettings?.socials?.instagram_url ? (
+                    <a href={footerSettings.socials.instagram_url} target="_blank" rel="noreferrer">
+                      {footerUi.instagram}
+                    </a>
+                  ) : null}
+                  {footerSettings?.socials?.telegram_url ? (
+                    <a href={footerSettings.socials.telegram_url} target="_blank" rel="noreferrer">
+                      {footerUi.telegram}
+                    </a>
+                  ) : null}
+                  {footerSettings?.socials?.whatsapp_url ? (
+                    <a href={footerSettings.socials.whatsapp_url} target="_blank" rel="noreferrer">
+                      {footerUi.whatsapp}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+              {(footerSettings?.contacts?.phone_primary ||
+                footerSettings?.contacts?.phone_secondary ||
+                footerSettings?.contacts?.email) ? (
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.contactsTitle}</p>
+                  {footerSettings?.contacts?.phone_primary ? (
+                    <a href={`tel:${String(footerSettings.contacts.phone_primary).replace(/\s+/g, '')}`}>
+                      {footerSettings.contacts.phone_primary}
+                    </a>
+                  ) : null}
+                  {footerSettings?.contacts?.phone_secondary ? (
+                    <a href={`tel:${String(footerSettings.contacts.phone_secondary).replace(/\s+/g, '')}`}>
+                      {footerSettings.contacts.phone_secondary}
+                    </a>
+                  ) : null}
+                  {footerSettings?.contacts?.email ? (
+                    <a href={`mailto:${footerSettings.contacts.email}`}>{footerSettings.contacts.email}</a>
+                  ) : null}
+                </div>
+              ) : null}
+              {(footerSettings?.legal?.privacy_url ||
+                footerSettings?.legal?.terms_url ||
+                footerSettings?.legal?.faq_url) ? (
+                <div className="app-footer-col">
+                  <p className="app-footer-title">{footerUi.legalTitle}</p>
+                  {footerSettings?.legal?.privacy_url ? (
+                    <a href={footerSettings.legal.privacy_url} target="_blank" rel="noreferrer">
+                      {footerUi.privacy}
+                    </a>
+                  ) : null}
+                  {footerSettings?.legal?.terms_url ? (
+                    <a href={footerSettings.legal.terms_url} target="_blank" rel="noreferrer">
+                      {footerUi.terms}
+                    </a>
+                  ) : null}
+                  {footerSettings?.legal?.faq_url ? (
+                    <a href={footerSettings.legal.faq_url} target="_blank" rel="noreferrer">
+                      {footerUi.faq}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <div className="app-footer-bottom">
               © {new Date().getFullYear()} EDUMAP. {footerUi.rights}
