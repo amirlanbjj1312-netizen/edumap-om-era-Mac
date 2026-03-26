@@ -829,6 +829,7 @@ export default function ParentSchoolDetailsPage() {
     socialEmpty: locale === 'en' ? 'No social links provided.' : locale === 'kk' ? 'Әлеуметтік желілер көрсетілмеген.' : 'Социальные сети не указаны.',
     noReviews: locale === 'en' ? 'No reviews' : locale === 'kk' ? 'Пікір жоқ' : 'Нет отзывов',
     reviewsWord: locale === 'en' ? 'reviews' : locale === 'kk' ? 'пікір' : 'отзывов',
+    ratingsWord: locale === 'en' ? 'ratings' : locale === 'kk' ? 'бағалау' : 'оценок',
     leaveReview: locale === 'en' ? 'Leave review' : locale === 'kk' ? 'Пікір қалдыру' : 'Оставить отзыв',
     reviewClose: locale === 'en' ? 'Close form' : locale === 'kk' ? 'Форманы жабу' : 'Скрыть форму',
     reviewExperienceType:
@@ -941,6 +942,10 @@ export default function ParentSchoolDetailsPage() {
         : locale === 'kk'
           ? 'Пікір қалдыру үшін кіріңіз.'
           : 'Войдите, чтобы оставить отзыв.',
+    reviewBreakdownTitle:
+      locale === 'en' ? 'Detailed rating' : locale === 'kk' ? 'Толық рейтинг' : 'Подробный рейтинг',
+    reviewRatedBy:
+      locale === 'en' ? 'Rated by' : locale === 'kk' ? 'Бағалағандар' : 'Оценили',
     noReviewsHint:
       locale === 'en'
         ? 'No reviews yet. Be the first to share your experience.'
@@ -1172,6 +1177,21 @@ export default function ParentSchoolDetailsPage() {
   const phone = formatKzPhone(toText(getIn(school, 'basic_info.phone'))) || 'Телефон не указан';
   const rating = String(getIn(school, 'system.rating') ?? '0.0');
   const reviews = String(getIn(school, 'system.reviews_count') ?? 0);
+  const feedbackCount = Number(getIn(school, 'system.feedback_count') ?? 0);
+  const ratingBreakdown = {
+    teaching: Number(getIn(school, 'system.rating_breakdown.criteria.teaching') ?? 0),
+    communication: Number(getIn(school, 'system.rating_breakdown.criteria.communication') ?? 0),
+    safety: Number(getIn(school, 'system.rating_breakdown.criteria.safety') ?? 0),
+    atmosphere: Number(getIn(school, 'system.rating_breakdown.criteria.atmosphere') ?? 0),
+    value: Number(getIn(school, 'system.rating_breakdown.criteria.value') ?? 0),
+  };
+  const ratingBreakdownRows = [
+    { label: ui.reviewTeaching, value: ratingBreakdown.teaching },
+    { label: ui.reviewCommunication, value: ratingBreakdown.communication },
+    { label: ui.reviewSafety, value: ratingBreakdown.safety },
+    { label: ui.reviewAtmosphere, value: ratingBreakdown.atmosphere },
+    { label: ui.reviewValue, value: ratingBreakdown.value },
+  ].filter((row) => row.value > 0);
   const typeRaw = pickFirstText(school, ['basic_info.type'], ui.notSpecified);
   const subtypeRaw = pickFirstText(school, ['basic_info.school_subtype'], '');
   const type = formatCombinedType(typeRaw, subtypeRaw, locale) || localizeCsv(typeRaw, locale) || localizeOption(typeRaw, locale);
@@ -1295,6 +1315,8 @@ export default function ParentSchoolDetailsPage() {
         recommendationFor: reviewDraft.recommendationFor.trim(),
         comment: reviewDraft.comment.trim(),
       });
+      const refreshed = await loadSchoolById(trackedSchoolId);
+      setSchool((refreshed?.data as SchoolRow) || null);
       setReviewMessage(ui.reviewSuccess);
       setReviewOpen(false);
       setReviewDraft({
@@ -2613,6 +2635,57 @@ export default function ParentSchoolDetailsPage() {
                         <p className="muted" style={{ margin: '10px 0 0' }}>
                           {ui.noReviewsHint}
                         </p>
+                        {ratingBreakdownRows.length ? (
+                          <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 12,
+                                alignItems: 'baseline',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <strong>{ui.reviewBreakdownTitle}</strong>
+                              <span className="muted">
+                                {ui.reviewRatedBy}: {feedbackCount} {ui.ratingsWord}
+                              </span>
+                            </div>
+                            {ratingBreakdownRows.map((row) => (
+                              <div key={row.label} style={{ display: 'grid', gap: 6 }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: 12,
+                                    fontSize: 14,
+                                  }}
+                                >
+                                  <span>{row.label}</span>
+                                  <strong>{row.value.toFixed(1)}</strong>
+                                </div>
+                                <div
+                                  style={{
+                                    height: 10,
+                                    borderRadius: 999,
+                                    background: 'rgba(34, 50, 84, 0.08)',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${Math.max(0, Math.min(100, (row.value / 5) * 100))}%`,
+                                      height: '100%',
+                                      borderRadius: 999,
+                                      background:
+                                        'linear-gradient(90deg, rgba(79,95,255,0.92) 0%, rgba(135,149,255,0.92) 100%)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                         {reviewOpen ? (
                           <form className="school-consult-form" onSubmit={submitReview} style={{ marginTop: 14 }}>
                             <div className="school-consult-grid">

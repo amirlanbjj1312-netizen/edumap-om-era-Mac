@@ -12,6 +12,10 @@ const {
   addSurveyResponse,
   listSurveyResponses,
 } = require('../services/ratingSurveyStore');
+const {
+  calculateSurveyAverage,
+  calculateCompositeRating,
+} = require('../services/schoolRating');
 
 const ROLE_PRIORITY = {
   user: 0,
@@ -33,142 +37,22 @@ const normalizeEmail = (value) =>
     .toLowerCase();
 const EXCLUDED_STATS_EMAILS = new Set(['amirlan.sm@mail.ru']);
 const isStatsExcludedEmail = (value) => EXCLUDED_STATS_EMAILS.has(normalizeEmail(value));
-
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-const EXPERIENCE_TYPE_POINTS = {
-  current_parent: 15,
-  former_parent: 10,
-  applicant_parent: 6,
-  consultation_only: 5,
-  other: 4,
-};
+const EXPERIENCE_TYPE_POINTS = new Set([
+  'current_parent',
+  'former_parent',
+  'applicant_parent',
+  'consultation_only',
+  'other',
+]);
 
-const EXPERIENCE_FRESHNESS_POINTS = {
-  current_year: 10,
-  within_2_years: 7,
-  within_5_years: 4,
-  over_5_years: 2,
-};
-
-const calculateSurveyAverage = (responses = [], questionById = new Map()) => {
-  const allScores = responses.flatMap((response) => {
-    if (!Array.isArray(response.answers)) return [];
-    return response.answers
-      .map((answer) => {
-        const explicitScore = Number(answer?.score || 0);
-        if (Number.isFinite(explicitScore) && explicitScore > 0) return explicitScore;
-        const questionId = String(answer?.question_id || '').trim();
-        const question = questionById.get(questionId);
-        if (!question || question.type !== 'single_choice') return 0;
-        const optionId = String(answer?.option_id || '').trim().toLowerCase();
-        const optionLabel = String(answer?.option_label || '').trim().toLowerCase();
-        const option = Array.isArray(question.options)
-          ? question.options.find(
-              (item) =>
-                String(item?.id || '').trim().toLowerCase() === optionId ||
-                String(item?.label || '').trim().toLowerCase() === optionLabel
-            )
-          : null;
-        const optionScore = Number(option?.score || 0);
-        if (!Number.isFinite(optionScore) || optionScore <= 0) return 0;
-        return optionScore;
-      })
-      .filter((score) => Number.isFinite(score) && score > 0);
-  });
-  if (!allScores.length) return 0;
-  const avg = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
-  return Number(avg.toFixed(2));
-};
-
-const calculateExperiencePoints = (responses = []) => {
-  if (!responses.length) {
-    return {
-      experienceType: 0,
-      freshness: 0,
-    };
-  }
-  const totals = responses.reduce(
-    (acc, response) => {
-      const experienceType =
-        EXPERIENCE_TYPE_POINTS[String(response?.experience_type || '').trim().toLowerCase()] || 0;
-      const freshness =
-        EXPERIENCE_FRESHNESS_POINTS[
-          String(response?.experience_freshness || '').trim().toLowerCase()
-        ] || 0;
-      acc.experienceType += experienceType;
-      acc.freshness += freshness;
-      return acc;
-    },
-    { experienceType: 0, freshness: 0 }
-  );
-  return {
-    experienceType: Number((totals.experienceType / responses.length).toFixed(2)),
-    freshness: Number((totals.freshness / responses.length).toFixed(2)),
-  };
-};
-
-const calculateVerificationPoints = ({ responses = [], consultations = [], schoolId = '' }) => {
-  if (!responses.length) return 0;
-  const normalizedSchoolId = String(schoolId || '').trim().toLowerCase();
-  const perResponse = responses.map((response) => {
-    const responseEmail = normalizeEmail(response?.user_email || '');
-    const hasConsultation = consultations.some(
-      (item) =>
-        normalizeEmail(item?.parentEmail || '') === responseEmail &&
-        String(item?.schoolId || '').trim().toLowerCase() === normalizedSchoolId
-    );
-    if (hasConsultation || response?.verified_interaction) return 10;
-    const experienceType = String(response?.experience_type || '').trim().toLowerCase();
-    if (experienceType === 'current_parent' || experienceType === 'former_parent') return 6;
-    if (experienceType === 'applicant_parent' || experienceType === 'consultation_only') return 4;
-    return 2;
-  });
-  const total = perResponse.reduce((sum, score) => sum + score, 0);
-  return Number((total / perResponse.length).toFixed(2));
-};
-
-const calculateCompositeRating = ({
-  surveyAvg = 0,
-  responses = [],
-  consultations = [],
-  schoolId = '',
-  popularityCount = 0,
-}) => {
-  const normalizedSurvey = clamp(Number(surveyAvg) || 0, 0, 5);
-  const surveyPoints = Number(((normalizedSurvey / 5) * 60).toFixed(2));
-  const experiencePoints = calculateExperiencePoints(responses);
-  const verificationPoints = calculateVerificationPoints({
-    responses,
-    consultations,
-    schoolId,
-  });
-  const popularityPoints = Number(
-    clamp(Math.log10(Math.max(0, Number(popularityCount) || 0) + 1) * 2 + 1, 0, 5).toFixed(2)
-  );
-  const totalPoints = clamp(
-    surveyPoints +
-      experiencePoints.experienceType +
-      experiencePoints.freshness +
-      verificationPoints +
-      popularityPoints,
-    0,
-    100
-  );
-  const final = clamp(totalPoints / 20, 0, 5);
-  return {
-    rating: Number(final.toFixed(1)),
-    total_points: Number(totalPoints.toFixed(2)),
-    survey_average: Number(normalizedSurvey.toFixed(2)),
-    points: {
-      survey: surveyPoints,
-      experience_type: experiencePoints.experienceType,
-      freshness: experiencePoints.freshness,
-      verification: verificationPoints,
-      popularity: popularityPoints,
-    },
-  };
-};
+const EXPERIENCE_FRESHNESS_POINTS = new Set([
+  'current_year',
+  'within_2_years',
+  'within_5_years',
+  'over_5_years',
+]);
 
 const resolveSchoolName = (school = {}) => {
   const displayName = school?.basic_info?.display_name;
@@ -506,10 +390,10 @@ const buildRatingSurveysRouter = () => {
       if (!campaignId || !schoolId) {
         return res.status(400).json({ error: 'campaignId and schoolId are required' });
       }
-      if (!EXPERIENCE_TYPE_POINTS[experienceType]) {
+      if (!EXPERIENCE_TYPE_POINTS.has(experienceType)) {
         return res.status(400).json({ error: 'experienceType is required' });
       }
-      if (!EXPERIENCE_FRESHNESS_POINTS[experienceFreshness]) {
+      if (!EXPERIENCE_FRESHNESS_POINTS.has(experienceFreshness)) {
         return res.status(400).json({ error: 'experienceFreshness is required' });
       }
       if (!answers.length) {
@@ -640,9 +524,10 @@ const buildRatingSurveysRouter = () => {
         ).length;
         const popularityCount = Number(school?.system?.popularity || 0);
         const formula = calculateCompositeRating({
-          surveyAvg,
+          school,
           responses: schoolResponses,
           consultations,
+          questionById,
           schoolId,
           popularityCount,
         });
@@ -657,6 +542,7 @@ const buildRatingSurveysRouter = () => {
             rating: formula.rating,
             reviews_count: reviewItemsCount,
             feedback_count: schoolResponses.length,
+            rating_breakdown: formula.breakdown,
             rating_formula: {
               survey_average: formula.survey_average,
               total_points: formula.total_points,
