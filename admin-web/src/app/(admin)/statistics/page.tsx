@@ -71,6 +71,8 @@ type ReviewModerationRow = {
   text: string;
   rating: number;
   created_at: string;
+  status?: string;
+  source?: string;
 };
 
 type EngagementSummaryPayload = {
@@ -2088,7 +2090,8 @@ export default function StatisticsPage() {
                             </p>
                             <p className="muted" style={{ margin: '4px 0 0' }}>
                               Автор: {review.author || '—'} · Рейтинг: {review.rating || 0} ·{' '}
-                              {review.created_at ? new Date(review.created_at).toLocaleString() : '—'}
+                              {review.created_at ? new Date(review.created_at).toLocaleString() : '—'} · Статус:{' '}
+                              {review.status || 'published'}
                             </p>
                             <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
                               {review.text || '—'}

@@ -37,6 +37,7 @@ const buildSchoolsRouter = () => {
     value === 'true' ||
     value === '1' ||
     value === 1;
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   const getBearerToken = (req) => {
     const header = req.headers.authorization || '';
@@ -155,6 +156,25 @@ const buildSchoolsRouter = () => {
         .json({ error: 'Only admin/superadmin can manage schools and payments' });
       return null;
     }
+    return { user: data.user, role };
+  };
+  const requireAuthenticatedActor = async (req, res) => {
+    if (!supabaseAdmin) {
+      res.status(500).json({ error: 'Supabase admin is not configured' });
+      return null;
+    }
+    const token = getBearerToken(req);
+    if (!token) {
+      res.status(401).json({ error: 'Authorization token is required' });
+      return null;
+    }
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      res.status(401).json({ error: 'Invalid token' });
+      return null;
+    }
+    const role =
+      data.user?.user_metadata?.role || data.user?.app_metadata?.role || 'user';
     return { user: data.user, role };
   };
   const resolveOptionalActor = async (req) => {
@@ -698,6 +718,24 @@ const buildSchoolsRouter = () => {
             text: review?.text || '',
             rating: Number(review?.rating) || 0,
             created_at: review?.created_at || '',
+            status: 'published',
+            source: review?.source || 'legacy',
+          });
+        }
+        const pendingReviews = Array.isArray(school?.reviews?.pending_items)
+          ? school.reviews.pending_items
+          : [];
+        for (const review of pendingReviews) {
+          rows.push({
+            id: review?.id || `pending-review-${Date.now()}`,
+            school_id: school?.school_id || '',
+            school_name: schoolName,
+            author: review?.author || '',
+            text: review?.text || review?.positives || review?.concerns || '',
+            rating: Number(review?.rating) || 0,
+            created_at: review?.created_at || '',
+            status: review?.status || 'pending',
+            source: review?.source || 'direct_card',
           });
         }
       }
@@ -727,10 +765,18 @@ const buildSchoolsRouter = () => {
         const reviews = Array.isArray(school?.reviews?.items)
           ? school.reviews.items
           : [];
-        if (!reviews.some((item) => String(item?.id || '') === reviewId)) {
+        const pendingReviews = Array.isArray(school?.reviews?.pending_items)
+          ? school.reviews.pending_items
+          : [];
+        const hasPublished = reviews.some((item) => String(item?.id || '') === reviewId);
+        const hasPending = pendingReviews.some((item) => String(item?.id || '') === reviewId);
+        if (!hasPublished && !hasPending) {
           continue;
         }
         const nextReviews = reviews.filter(
+          (item) => String(item?.id || '') !== reviewId
+        );
+        const nextPendingReviews = pendingReviews.filter(
           (item) => String(item?.id || '') !== reviewId
         );
         const ratingSum = nextReviews.reduce(
@@ -750,6 +796,7 @@ const buildSchoolsRouter = () => {
           reviews: {
             ...(school.reviews || {}),
             items: nextReviews,
+            pending_items: nextPendingReviews,
             count: nextReviews.length,
             average_rating: averageRating,
             highlight: highlightText,
@@ -810,6 +857,7 @@ const buildSchoolsRouter = () => {
         reviews: {
           ...(school.reviews || {}),
           items: [],
+          pending_items: [],
           count: 0,
           average_rating: null,
           highlight: '',
@@ -835,6 +883,121 @@ const buildSchoolsRouter = () => {
 
       await upsertSchool(updatedProfile);
       return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/:id/reviews/submit', async (req, res, next) => {
+    try {
+      const actorPayload = await requireAuthenticatedActor(req, res);
+      if (!actorPayload) return;
+      const schoolId = String(req.params?.id || '').trim();
+      if (!schoolId) {
+        return res.status(400).json({ error: 'schoolId is required' });
+      }
+
+      const schools = await readStore();
+      const school = schools.find((item) => String(item?.school_id || '').trim() === schoolId);
+      if (!school) {
+        return res.status(404).json({ error: 'School not found' });
+      }
+
+      const experienceType = String(req.body?.experienceType || '').trim().toLowerCase();
+      const experienceFreshness = String(req.body?.experienceFreshness || '').trim().toLowerCase();
+      const allowedExperienceTypes = new Set([
+        'current_parent',
+        'former_parent',
+        'applicant_parent',
+        'consultation_only',
+        'other',
+      ]);
+      const allowedFreshnessValues = new Set([
+        'current_year',
+        'within_2_years',
+        'within_5_years',
+        'over_5_years',
+      ]);
+      if (!allowedExperienceTypes.has(experienceType)) {
+        return res.status(400).json({ error: 'experienceType is required' });
+      }
+      if (!allowedFreshnessValues.has(experienceFreshness)) {
+        return res.status(400).json({ error: 'experienceFreshness is required' });
+      }
+
+      const criteria = {
+        teaching: clamp(Number(req.body?.teachingRating || 0), 1, 5),
+        communication: clamp(Number(req.body?.communicationRating || 0), 1, 5),
+        safety: clamp(Number(req.body?.safetyRating || 0), 1, 5),
+        atmosphere: clamp(Number(req.body?.atmosphereRating || 0), 1, 5),
+        value: clamp(Number(req.body?.valueRating || 0), 1, 5),
+      };
+      const missingCriteria = Object.values(criteria).some((score) => !Number.isFinite(score) || score < 1 || score > 5);
+      if (missingCriteria) {
+        return res.status(400).json({ error: 'All review criteria are required' });
+      }
+
+      const positives = normalizeText(req.body?.positives).slice(0, 1200);
+      const concerns = normalizeText(req.body?.concerns).slice(0, 1200);
+      const recommendationFor = normalizeText(req.body?.recommendationFor).slice(0, 600);
+      const comment = normalizeText(req.body?.comment).slice(0, 1200);
+      if (!positives && !concerns && !comment) {
+        return res.status(400).json({ error: 'Review text is required' });
+      }
+
+      const rating =
+        (
+          criteria.teaching +
+          criteria.communication +
+          criteria.safety +
+          criteria.atmosphere +
+          criteria.value
+        ) / 5;
+
+      const authorName =
+        normalizeText(
+          actorPayload.user?.user_metadata?.name ||
+            [actorPayload.user?.user_metadata?.firstName, actorPayload.user?.user_metadata?.lastName]
+              .filter(Boolean)
+              .join(' ') ||
+            actorPayload.user?.email
+        ) || 'Parent';
+
+      const nextPendingReviews = [
+        {
+          id: `pending-review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          author: authorName,
+          author_email: normalizeEmail(actorPayload.user?.email || ''),
+          text: comment || positives || concerns,
+          rating: Number(rating.toFixed(1)),
+          created_at: new Date().toISOString(),
+          status: 'pending',
+          source: 'direct_card',
+          experience_type: experienceType,
+          experience_freshness: experienceFreshness,
+          criteria,
+          positives,
+          concerns,
+          recommendation_for: recommendationFor,
+          comment,
+        },
+        ...(Array.isArray(school?.reviews?.pending_items) ? school.reviews.pending_items : []),
+      ].slice(0, 200);
+
+      const updatedProfile = {
+        ...school,
+        reviews: {
+          ...(school.reviews || {}),
+          pending_items: nextPendingReviews,
+        },
+        system: {
+          ...(school.system || {}),
+          updated_at: new Date().toISOString(),
+        },
+      };
+
+      await upsertSchool(updatedProfile);
+      res.status(201).json({ ok: true });
     } catch (error) {
       next(error);
     }

@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchoolById, recordEngagementEvent, requestJson } from '@/lib/api';
+import { loadSchoolById, recordEngagementEvent, requestJson, submitDirectSchoolReview } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
@@ -76,6 +76,20 @@ type ConsultationDraft = {
   childName: string;
   childGrade: string;
   consultationType: string;
+  comment: string;
+};
+
+type ReviewDraft = {
+  experienceType: 'current_parent' | 'former_parent' | 'applicant_parent' | 'consultation_only' | 'other';
+  experienceFreshness: 'current_year' | 'within_2_years' | 'within_5_years' | 'over_5_years';
+  teachingRating: string;
+  communicationRating: string;
+  safetyRating: string;
+  atmosphereRating: string;
+  valueRating: string;
+  positives: string;
+  concerns: string;
+  recommendationFor: string;
   comment: string;
 };
 
@@ -816,6 +830,117 @@ export default function ParentSchoolDetailsPage() {
     noReviews: locale === 'en' ? 'No reviews' : locale === 'kk' ? 'Пікір жоқ' : 'Нет отзывов',
     reviewsWord: locale === 'en' ? 'reviews' : locale === 'kk' ? 'пікір' : 'отзывов',
     leaveReview: locale === 'en' ? 'Leave review' : locale === 'kk' ? 'Пікір қалдыру' : 'Оставить отзыв',
+    reviewClose: locale === 'en' ? 'Close form' : locale === 'kk' ? 'Форманы жабу' : 'Скрыть форму',
+    reviewExperienceType:
+      locale === 'en' ? 'Experience type' : locale === 'kk' ? 'Тәжірибе түрі' : 'Тип опыта',
+    reviewExperienceFreshness:
+      locale === 'en'
+        ? 'How recent is this experience?'
+        : locale === 'kk'
+          ? 'Бұл тәжірибе қаншалықты жаңа?'
+          : 'Насколько свежий этот опыт?',
+    reviewCurrentParent:
+      locale === 'en'
+        ? 'Child studies there now'
+        : locale === 'kk'
+          ? 'Бала қазір осы мектепте оқиды'
+          : 'Ребенок учится там сейчас',
+    reviewFormerParent:
+      locale === 'en'
+        ? 'Child studied there before'
+        : locale === 'kk'
+          ? 'Бала бұрын осы мектепте оқыған'
+          : 'Ребенок учился там раньше',
+    reviewApplicantParent:
+      locale === 'en'
+        ? 'Applied but did not continue'
+        : locale === 'kk'
+          ? 'Түсуге тырыстық, бірақ жалғастырмадық'
+          : 'Поступали, но не продолжили',
+    reviewConsultationOnly:
+      locale === 'en'
+        ? 'Only had consultation/contact'
+        : locale === 'kk'
+          ? 'Тек кеңес/байланыс болды'
+          : 'Была только консультация/контакт',
+    reviewOtherExperience:
+      locale === 'en' ? 'Other experience' : locale === 'kk' ? 'Басқа тәжірибе' : 'Другой опыт',
+    reviewFreshnessCurrent:
+      locale === 'en'
+        ? 'Current or within the last year'
+        : locale === 'kk'
+          ? 'Қазір немесе соңғы 1 жыл ішінде'
+          : 'Сейчас или в течение последнего года',
+    reviewFreshnessTwo:
+      locale === 'en' ? '1-2 years ago' : locale === 'kk' ? '1-2 жыл бұрын' : '1-2 года назад',
+    reviewFreshnessFive:
+      locale === 'en' ? '2-5 years ago' : locale === 'kk' ? '2-5 жыл бұрын' : '2-5 лет назад',
+    reviewFreshnessOlder:
+      locale === 'en' ? 'More than 5 years ago' : locale === 'kk' ? '5 жылдан бұрын' : 'Более 5 лет назад',
+    reviewTeaching:
+      locale === 'en' ? 'Teaching quality' : locale === 'kk' ? 'Оқыту сапасы' : 'Качество обучения',
+    reviewCommunication:
+      locale === 'en'
+        ? 'Communication with parents'
+        : locale === 'kk'
+          ? 'Ата-анамен коммуникация'
+          : 'Коммуникация со школой',
+    reviewSafety:
+      locale === 'en' ? 'Safety' : locale === 'kk' ? 'Қауіпсіздік' : 'Безопасность',
+    reviewAtmosphere:
+      locale === 'en' ? 'Atmosphere' : locale === 'kk' ? 'Атмосфера' : 'Атмосфера',
+    reviewValue:
+      locale === 'en' ? 'Value for money' : locale === 'kk' ? 'Баға/сапа' : 'Цена/качество',
+    reviewPositives:
+      locale === 'en'
+        ? 'What was really good?'
+        : locale === 'kk'
+          ? 'Не ұнады?'
+          : 'Что действительно понравилось?',
+    reviewConcerns:
+      locale === 'en'
+        ? 'What should parents know in advance?'
+        : locale === 'kk'
+          ? 'Ата-аналар нені алдын ала білуі керек?'
+          : 'Что родителям стоит знать заранее?',
+    reviewRecommendationFor:
+      locale === 'en'
+        ? 'Who would you recommend this school to?'
+        : locale === 'kk'
+          ? 'Бұл мектеп кімге көбірек сай келеді?'
+          : 'Кому бы вы рекомендовали эту школу?',
+    reviewComment:
+      locale === 'en'
+        ? 'Additional comment'
+        : locale === 'kk'
+          ? 'Қосымша пікір'
+          : 'Дополнительный комментарий',
+    reviewSubmit:
+      locale === 'en'
+        ? 'Send for moderation'
+        : locale === 'kk'
+          ? 'Модерацияға жіберу'
+          : 'Отправить на модерацию',
+    reviewSending:
+      locale === 'en' ? 'Sending...' : locale === 'kk' ? 'Жіберілуде...' : 'Отправляем...',
+    reviewSuccess:
+      locale === 'en'
+        ? 'Review sent. It will appear after moderation.'
+        : locale === 'kk'
+          ? 'Пікір жіберілді. Модерациядан кейін жарияланады.'
+          : 'Отзыв отправлен. После модерации он появится в карточке.',
+    reviewRequired:
+      locale === 'en'
+        ? 'Fill in all required fields and ratings.'
+        : locale === 'kk'
+          ? 'Міндетті өрістер мен бағаларды толтырыңыз.'
+          : 'Заполните обязательные поля и оценки.',
+    reviewSignIn:
+      locale === 'en'
+        ? 'Sign in to leave a review.'
+        : locale === 'kk'
+          ? 'Пікір қалдыру үшін кіріңіз.'
+          : 'Войдите, чтобы оставить отзыв.',
     noReviewsHint:
       locale === 'en'
         ? 'No reviews yet. Be the first to share your experience.'
@@ -959,6 +1084,10 @@ export default function ParentSchoolDetailsPage() {
   const [consultationSaving, setConsultationSaving] = useState(false);
   const [consultationMessage, setConsultationMessage] = useState('');
   const [consultationError, setConsultationError] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
+  const [reviewError, setReviewError] = useState('');
   const [consultationDraft, setConsultationDraft] = useState<ConsultationDraft>({
     parentName: '',
     parentPhone: '',
@@ -966,6 +1095,19 @@ export default function ParentSchoolDetailsPage() {
     childName: '',
     childGrade: '',
     consultationType: 'schoolDetail.consultation.firstMeeting',
+    comment: '',
+  });
+  const [reviewDraft, setReviewDraft] = useState<ReviewDraft>({
+    experienceType: 'current_parent',
+    experienceFreshness: 'current_year',
+    teachingRating: '0',
+    communicationRating: '0',
+    safetyRating: '0',
+    atmosphereRating: '0',
+    valueRating: '0',
+    positives: '',
+    concerns: '',
+    recommendationFor: '',
     comment: '',
   });
 
@@ -1041,6 +1183,20 @@ export default function ParentSchoolDetailsPage() {
     { value: 'schoolDetail.consultation.other', label: ui.consultationOther },
   ];
   const gradeOptions = ['pre-k', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+  const reviewExperienceOptions = [
+    { value: 'current_parent', label: ui.reviewCurrentParent },
+    { value: 'former_parent', label: ui.reviewFormerParent },
+    { value: 'applicant_parent', label: ui.reviewApplicantParent },
+    { value: 'consultation_only', label: ui.reviewConsultationOnly },
+    { value: 'other', label: ui.reviewOtherExperience },
+  ];
+  const reviewFreshnessOptions = [
+    { value: 'current_year', label: ui.reviewFreshnessCurrent },
+    { value: 'within_2_years', label: ui.reviewFreshnessTwo },
+    { value: 'within_5_years', label: ui.reviewFreshnessFive },
+    { value: 'over_5_years', label: ui.reviewFreshnessOlder },
+  ];
+  const reviewRatingOptions = ['0', '1', '2', '3', '4', '5'];
 
   const translateConsultationError = (message: string) => {
     const normalized = String(message || '').trim();
@@ -1097,6 +1253,68 @@ export default function ParentSchoolDetailsPage() {
           : 'С этого номера уже слишком много заявок. Попробуйте позже.';
     }
     return normalized;
+  };
+
+  const submitReview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (guest) {
+      setReviewError(ui.reviewSignIn);
+      return;
+    }
+    const ratingFields = [
+      reviewDraft.teachingRating,
+      reviewDraft.communicationRating,
+      reviewDraft.safetyRating,
+      reviewDraft.atmosphereRating,
+      reviewDraft.valueRating,
+    ];
+    if (
+      ratingFields.some((value) => {
+        const num = Number(value || 0);
+        return !(num >= 1 && num <= 5);
+      }) ||
+      (!reviewDraft.positives.trim() && !reviewDraft.concerns.trim() && !reviewDraft.comment.trim())
+    ) {
+      setReviewError(ui.reviewRequired);
+      return;
+    }
+    try {
+      setReviewSaving(true);
+      setReviewError('');
+      setReviewMessage('');
+      await submitDirectSchoolReview(trackedSchoolId, {
+        experienceType: reviewDraft.experienceType,
+        experienceFreshness: reviewDraft.experienceFreshness,
+        teachingRating: Number(reviewDraft.teachingRating),
+        communicationRating: Number(reviewDraft.communicationRating),
+        safetyRating: Number(reviewDraft.safetyRating),
+        atmosphereRating: Number(reviewDraft.atmosphereRating),
+        valueRating: Number(reviewDraft.valueRating),
+        positives: reviewDraft.positives.trim(),
+        concerns: reviewDraft.concerns.trim(),
+        recommendationFor: reviewDraft.recommendationFor.trim(),
+        comment: reviewDraft.comment.trim(),
+      });
+      setReviewMessage(ui.reviewSuccess);
+      setReviewOpen(false);
+      setReviewDraft({
+        experienceType: 'current_parent',
+        experienceFreshness: 'current_year',
+        teachingRating: '0',
+        communicationRating: '0',
+        safetyRating: '0',
+        atmosphereRating: '0',
+        valueRating: '0',
+        positives: '',
+        concerns: '',
+        recommendationFor: '',
+        comment: '',
+      });
+    } catch (error) {
+      setReviewError((error as Error)?.message || ui.reviewRequired);
+    } finally {
+      setReviewSaving(false);
+    }
   };
 
   const submitConsultation = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2380,11 +2598,160 @@ export default function ParentSchoolDetailsPage() {
                       <div className="school-reviews-box">
                         <div className="school-reviews-head">
                           <strong>{Number(reviews) > 0 ? `${reviews} ${ui.reviewsWord}` : ui.noReviews}</strong>
-                          <button type="button" className="button secondary">{ui.leaveReview}</button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => {
+                              setReviewOpen((prev) => !prev);
+                              setReviewError('');
+                              setReviewMessage('');
+                            }}
+                          >
+                            {reviewOpen ? ui.reviewClose : ui.leaveReview}
+                          </button>
                         </div>
                         <p className="muted" style={{ margin: '10px 0 0' }}>
                           {ui.noReviewsHint}
                         </p>
+                        {reviewOpen ? (
+                          <form className="school-consult-form" onSubmit={submitReview} style={{ marginTop: 14 }}>
+                            <div className="school-consult-grid">
+                              <label className="field">
+                                <span>{ui.reviewExperienceType}</span>
+                                <select
+                                  className="select"
+                                  value={reviewDraft.experienceType}
+                                  onChange={(event) =>
+                                    setReviewDraft((prev) => ({
+                                      ...prev,
+                                      experienceType: event.target.value as ReviewDraft['experienceType'],
+                                    }))
+                                  }
+                                >
+                                  {reviewExperienceOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              <label className="field">
+                                <span>{ui.reviewExperienceFreshness}</span>
+                                <select
+                                  className="select"
+                                  value={reviewDraft.experienceFreshness}
+                                  onChange={(event) =>
+                                    setReviewDraft((prev) => ({
+                                      ...prev,
+                                      experienceFreshness:
+                                        event.target.value as ReviewDraft['experienceFreshness'],
+                                    }))
+                                  }
+                                >
+                                  {reviewFreshnessOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              {[
+                                ['teachingRating', ui.reviewTeaching],
+                                ['communicationRating', ui.reviewCommunication],
+                                ['safetyRating', ui.reviewSafety],
+                                ['atmosphereRating', ui.reviewAtmosphere],
+                                ['valueRating', ui.reviewValue],
+                              ].map(([field, label]) => (
+                                <label key={field} className="field">
+                                  <span>{label}</span>
+                                  <select
+                                    className="select"
+                                    value={String(reviewDraft[field as keyof ReviewDraft] || '0')}
+                                    onChange={(event) =>
+                                      setReviewDraft((prev) => ({
+                                        ...prev,
+                                        [field]: event.target.value,
+                                      }))
+                                    }
+                                  >
+                                    {reviewRatingOptions.map((value) => (
+                                      <option key={`${field}-${value}`} value={value}>
+                                        {value === '0' ? '—' : value}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+
+                            <label className="field">
+                              <span>{ui.reviewPositives}</span>
+                              <textarea
+                                className="input"
+                                rows={3}
+                                value={reviewDraft.positives}
+                                onChange={(event) =>
+                                  setReviewDraft((prev) => ({ ...prev, positives: event.target.value }))
+                                }
+                              />
+                            </label>
+
+                            <label className="field">
+                              <span>{ui.reviewConcerns}</span>
+                              <textarea
+                                className="input"
+                                rows={3}
+                                value={reviewDraft.concerns}
+                                onChange={(event) =>
+                                  setReviewDraft((prev) => ({ ...prev, concerns: event.target.value }))
+                                }
+                              />
+                            </label>
+
+                            <label className="field">
+                              <span>{ui.reviewRecommendationFor}</span>
+                              <textarea
+                                className="input"
+                                rows={2}
+                                value={reviewDraft.recommendationFor}
+                                onChange={(event) =>
+                                  setReviewDraft((prev) => ({
+                                    ...prev,
+                                    recommendationFor: event.target.value,
+                                  }))
+                                }
+                              />
+                            </label>
+
+                            <label className="field">
+                              <span>{ui.reviewComment}</span>
+                              <textarea
+                                className="input"
+                                rows={3}
+                                value={reviewDraft.comment}
+                                onChange={(event) =>
+                                  setReviewDraft((prev) => ({ ...prev, comment: event.target.value }))
+                                }
+                              />
+                            </label>
+
+                            {reviewError ? (
+                              <p className="muted" style={{ margin: 0, color: '#d14343' }}>
+                                {reviewError}
+                              </p>
+                            ) : null}
+                            <button type="submit" className="school-consult-btn" disabled={reviewSaving}>
+                              {reviewSaving ? ui.reviewSending : ui.reviewSubmit}
+                            </button>
+                          </form>
+                        ) : null}
+                        {reviewMessage ? (
+                          <p className="muted" style={{ margin: '12px 0 0', color: '#1f8f4d' }}>
+                            {reviewMessage}
+                          </p>
+                        ) : null}
                       </div>
                     ) : section.key === 'staff' ? (
                       <div className="school-staff-wrap">

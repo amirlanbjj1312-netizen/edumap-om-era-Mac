@@ -382,8 +382,38 @@ export async function loadAllReviews(token: string) {
       text: string;
       rating: number;
       created_at: string;
+      status?: string;
+      source?: string;
     }>;
   }>('/schools/reviews/all', { token });
+}
+
+export async function submitDirectSchoolReview(
+  schoolId: string,
+  payload: {
+    experienceType: 'current_parent' | 'former_parent' | 'applicant_parent' | 'consultation_only' | 'other';
+    experienceFreshness: 'current_year' | 'within_2_years' | 'within_5_years' | 'over_5_years';
+    teachingRating: number;
+    communicationRating: number;
+    safetyRating: number;
+    atmosphereRating: number;
+    valueRating: number;
+    positives?: string;
+    concerns?: string;
+    recommendationFor?: string;
+    comment?: string;
+  }
+) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ ok: true }>(
+    `/schools/${encodeURIComponent(schoolId)}/reviews/submit`,
+    {
+      token,
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function deleteReviewById(token: string, reviewId: string) {
