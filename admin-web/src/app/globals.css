@@ -3637,6 +3637,42 @@ a {
   padding: 14px;
 }
 
+.school-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.school-consult-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.school-consult-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.school-consult-status {
+  margin: 0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 600;
+}
+
+.school-consult-status-success {
+  background: rgba(21, 128, 61, 0.12);
+  color: #166534;
+}
+
+.school-consult-status-error {
+  background: rgba(185, 28, 28, 0.12);
+  color: #b91c1c;
+}
+
 .school-accordion-title {
   display: inline-flex;
   align-items: center;
@@ -5692,6 +5728,11 @@ a {
 
   .school-consult-btn {
     font-size: 16px;
+  }
+
+  .school-detail-actions,
+  .school-consult-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .school-service-card-grid {

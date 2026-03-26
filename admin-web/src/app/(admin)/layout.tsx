@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
+import { loadSchools } from '@/lib/api';
+import { buildFallbackSchoolId } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
@@ -33,29 +35,71 @@ const ROLE_PRIORITY: Record<string, number> = {
   superadmin: 3,
 };
 
+const normalizeEmail = (value: unknown) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+const resolveSessionSchoolId = (user: any) => {
+  const appSchoolId =
+    typeof user?.app_metadata?.school_id === 'string' ? user.app_metadata.school_id.trim() : '';
+  if (appSchoolId) return appSchoolId;
+  const userSchoolId =
+    typeof user?.user_metadata?.school_id === 'string' ? user.user_metadata.school_id.trim() : '';
+  return userSchoolId;
+};
+
+const hasLeadAccessForSchool = (school: any) => {
+  const plan = String(school?.monetization?.plan_name || 'Starter').trim().toLowerCase();
+  return plan === 'growth' || plan === 'pro';
+};
+
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t, locale } = useAdminLocale();
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState('user');
+  const [hasLeadAccess, setHasLeadAccess] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!mounted) return;
         if (!data.session) {
           router.replace('/login');
         } else {
+          const sessionUser = data.session.user;
           const nextRole = resolvePortalRole(
-            data.session.user?.user_metadata?.role ||
-              data.session.user?.app_metadata?.role
+            sessionUser?.user_metadata?.role ||
+              sessionUser?.app_metadata?.role
           );
           if (nextRole === 'user') {
             router.replace(portalHomeByRole(nextRole));
             return;
+          }
+          if (nextRole === 'admin') {
+            try {
+              const email = normalizeEmail(sessionUser?.email);
+              const fallbackSchoolId = buildFallbackSchoolId(email).toLowerCase();
+              const assignedSchoolId = resolveSessionSchoolId(sessionUser).toLowerCase();
+              const schoolsResponse = await loadSchools();
+              const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
+              const ownSchool =
+                allSchools.find((item) => normalizeEmail(item?.basic_info?.email) === email) ||
+                allSchools.find(
+                  (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
+                ) ||
+                allSchools.find(
+                  (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
+                ) ||
+                null;
+              setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
+            } catch {
+              setHasLeadAccess(false);
+            }
+          } else {
+            setHasLeadAccess(true);
           }
           setRole(nextRole);
           setReady(true);
@@ -65,18 +109,42 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
         if (!mounted) return;
         router.replace('/login');
       });
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         router.replace('/login');
       } else {
+        const sessionUser = session.user;
         const nextRole =
           resolvePortalRole(
-            session.user?.user_metadata?.role ||
-            session.user?.app_metadata?.role
+            sessionUser?.user_metadata?.role ||
+            sessionUser?.app_metadata?.role
           );
         if (nextRole === 'user') {
           router.replace(portalHomeByRole(nextRole));
           return;
+        }
+        if (nextRole === 'admin') {
+          try {
+            const email = normalizeEmail(sessionUser?.email);
+            const fallbackSchoolId = buildFallbackSchoolId(email).toLowerCase();
+            const assignedSchoolId = resolveSessionSchoolId(sessionUser).toLowerCase();
+            const schoolsResponse = await loadSchools();
+            const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
+            const ownSchool =
+              allSchools.find((item) => normalizeEmail(item?.basic_info?.email) === email) ||
+              allSchools.find(
+                (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
+              ) ||
+              allSchools.find(
+                (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
+              ) ||
+              null;
+            setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
+          } catch {
+            setHasLeadAccess(false);
+          }
+        } else {
+          setHasLeadAccess(true);
         }
         setRole(nextRole);
       }
@@ -103,6 +171,9 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
   }
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.href === '/requests' && role === 'admin' && !hasLeadAccess) {
+      return false;
+    }
     if (!item.minRole) return true;
     return (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[item.minRole] || 0);
   });

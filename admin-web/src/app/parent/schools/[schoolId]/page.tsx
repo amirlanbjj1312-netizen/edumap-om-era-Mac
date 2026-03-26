@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { loadSchoolById, recordEngagementEvent } from '@/lib/api';
+import { loadSchoolById, recordEngagementEvent, requestJson } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
@@ -67,6 +67,16 @@ type MediaViewerKind = 'photo' | 'video' | 'doc';
 type MediaViewerState = {
   kind: MediaViewerKind;
   index: number;
+};
+
+type ConsultationDraft = {
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
+  childName: string;
+  childGrade: string;
+  consultationType: string;
+  comment: string;
 };
 
 const toText = (value: unknown): string => {
@@ -751,6 +761,55 @@ export default function ParentSchoolDetailsPage() {
     city: locale === 'en' ? 'City' : locale === 'kk' ? 'Қала' : 'Город',
     district: locale === 'en' ? 'District' : locale === 'kk' ? 'Аудан' : 'Район',
     clubs: locale === 'en' ? 'Clubs and sections' : locale === 'kk' ? 'Үйірмелер мен секциялар' : 'Кружки и секции',
+    consultationCta:
+      locale === 'en'
+        ? 'Book a consultation'
+        : locale === 'kk'
+          ? 'Кеңеске жазылу'
+          : 'Записаться на консультацию',
+    consultationOpen:
+      locale === 'en'
+        ? 'Request a consultation with the school'
+        : locale === 'kk'
+          ? 'Мектеппен кеңес алуға өтінім қалдыру'
+          : 'Оставить заявку на консультацию со школой',
+    consultationHint:
+      locale === 'en'
+        ? 'The school will receive your contact details in its CRM.'
+        : locale === 'kk'
+          ? 'Мектеп сіздің байланыс деректеріңізді өз CRM жүйесінде көреді.'
+          : 'Школа получит ваши контакты в своём разделе заявок.',
+    consultationParentName: locale === 'en' ? 'Parent name' : locale === 'kk' ? 'Ата-ана аты' : 'Имя родителя',
+    consultationParentPhone: locale === 'en' ? 'Phone number' : locale === 'kk' ? 'Телефон нөмірі' : 'Номер телефона',
+    consultationParentEmail: locale === 'en' ? 'Email' : locale === 'kk' ? 'Email' : 'Email',
+    consultationChildName: locale === 'en' ? 'Child name' : locale === 'kk' ? 'Бала аты' : 'Имя ребенка',
+    consultationChildGrade: locale === 'en' ? 'Child grade' : locale === 'kk' ? 'Бала сыныбы' : 'Класс ребенка',
+    consultationComment:
+      locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
+    consultationTypeLabel:
+      locale === 'en' ? 'Request type' : locale === 'kk' ? 'Өтінім түрі' : 'Тип запроса',
+    consultationSubmit:
+      locale === 'en' ? 'Send request' : locale === 'kk' ? 'Өтінім жіберу' : 'Отправить заявку',
+    consultationSending:
+      locale === 'en' ? 'Sending...' : locale === 'kk' ? 'Жіберілуде...' : 'Отправляем...',
+    consultationSuccess:
+      locale === 'en'
+        ? 'Request sent. The school will contact you.'
+        : locale === 'kk'
+          ? 'Өтінім жіберілді. Мектеп сізбен байланысады.'
+          : 'Заявка отправлена. Школа свяжется с вами.',
+    consultationClose: locale === 'en' ? 'Close' : locale === 'kk' ? 'Жабу' : 'Скрыть',
+    consultationFirstMeeting:
+      locale === 'en' ? 'First meeting' : locale === 'kk' ? 'Алғашқы кездесу' : 'Первая консультация',
+    consultationTransfer:
+      locale === 'en' ? 'Transfer' : locale === 'kk' ? 'Ауысу' : 'Перевод в школу',
+    consultationLearningQuestion:
+      locale === 'en'
+        ? 'Learning question'
+        : locale === 'kk'
+          ? 'Оқу туралы сұрақ'
+          : 'Вопрос по обучению',
+    consultationOther: locale === 'en' ? 'Other' : locale === 'kk' ? 'Басқа' : 'Другое',
     schoolPrograms: locale === 'en' ? 'Study programs' : locale === 'kk' ? 'Оқу бағдарламалары' : 'Учебные программы',
     programInfo: locale === 'en' ? 'Program information' : locale === 'kk' ? 'Бағдарлама туралы' : 'Информация о программе',
     socialEmpty: locale === 'en' ? 'No social links provided.' : locale === 'kk' ? 'Әлеуметтік желілер көрсетілмеген.' : 'Социальные сети не указаны.',
@@ -896,6 +955,19 @@ export default function ParentSchoolDetailsPage() {
   const [activeProgram, setActiveProgram] = useState('');
   const [typeInfoOpen, setTypeInfoOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const [consultationSaving, setConsultationSaving] = useState(false);
+  const [consultationMessage, setConsultationMessage] = useState('');
+  const [consultationError, setConsultationError] = useState('');
+  const [consultationDraft, setConsultationDraft] = useState<ConsultationDraft>({
+    parentName: '',
+    parentPhone: '',
+    parentEmail: '',
+    childName: '',
+    childGrade: '',
+    consultationType: 'schoolDetail.consultation.firstMeeting',
+    comment: '',
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -942,6 +1014,8 @@ export default function ParentSchoolDetailsPage() {
   }, [locale, school?.school_id]);
 
   const trackedSchoolId = String(school?.school_id || '').trim();
+  const schoolPlan = String(getIn(school, 'monetization.plan_name') || 'Starter').trim().toLowerCase();
+  const canRequestConsultation = !guest && (schoolPlan === 'growth' || schoolPlan === 'pro');
 
   const name = pickFirstText(
     school,
@@ -960,6 +1034,109 @@ export default function ParentSchoolDetailsPage() {
   const subtypeRaw = pickFirstText(school, ['basic_info.school_subtype'], '');
   const type = formatCombinedType(typeRaw, subtypeRaw, locale) || localizeCsv(typeRaw, locale) || localizeOption(typeRaw, locale);
   const isPrivateSchool = isPrivateType(typeRaw);
+  const consultationTypeOptions = [
+    { value: 'schoolDetail.consultation.firstMeeting', label: ui.consultationFirstMeeting },
+    { value: 'schoolDetail.consultation.transfer', label: ui.consultationTransfer },
+    { value: 'schoolDetail.consultation.learningQuestion', label: ui.consultationLearningQuestion },
+    { value: 'schoolDetail.consultation.other', label: ui.consultationOther },
+  ];
+  const gradeOptions = ['pre-k', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+
+  const translateConsultationError = (message: string) => {
+    const normalized = String(message || '').trim();
+    const fieldLabels =
+      locale === 'en'
+        ? {
+            parentName: 'Parent name',
+            parentPhone: 'Phone number',
+            childName: 'Child name',
+            childGrade: 'Child grade',
+          }
+        : locale === 'kk'
+          ? {
+              parentName: 'Ата-ана аты',
+              parentPhone: 'Телефон нөмірі',
+              childName: 'Бала аты',
+              childGrade: 'Бала сыныбы',
+            }
+          : {
+              parentName: 'Имя родителя',
+              parentPhone: 'Номер телефона',
+              childName: 'Имя ребенка',
+              childGrade: 'Класс ребенка',
+            };
+    const requiredMatch = normalized.match(/^Field "([^"]+)" is required\.$/);
+    if (requiredMatch) {
+      const field = requiredMatch[1] as keyof typeof fieldLabels;
+      const label = fieldLabels[field] || requiredMatch[1];
+      return locale === 'en'
+        ? `${label} is required.`
+        : locale === 'kk'
+          ? `«${label}» өрісін толтырыңыз.`
+          : `Заполните поле «${label}».`;
+    }
+    if (normalized === 'A similar consultation request was sent recently. Please wait.') {
+      return locale === 'en'
+        ? 'A similar request was already sent recently. Please wait a bit.'
+        : locale === 'kk'
+          ? 'Ұқсас өтінім жақында жіберілген. Сәл күте тұрыңыз.'
+          : 'Похожая заявка уже была отправлена недавно. Пожалуйста, подождите немного.';
+    }
+    if (normalized === 'Too many requests from this IP. Try later.') {
+      return locale === 'en'
+        ? 'Too many requests. Please try again later.'
+        : locale === 'kk'
+          ? 'Өтінім тым көп. Кейінірек қайталап көріңіз.'
+          : 'Слишком много попыток. Попробуйте позже.';
+    }
+    if (normalized === 'Too many requests from this phone number. Try later.') {
+      return locale === 'en'
+        ? 'Too many requests from this number. Please try later.'
+        : locale === 'kk'
+          ? 'Бұл нөмірден өтінім тым көп. Кейінірек қайталап көріңіз.'
+          : 'С этого номера уже слишком много заявок. Попробуйте позже.';
+    }
+    return normalized;
+  };
+
+  const submitConsultation = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!trackedSchoolId) return;
+    setConsultationSaving(true);
+    setConsultationMessage('');
+    setConsultationError('');
+    try {
+      await requestJson<{ data?: { id?: string } }>('/consultations', {
+        method: 'POST',
+        body: JSON.stringify({
+          schoolId: trackedSchoolId,
+          schoolName: name,
+          parentName: consultationDraft.parentName.trim(),
+          parentPhone: consultationDraft.parentPhone.trim(),
+          parentEmail: consultationDraft.parentEmail.trim(),
+          childName: consultationDraft.childName.trim(),
+          childGrade: consultationDraft.childGrade.trim(),
+          consultationType: consultationDraft.consultationType,
+          comment: consultationDraft.comment.trim(),
+        }),
+      });
+      setConsultationMessage(ui.consultationSuccess);
+      setConsultationDraft({
+        parentName: '',
+        parentPhone: '',
+        parentEmail: '',
+        childName: '',
+        childGrade: '',
+        consultationType: 'schoolDetail.consultation.firstMeeting',
+        comment: '',
+      });
+      setConsultationOpen(false);
+    } catch (error) {
+      setConsultationError(translateConsultationError((error as Error)?.message || 'Request failed'));
+    } finally {
+      setConsultationSaving(false);
+    }
+  };
   const subtypeInfoMap: Record<string, { ru: string; en: string; kk: string }> = {
     'General School': {
       ru: 'Базовая общеобразовательная школа по стандартной программе.',
@@ -1842,9 +2019,140 @@ export default function ParentSchoolDetailsPage() {
 
           <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
             <div className={guest ? 'guest-gated-content school-detail-sections' : 'school-detail-sections'}>
-          <Link href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`} className="school-consult-btn">
-            {ui.clubs}
-          </Link>
+          <div className="school-detail-actions">
+            {canRequestConsultation ? (
+              <button
+                type="button"
+                className="school-consult-btn"
+                onClick={() => {
+                  setConsultationOpen((prev) => !prev);
+                  setConsultationError('');
+                  setConsultationMessage('');
+                }}
+              >
+                {consultationOpen ? ui.consultationClose : ui.consultationCta}
+              </button>
+            ) : null}
+            <Link
+              href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`}
+              className="school-consult-btn"
+            >
+              {ui.clubs}
+            </Link>
+          </div>
+
+          {canRequestConsultation && consultationOpen ? (
+            <form className="school-consult-form" onSubmit={submitConsultation}>
+              <div className="school-consult-form-grid">
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationParentName}</span>
+                  <input
+                    className="input"
+                    value={consultationDraft.parentName}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({ ...prev, parentName: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationParentPhone}</span>
+                  <input
+                    className="input"
+                    value={consultationDraft.parentPhone}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({ ...prev, parentPhone: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationParentEmail}</span>
+                  <input
+                    className="input"
+                    type="email"
+                    value={consultationDraft.parentEmail}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({ ...prev, parentEmail: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationChildName}</span>
+                  <input
+                    className="input"
+                    value={consultationDraft.childName}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({ ...prev, childName: event.target.value }))
+                    }
+                  />
+                </label>
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationChildGrade}</span>
+                  <select
+                    value={consultationDraft.childGrade}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({ ...prev, childGrade: event.target.value }))
+                    }
+                  >
+                    <option value="">{ui.notSpecified}</option>
+                    {gradeOptions.map((grade) => (
+                      <option key={grade} value={grade}>
+                        {grade === 'pre-k' ? 'Pre-K' : grade}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field" style={{ marginBottom: 0 }}>
+                  <span>{ui.consultationTypeLabel}</span>
+                  <select
+                    value={consultationDraft.consultationType}
+                    onChange={(event) =>
+                      setConsultationDraft((prev) => ({
+                        ...prev,
+                        consultationType: event.target.value,
+                      }))
+                    }
+                  >
+                    {consultationTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="field" style={{ marginBottom: 0 }}>
+                <span>{ui.consultationComment}</span>
+                <textarea
+                  className="input"
+                  rows={4}
+                  value={consultationDraft.comment}
+                  onChange={(event) =>
+                    setConsultationDraft((prev) => ({ ...prev, comment: event.target.value }))
+                  }
+                />
+              </label>
+              <p className="muted" style={{ margin: 0 }}>
+                {ui.consultationHint}
+              </p>
+              {consultationError ? (
+                <p className="school-consult-status school-consult-status-error">
+                  {consultationError}
+                </p>
+              ) : null}
+              {consultationMessage ? (
+                <p className="school-consult-status school-consult-status-success">
+                  {consultationMessage}
+                </p>
+              ) : null}
+              <button type="submit" className="school-consult-btn" disabled={consultationSaving}>
+                {consultationSaving ? ui.consultationSending : ui.consultationSubmit}
+              </button>
+            </form>
+          ) : consultationMessage ? (
+            <p className="school-consult-status school-consult-status-success">
+              {consultationMessage}
+            </p>
+          ) : null}
 
           {SECTION_LABELS.map((section) => {
             const items =

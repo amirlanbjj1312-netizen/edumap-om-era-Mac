@@ -37,6 +37,11 @@ const resolveSessionSchoolId = (user: any) => {
   return userSchoolId;
 };
 
+const hasLeadAccessForSchool = (school: any) => {
+  const plan = String(school?.monetization?.plan_name || 'Starter').trim().toLowerCase();
+  return plan === 'growth' || plan === 'pro';
+};
+
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
   const fromMeta = (...keys: string[]) => {
@@ -105,13 +110,15 @@ export default function ProfilePage() {
   const [draftOrganization, setDraftOrganization] = useState('');
   const [draftPhone, setDraftPhone] = useState('');
   const [draftWebsite, setDraftWebsite] = useState('');
+  const [hasLeadAccess, setHasLeadAccess] = useState(false);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      const nextForm = toProfileForm(data.session?.user);
+      const sessionUser = data.session?.user;
+      const nextForm = toProfileForm(sessionUser);
       setForm(nextForm);
       setDraftFirstName(nextForm.firstName);
       setDraftLastName(nextForm.lastName);
@@ -119,6 +126,18 @@ export default function ProfilePage() {
       setDraftOrganization(nextForm.organization);
       setDraftPhone(nextForm.contactPhone);
       setDraftWebsite(nextForm.website);
+      try {
+        const email = normalizeEmail(nextForm.email);
+        const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
+        const result = await loadSchools();
+        const ownSchool = result.data.find((item: any) => {
+          const itemEmail = normalizeEmail(item?.basic_info?.email);
+          return item?.school_id === schoolId || (itemEmail && itemEmail === email);
+        });
+        setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
+      } catch {
+        setHasLeadAccess(false);
+      }
       setLoading(false);
     };
     load();
@@ -492,13 +511,15 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          className="button secondary"
-          onClick={() => window.location.assign('/requests')}
-        >
-          {ui.contactSupport}
-        </button>
+        {hasLeadAccess ? (
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => window.location.assign('/requests')}
+          >
+            {ui.contactSupport}
+          </button>
+        ) : null}
         <button
           type="button"
           className="button secondary"
