@@ -164,6 +164,12 @@ const normalizeResponse = (input = {}) => ({
   school_id: normalizeString(input.school_id || input.schoolId, 140),
   user_id: normalizeString(input.user_id || input.userId, 120),
   user_email: normalizeString(input.user_email || input.userEmail, 160).toLowerCase(),
+  experience_type: normalizeString(input.experience_type || input.experienceType, 40).toLowerCase(),
+  experience_freshness: normalizeString(
+    input.experience_freshness || input.experienceFreshness,
+    40
+  ).toLowerCase(),
+  verified_interaction: toBool(input.verified_interaction ?? input.verifiedInteraction, false),
   answers: Array.isArray(input.answers)
     ? input.answers
         .map(normalizeAnswer)

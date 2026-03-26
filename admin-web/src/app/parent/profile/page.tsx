@@ -41,6 +41,19 @@ type ActiveSurveyCampaign = {
   }>;
 };
 
+type SurveyExperienceType =
+  | 'current_parent'
+  | 'former_parent'
+  | 'applicant_parent'
+  | 'consultation_only'
+  | 'other';
+
+type SurveyExperienceFreshness =
+  | 'current_year'
+  | 'within_2_years'
+  | 'within_5_years'
+  | 'over_5_years';
+
 const toText = (value: unknown): string => {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return String(value);
@@ -85,6 +98,10 @@ export default function ParentProfilePage() {
   const [surveySchoolQuery, setSurveySchoolQuery] = useState('');
   const [surveyAnswers, setSurveyAnswers] = useState<Record<string, { score?: number; optionId?: string; optionLabel?: string; text?: string }>>({});
   const [surveyComment, setSurveyComment] = useState('');
+  const [surveyExperienceType, setSurveyExperienceType] =
+    useState<SurveyExperienceType>('current_parent');
+  const [surveyExperienceFreshness, setSurveyExperienceFreshness] =
+    useState<SurveyExperienceFreshness>('current_year');
 
   useEffect(() => {
     let mounted = true;
@@ -242,6 +259,18 @@ export default function ParentProfilePage() {
           schoolSearchPlaceholder: 'Start typing school name',
           schoolSearchEmpty: 'No schools found for this query.',
           schoolRequired: 'Choose a school from the list.',
+          experienceType: 'Experience type',
+          experienceFreshness: 'How recent is this experience?',
+          currentParent: 'Child studies there now',
+          formerParent: 'Child studied there before',
+          applicantParent: 'Applied but did not continue',
+          consultationOnly: 'Only had consultation/contact',
+          otherExperience: 'Other experience',
+          freshnessCurrent: 'Current or within the last year',
+          freshnessTwo: '1-2 years ago',
+          freshnessFive: '2-5 years ago',
+          freshnessOlder: 'More than 5 years ago',
+          experienceRequired: 'Specify the type and freshness of experience.',
           comment: 'Comment (optional)',
           submit: 'Send survey',
           loading: 'Loading surveys...',
@@ -261,6 +290,18 @@ export default function ParentProfilePage() {
             schoolSearchPlaceholder: 'Мектеп атауын жаза бастаңыз',
             schoolSearchEmpty: 'Сұрау бойынша мектеп табылмады.',
             schoolRequired: 'Тізімнен мектепті таңдаңыз.',
+            experienceType: 'Тәжірибе түрі',
+            experienceFreshness: 'Бұл тәжірибе қаншалықты жаңа?',
+            currentParent: 'Бала қазір осы мектепте оқиды',
+            formerParent: 'Бала бұрын осы мектепте оқыған',
+            applicantParent: 'Түсуге тырыстық, бірақ жалғастырмадық',
+            consultationOnly: 'Тек кеңес/байланыс болды',
+            otherExperience: 'Басқа тәжірибе',
+            freshnessCurrent: 'Қазір немесе соңғы 1 жыл ішінде',
+            freshnessTwo: '1-2 жыл бұрын',
+            freshnessFive: '2-5 жыл бұрын',
+            freshnessOlder: '5 жылдан бұрын',
+            experienceRequired: 'Тәжірибе түрі мен мерзімін көрсетіңіз.',
             comment: 'Пікір (міндетті емес)',
             submit: 'Сауалнаманы жіберу',
             loading: 'Сауалнамалар жүктелуде...',
@@ -279,6 +320,18 @@ export default function ParentProfilePage() {
             schoolSearchPlaceholder: 'Начните вводить название школы',
             schoolSearchEmpty: 'По вашему запросу школы не найдены.',
             schoolRequired: 'Выберите школу из списка.',
+            experienceType: 'Тип опыта',
+            experienceFreshness: 'Насколько свежий этот опыт?',
+            currentParent: 'Ребенок учится там сейчас',
+            formerParent: 'Ребенок учился там раньше',
+            applicantParent: 'Поступали, но не продолжили',
+            consultationOnly: 'Была только консультация/контакт',
+            otherExperience: 'Другой опыт',
+            freshnessCurrent: 'Сейчас или в течение последнего года',
+            freshnessTwo: '1-2 года назад',
+            freshnessFive: '2-5 лет назад',
+            freshnessOlder: 'Более 5 лет назад',
+            experienceRequired: 'Укажите тип и свежесть опыта.',
             comment: 'Комментарий (необязательно)',
             submit: 'Отправить анкету',
             loading: 'Загружаем анкеты...',
@@ -346,6 +399,10 @@ export default function ParentProfilePage() {
       setSurveyMessage(surveyUi.schoolRequired);
       return;
     }
+    if (!surveyExperienceType || !surveyExperienceFreshness) {
+      setSurveyMessage(surveyUi.experienceRequired);
+      return;
+    }
     const missingRequired = activeCampaign.questions.some((question) => {
       if (question.required === false) return false;
       const answer = surveyAnswers[question.id] || {};
@@ -374,11 +431,15 @@ export default function ParentProfilePage() {
       await submitRatingSurveyResponse(token, {
         campaignId: activeCampaign.id,
         schoolId: selectedSurveySchoolId,
+        experienceType: surveyExperienceType,
+        experienceFreshness: surveyExperienceFreshness,
         answers,
         comment: surveyComment,
       });
       setSurveyAnswers({});
       setSurveyComment('');
+      setSurveyExperienceType('current_parent');
+      setSurveyExperienceFreshness('current_year');
       const payload = await loadActiveRatingSurveys(token);
       const campaigns = Array.isArray(payload?.data) ? payload.data : [];
       setSurveyCampaigns(campaigns);
@@ -589,6 +650,8 @@ export default function ParentProfilePage() {
                       setSurveySchoolQuery(nextSchool?.name || '');
                       setSurveyAnswers({});
                       setSurveyComment('');
+                      setSurveyExperienceType('current_parent');
+                      setSurveyExperienceFreshness('current_year');
                       setSurveyMessage('');
                     }}
                   >
@@ -657,6 +720,43 @@ export default function ParentProfilePage() {
                         )}
                       </div>
                     </label>
+
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <label className="field">
+                        <span>{surveyUi.experienceType}</span>
+                        <select
+                          className="select"
+                          value={surveyExperienceType}
+                          onChange={(event) =>
+                            setSurveyExperienceType(event.target.value as SurveyExperienceType)
+                          }
+                        >
+                          <option value="current_parent">{surveyUi.currentParent}</option>
+                          <option value="former_parent">{surveyUi.formerParent}</option>
+                          <option value="applicant_parent">{surveyUi.applicantParent}</option>
+                          <option value="consultation_only">{surveyUi.consultationOnly}</option>
+                          <option value="other">{surveyUi.otherExperience}</option>
+                        </select>
+                      </label>
+
+                      <label className="field">
+                        <span>{surveyUi.experienceFreshness}</span>
+                        <select
+                          className="select"
+                          value={surveyExperienceFreshness}
+                          onChange={(event) =>
+                            setSurveyExperienceFreshness(
+                              event.target.value as SurveyExperienceFreshness
+                            )
+                          }
+                        >
+                          <option value="current_year">{surveyUi.freshnessCurrent}</option>
+                          <option value="within_2_years">{surveyUi.freshnessTwo}</option>
+                          <option value="within_5_years">{surveyUi.freshnessFive}</option>
+                          <option value="over_5_years">{surveyUi.freshnessOlder}</option>
+                        </select>
+                      </label>
+                    </div>
 
                     <div style={{ display: 'grid', gap: 8 }}>
                       {activeCampaign.questions.map((question) => (

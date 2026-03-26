@@ -785,9 +785,15 @@ export async function loadRatingSurveyAnalytics(token: string) {
         calculated_rating: number;
         formula: {
           rating: number;
-          survey: number;
-          consultations: number;
-          popularity: number;
+          total_points: number;
+          survey_average: number;
+          points: {
+            survey: number;
+            experience_type: number;
+            freshness: number;
+            verification: number;
+            popularity: number;
+          };
         };
       }>;
     };
@@ -822,6 +828,8 @@ export async function submitRatingSurveyResponse(
   payload: {
     campaignId: string;
     schoolId: string;
+    experienceType: 'current_parent' | 'former_parent' | 'applicant_parent' | 'consultation_only' | 'other';
+    experienceFreshness: 'current_year' | 'within_2_years' | 'within_5_years' | 'over_5_years';
     comment?: string;
     answers: Array<{
       questionId: string;
