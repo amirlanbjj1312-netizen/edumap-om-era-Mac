@@ -168,6 +168,13 @@ const getLocalizedValue = (value: any, locale: 'ru' | 'en' | 'kk' = 'ru') => {
   }
   return '';
 };
+const hasValue = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some((item) => hasValue(item));
+  }
+  return Boolean(String(value || '').trim());
+};
 
 export default function StatisticsPage() {
   const { t } = useAdminLocale();
@@ -444,6 +451,118 @@ export default function StatisticsPage() {
     () => Math.max(1, ...schoolActionRows.map((item) => item.value)),
     [schoolActionRows]
   );
+  const schoolAiAudit = useMemo(() => {
+    if (!ownSchool || !schoolStats) return null;
+
+    const financeRules = Array.isArray(ownSchool?.finance?.fee_rules)
+      ? ownSchool.finance.fee_rules
+      : [];
+    const teachers = Array.isArray(ownSchool?.services?.teaching_staff?.members)
+      ? ownSchool.services.teaching_staff.members
+      : [];
+    const reviews = Array.isArray(ownSchool?.reviews?.items) ? ownSchool.reviews.items : [];
+    const clubsCount = Array.isArray(ownSchool?.services?.clubs_catalog)
+      ? ownSchool.services.clubs_catalog.length
+      : Array.isArray(ownSchool?.services?.clubs_unified)
+        ? ownSchool.services.clubs_unified.length
+        : 0;
+    const strengths: string[] = [];
+    const critical: string[] = [];
+    const growth: string[] = [];
+
+    const hasLogo = hasValue(ownSchool?.media?.logo);
+    const hasDescription = hasValue(ownSchool?.basic_info?.description);
+    const hasPrograms = schoolStats.programsCount > 0;
+    const hasTeachers = schoolStats.staffCount > 0;
+    const hasPhotos = schoolStats.photosCount > 0;
+    const hasEnoughPhotos = schoolStats.photosCount >= 8;
+    const hasFinance = financeRules.length > 0 || hasValue(ownSchool?.finance?.monthly_fee);
+    const hasAdmission =
+      hasValue(ownSchool?.admission?.process) ||
+      hasValue(ownSchool?.admission?.requirements) ||
+      hasValue(ownSchool?.admission?.admission_rules);
+    const hasContacts =
+      hasValue(ownSchool?.basic_info?.phone) &&
+      hasValue(ownSchool?.basic_info?.email) &&
+      hasValue(ownSchool?.basic_info?.website);
+    const hasCoordinates =
+      hasValue(ownSchool?.basic_info?.coordinates?.latitude) &&
+      hasValue(ownSchool?.basic_info?.coordinates?.longitude);
+    const hasReviews = reviews.length > 0;
+    const hasStrongReviews = reviews.length >= 5;
+
+    if (hasLogo) strengths.push('Есть логотип, карточка выглядит узнаваемо.');
+    if (hasEnoughPhotos) strengths.push(`Загружено достаточно фото: ${schoolStats.photosCount}.`);
+    if (hasPrograms) strengths.push(`Заполнены учебные программы: ${schoolStats.programsCount}.`);
+    if (hasTeachers) strengths.push(`Есть карточки преподавателей: ${schoolStats.staffCount}.`);
+    if (hasFinance) strengths.push('Заполнен финансовый блок.');
+    if (hasAdmission) strengths.push('Есть информация о поступлении.');
+    if (hasStrongReviews) strengths.push(`Накоплены отзывы: ${reviews.length}.`);
+    if (schoolEngagementTotals.contact_click_total > 0) {
+      strengths.push(`Родители уже кликают в контакты: ${schoolEngagementTotals.contact_click_total}.`);
+    }
+
+    if (!hasLogo) critical.push('Добавьте логотип школы.');
+    if (!hasDescription) critical.push('Заполните описание школы.');
+    if (!hasPrograms) critical.push('Добавьте учебные программы и направления.');
+    if (!hasTeachers) critical.push('Добавьте карточки преподавателей.');
+    if (!hasPhotos) critical.push('Загрузите фотографии школы.');
+    else if (!hasEnoughPhotos) critical.push('Добавьте больше фото: сейчас их мало для сильной карточки.');
+    if (!hasFinance) critical.push('Заполните стоимость обучения или fee rules.');
+    if (!hasAdmission) critical.push('Заполните блок поступления: этапы, сроки, требования.');
+    if (!hasContacts) critical.push('Дозаполните контакты: телефон, email и сайт.');
+    if (!hasCoordinates) critical.push('Добавьте координаты, чтобы школа полноценно работала на карте.');
+    if (clubsCount === 0) critical.push('Добавьте кружки и секции.');
+
+    if (critical.length === 0) {
+      if (!hasStrongReviews) {
+        growth.push('Соберите минимум 5 отзывов, чтобы карточка вызывала больше доверия.');
+      }
+      if (schoolEngagementTotals.price_open === 0 && hasFinance) {
+        growth.push('Упростите блок цены: родители не открывают стоимость, значит она подана неочевидно.');
+      }
+      if (schoolEngagementTotals.admission_open === 0 && hasAdmission) {
+        growth.push('Сделайте блок поступления конкретнее: сроки, экзамены, документы и CTA.');
+      }
+      if (schoolEngagementTotals.contact_click_total === 0) {
+        growth.push('Усильте CTA и контакты: карточку смотрят, но в контакты не переходят.');
+      }
+      if (schoolEngagementTotals.compare_add === 0 && schoolEngagementTotals.school_card_view > 20) {
+        growth.push('Добавьте более четкие преимущества школы, чтобы ее чаще брали в сравнение.');
+      }
+      if (schoolEngagementTotals.favorite_add === 0 && schoolEngagementTotals.school_card_view > 20) {
+        growth.push('Добавьте короткий список сильных сторон школы на первом экране карточки.');
+      }
+      if (clubsCount < 3) {
+        growth.push('Расширьте список кружков: это повышает ценность карточки для родителей.');
+      }
+      if (schoolStats.photosCount < 15) {
+        growth.push('Добавьте еще фото живой школьной среды, а не только общие кадры.');
+      }
+    }
+
+    const scoreBase = [
+      hasLogo,
+      hasDescription,
+      hasPrograms,
+      hasTeachers,
+      hasPhotos,
+      hasFinance,
+      hasAdmission,
+      hasContacts,
+      hasCoordinates,
+      clubsCount > 0,
+    ].filter(Boolean).length;
+    const readinessScore = Math.round((scoreBase / 10) * 100);
+
+    return {
+      readinessScore,
+      strengths,
+      critical,
+      growth,
+      mode: critical.length ? 'fix_gaps' : 'optimize',
+    };
+  }, [ownSchool, schoolStats, schoolEngagementTotals]);
 
   const canManageSurveys = actorRole === 'moderator' || actorRole === 'superadmin';
   const canResetProgramAnalytics = actorRole === 'superadmin';
@@ -1064,6 +1183,93 @@ export default function StatisticsPage() {
                       </p>
                     ) : null}
                   </div>
+
+                  {hasProAnalytics && schoolAiAudit ? (
+                    <div className="card" style={{ marginBottom: 16 }}>
+                      <div className="requests-head" style={{ marginBottom: 12 }}>
+                        <div>
+                          <h3 style={{ margin: 0 }}>AI-рекомендации по улучшению карточки</h3>
+                          <p className="muted" style={{ margin: '6px 0 0' }}>
+                            Доступно только на Pro. Рекомендации строятся по заполненности карточки и интересу родителей.
+                          </p>
+                        </div>
+                        <strong>{schoolAiAudit.readinessScore}%</strong>
+                      </div>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)',
+                          gap: 16,
+                        }}
+                      >
+                        <div
+                          style={{
+                            border: '1px solid rgba(120,106,255,0.18)',
+                            borderRadius: 16,
+                            padding: 16,
+                            background: '#fff',
+                          }}
+                        >
+                          <h4 style={{ marginTop: 0 }}>
+                            {schoolAiAudit.mode === 'fix_gaps' ? 'Что нужно исправить в первую очередь' : 'Сильные стороны карточки'}
+                          </h4>
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            {(schoolAiAudit.mode === 'fix_gaps' ? schoolAiAudit.critical : schoolAiAudit.strengths).map((item) => (
+                              <div
+                                key={item}
+                                style={{
+                                  padding: '12px 14px',
+                                  borderRadius: 14,
+                                  background:
+                                    schoolAiAudit.mode === 'fix_gaps'
+                                      ? 'rgba(245, 158, 11, 0.12)'
+                                      : 'rgba(34, 197, 94, 0.12)',
+                                }}
+                              >
+                                {item}
+                              </div>
+                            ))}
+                            {!((schoolAiAudit.mode === 'fix_gaps' ? schoolAiAudit.critical : schoolAiAudit.strengths).length) ? (
+                              <p className="muted" style={{ marginBottom: 0 }}>
+                                Явных проблем не найдено.
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            border: '1px solid rgba(120,106,255,0.18)',
+                            borderRadius: 16,
+                            padding: 16,
+                            background: '#fff',
+                          }}
+                        >
+                          <h4 style={{ marginTop: 0 }}>
+                            {schoolAiAudit.mode === 'fix_gaps' ? 'Что усилить после заполнения' : 'Как усилить конверсию'}
+                          </h4>
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            {(schoolAiAudit.mode === 'fix_gaps' ? schoolAiAudit.growth : schoolAiAudit.growth).map((item) => (
+                              <div
+                                key={item}
+                                style={{
+                                  padding: '12px 14px',
+                                  borderRadius: 14,
+                                  background: 'rgba(79,95,255,0.10)',
+                                }}
+                              >
+                                {item}
+                              </div>
+                            ))}
+                            {!schoolAiAudit.growth.length ? (
+                              <p className="muted" style={{ marginBottom: 0 }}>
+                                Карточка выглядит сильной. Следующий шаг: собирать больше отзывов, кейсов и заявок.
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="schools-admin-list">
                     {hasGrowthAnalytics ? (
