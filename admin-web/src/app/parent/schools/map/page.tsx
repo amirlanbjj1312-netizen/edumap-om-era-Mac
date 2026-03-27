@@ -189,6 +189,64 @@ const getSchoolTypes = (value: unknown): string[] => {
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
+const CITY_DISTRICT_CATALOG: Record<string, string[]> = {
+  Astana: ['Almaty', 'Baikonyr', 'Yesil', 'Nura', 'Saryarka'],
+  Almaty: ['Almaly', 'Auezov', 'Bostandyk', 'Zhetysu', 'Medeu', 'Nauryzbay', 'Turksib'],
+  Karaganda: ['City', 'Maikuduk', 'Yugo-Vostok', 'Prishakhtinsk', 'Sortirovka'],
+};
+
+const DISTRICT_CANONICAL_MAP: Record<string, string> = {
+  almaty: 'Almaty',
+  'almaty district': 'Almaty',
+  алматы: 'Almaty',
+  baikonyr: 'Baikonyr',
+  байконур: 'Baikonyr',
+  байконыр: 'Baikonyr',
+  yesil: 'Yesil',
+  esil: 'Yesil',
+  есиль: 'Yesil',
+  есіл: 'Yesil',
+  nura: 'Nura',
+  нура: 'Nura',
+  нұра: 'Nura',
+  saryarka: 'Saryarka',
+  сарыарка: 'Saryarka',
+  сарыарқа: 'Saryarka',
+  almaly: 'Almaly',
+  алмалы: 'Almaly',
+  auezov: 'Auezov',
+  ауэзов: 'Auezov',
+  әуезов: 'Auezov',
+  bostandyk: 'Bostandyk',
+  бостандык: 'Bostandyk',
+  бостандық: 'Bostandyk',
+  zhetysu: 'Zhetysu',
+  жетысу: 'Zhetysu',
+  жетісу: 'Zhetysu',
+  medeu: 'Medeu',
+  медеу: 'Medeu',
+  nauryzbay: 'Nauryzbay',
+  наурызбай: 'Nauryzbay',
+  turksib: 'Turksib',
+  турксиб: 'Turksib',
+  city: 'City',
+  город: 'City',
+  maikuduk: 'Maikuduk',
+  майкудук: 'Maikuduk',
+  майқұдық: 'Maikuduk',
+  'yugo-vostok': 'Yugo-Vostok',
+  'юго-восток': 'Yugo-Vostok',
+  prishakhtinsk: 'Prishakhtinsk',
+  пришахтинск: 'Prishakhtinsk',
+  sortirovka: 'Sortirovka',
+  сортировка: 'Sortirovka',
+};
+
+const normalizeDistrictName = (value: unknown) => {
+  const raw = toText(value).trim().toLowerCase();
+  return DISTRICT_CANONICAL_MAP[raw] || toText(value).trim();
+};
+
 const toggleValue = (arr: string[], value: string) =>
   arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
 
@@ -317,6 +375,7 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   Yesil: { ru: 'Есиль', en: 'Yesil', kk: 'Есіл' },
   Saryarka: { ru: 'Сарыарка', en: 'Saryarka', kk: 'Сарыарқа' },
   Nura: { ru: 'Нура', en: 'Nura', kk: 'Нұра' },
+  Turksib: { ru: 'Турксибский', en: 'Turksib', kk: 'Түрксіб' },
   Maikuduk: { ru: 'Майкудук', en: 'Maikuduk', kk: 'Майқұдық' },
   'Yugo-Vostok': { ru: 'Юго-Восток', en: 'Yugo-Vostok', kk: 'Оңтүстік-Шығыс' },
   Prishakhtinsk: { ru: 'Пришахтинск', en: 'Prishakhtinsk', kk: 'Пришахтинск' },
@@ -536,9 +595,12 @@ export default function ParentSchoolsMapPage() {
   }, [rowsWithCoords]);
 
   const districtOptions = useMemo(() => {
+    if (cityFilter && CITY_DISTRICT_CATALOG[cityFilter]) {
+      return CITY_DISTRICT_CATALOG[cityFilter];
+    }
     const values = rowsWithCoords
       .filter((row) => !cityFilter || toText(row.basic_info?.city) === cityFilter)
-      .map((row) => toText(row.basic_info?.district).trim())
+      .map((row) => normalizeDistrictName(row.basic_info?.district))
       .filter(Boolean);
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
   }, [rowsWithCoords, cityFilter]);
@@ -567,7 +629,7 @@ export default function ParentSchoolsMapPage() {
   const filteredRows = useMemo(() => {
     return rowsWithCoords.filter((row) => {
       const city = toText(row.basic_info?.city);
-      const district = toText(row.basic_info?.district);
+      const district = normalizeDistrictName(row.basic_info?.district);
       const schoolTypeValues = getSchoolTypes(row.basic_info?.type);
       const monthlyFee = getMonthlyFee(row);
 
