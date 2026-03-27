@@ -37,11 +37,6 @@ const resolveSessionSchoolId = (user: any) => {
   return userSchoolId;
 };
 
-const hasLeadAccessForSchool = (school: any) => {
-  const plan = String(school?.monetization?.plan_name || 'Starter').trim().toLowerCase();
-  return plan === 'growth' || plan === 'pro';
-};
-
 const toProfileForm = (user: any): ProfileForm => {
   const meta = user?.user_metadata || {};
   const fromMeta = (...keys: string[]) => {
@@ -79,7 +74,6 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [nextPassword, setNextPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [hasLeadAccess, setHasLeadAccess] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -89,18 +83,6 @@ export default function ProfilePage() {
       const sessionUser = data.session?.user;
       const nextForm = toProfileForm(sessionUser);
       setForm(nextForm);
-      try {
-        const email = normalizeEmail(nextForm.email);
-        const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
-        const result = await loadSchools();
-        const ownSchool = result.data.find((item: any) => {
-          const itemEmail = normalizeEmail(item?.basic_info?.email);
-          return item?.school_id === schoolId || (itemEmail && itemEmail === email);
-        });
-        setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
-      } catch {
-        setHasLeadAccess(false);
-      }
       setLoading(false);
     };
     load();
@@ -407,15 +389,13 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {hasLeadAccess ? (
-          <button
-            type="button"
-            className="button secondary"
-            onClick={() => window.location.assign('/requests')}
-          >
-            {ui.contactSupport}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => window.location.assign('/requests')}
+        >
+          {ui.contactSupport}
+        </button>
         <button
           type="button"
           className="button secondary"

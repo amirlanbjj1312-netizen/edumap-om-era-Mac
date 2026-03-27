@@ -1161,8 +1161,7 @@ export default function ParentSchoolDetailsPage() {
   }, [locale, school?.school_id]);
 
   const trackedSchoolId = String(school?.school_id || '').trim();
-  const schoolPlan = String(getIn(school, 'monetization.plan_name') || 'Starter').trim().toLowerCase();
-  const canRequestConsultation = !guest && (schoolPlan === 'growth' || schoolPlan === 'pro');
+  const canRequestConsultation = !guest;
 
   const name = pickFirstText(
     school,

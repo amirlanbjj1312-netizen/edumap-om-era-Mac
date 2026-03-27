@@ -5,8 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadParentFooterSettings, loadSchools } from '@/lib/api';
-import { buildFallbackSchoolId } from '@/lib/auth';
+import { loadParentFooterSettings } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
@@ -20,7 +19,6 @@ const NAV_ITEMS: Array<{
   { href: '/schools', labelKey: 'navSchools', minRole: 'moderator' },
   { href: '/news', labelKey: 'navNews', minRole: 'moderator' },
   { href: '/courses', labelKey: 'navCourses', minRole: 'moderator' },
-  { href: '/pricing', labelKey: 'navPricing', minRole: 'moderator' },
   { href: '/site-settings', labelKey: 'navSiteSettings', minRole: 'moderator' },
   { href: '/users', labelKey: 'navUsers', minRole: 'moderator' },
   { href: '/requests', labelKey: 'navRequests' },
@@ -35,30 +33,12 @@ const ROLE_PRIORITY: Record<string, number> = {
   superadmin: 3,
 };
 
-const normalizeEmail = (value: unknown) =>
-  typeof value === 'string' ? value.trim().toLowerCase() : '';
-
-const resolveSessionSchoolId = (user: any) => {
-  const appSchoolId =
-    typeof user?.app_metadata?.school_id === 'string' ? user.app_metadata.school_id.trim() : '';
-  if (appSchoolId) return appSchoolId;
-  const userSchoolId =
-    typeof user?.user_metadata?.school_id === 'string' ? user.user_metadata.school_id.trim() : '';
-  return userSchoolId;
-};
-
-const hasLeadAccessForSchool = (school: any) => {
-  const plan = String(school?.monetization?.plan_name || 'Starter').trim().toLowerCase();
-  return plan === 'growth' || plan === 'pro';
-};
-
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t, locale } = useAdminLocale();
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState('user');
-  const [hasLeadAccess, setHasLeadAccess] = useState(false);
   const [footerSettings, setFooterSettings] = useState<any>(null);
 
   useEffect(() => {
@@ -85,29 +65,6 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
             router.replace(portalHomeByRole(nextRole));
             return;
           }
-          if (nextRole === 'admin') {
-            try {
-              const email = normalizeEmail(sessionUser?.email);
-              const fallbackSchoolId = buildFallbackSchoolId(email).toLowerCase();
-              const assignedSchoolId = resolveSessionSchoolId(sessionUser).toLowerCase();
-              const schoolsResponse = await loadSchools();
-              const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
-              const ownSchool =
-                allSchools.find((item) => normalizeEmail(item?.basic_info?.email) === email) ||
-                allSchools.find(
-                  (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
-                ) ||
-                allSchools.find(
-                  (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
-                ) ||
-                null;
-              setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
-            } catch {
-              setHasLeadAccess(false);
-            }
-          } else {
-            setHasLeadAccess(true);
-          }
           setRole(nextRole);
           setReady(true);
         }
@@ -130,29 +87,6 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
           router.replace(portalHomeByRole(nextRole));
           return;
         }
-        if (nextRole === 'admin') {
-          try {
-            const email = normalizeEmail(sessionUser?.email);
-            const fallbackSchoolId = buildFallbackSchoolId(email).toLowerCase();
-            const assignedSchoolId = resolveSessionSchoolId(sessionUser).toLowerCase();
-            const schoolsResponse = await loadSchools();
-            const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
-            const ownSchool =
-              allSchools.find((item) => normalizeEmail(item?.basic_info?.email) === email) ||
-              allSchools.find(
-                (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
-              ) ||
-              allSchools.find(
-                (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
-              ) ||
-              null;
-            setHasLeadAccess(hasLeadAccessForSchool(ownSchool));
-          } catch {
-            setHasLeadAccess(false);
-          }
-        } else {
-          setHasLeadAccess(true);
-        }
         setRole(nextRole);
       }
     });
@@ -161,18 +95,6 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
       authListener.subscription.unsubscribe();
     };
   }, [router]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const handleLeadAccessChange = (event: Event) => {
-      const customEvent = event as CustomEvent<{ hasLeadAccess?: boolean }>;
-      setHasLeadAccess(Boolean(customEvent.detail?.hasLeadAccess));
-    };
-    window.addEventListener('edumap:school-lead-access-changed', handleLeadAccessChange);
-    return () => {
-      window.removeEventListener('edumap:school-lead-access-changed', handleLeadAccessChange);
-    };
-  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -190,9 +112,6 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
   }
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.href === '/requests' && role === 'admin' && !hasLeadAccess) {
-      return false;
-    }
     if (!item.minRole) return true;
     return (ROLE_PRIORITY[role] || 0) >= (ROLE_PRIORITY[item.minRole] || 0);
   });

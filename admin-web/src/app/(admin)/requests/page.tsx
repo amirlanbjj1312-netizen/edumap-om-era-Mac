@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminLocale } from '@/lib/adminLocale';
-import { loadSchools, requestJson } from '@/lib/api';
-import { buildFallbackSchoolId } from '@/lib/auth';
+import { requestJson } from '@/lib/api';
 import { formatKzPhone } from '@/lib/phone';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -49,23 +48,6 @@ const STATUS_TONE: Record<string, string> = {
   rejected: '#b91c1c',
 };
 
-const normalizeEmail = (value: unknown) =>
-  typeof value === 'string' ? value.trim().toLowerCase() : '';
-
-const resolveSessionSchoolId = (user: any) => {
-  const appSchoolId =
-    typeof user?.app_metadata?.school_id === 'string' ? user.app_metadata.school_id.trim() : '';
-  if (appSchoolId) return appSchoolId;
-  const userSchoolId =
-    typeof user?.user_metadata?.school_id === 'string' ? user.user_metadata.school_id.trim() : '';
-  return userSchoolId;
-};
-
-const hasLeadAccessForSchool = (school: any) => {
-  const plan = String(school?.monetization?.plan_name || 'Starter').trim().toLowerCase();
-  return plan === 'growth' || plan === 'pro';
-};
-
 export default function RequestsPage() {
   const { t } = useAdminLocale();
   const [loading, setLoading] = useState(true);
@@ -81,8 +63,6 @@ export default function RequestsPage() {
   const [draftAssignedTo, setDraftAssignedTo] = useState('');
   const [draftFollowUpAt, setDraftFollowUpAt] = useState('');
   const [draftInternalNote, setDraftInternalNote] = useState('');
-  const [hasLeadAccess, setHasLeadAccess] = useState(true);
-  const [accessResolved, setAccessResolved] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -107,40 +87,10 @@ export default function RequestsPage() {
     if (!token || !canView) {
       setRows([]);
       setLoading(false);
-      setAccessResolved(true);
       return;
     }
     setLoading(true);
     try {
-      if (actorRole === 'admin') {
-        const schoolsResponse = await loadSchools();
-        const allSchools = Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : [];
-        const email = normalizeEmail(actorEmail);
-        const fallbackSchoolId = buildFallbackSchoolId(email).toLowerCase();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const assignedSchoolId = resolveSessionSchoolId(sessionData?.session?.user).toLowerCase();
-        const ownSchool =
-          allSchools.find((item) => normalizeEmail(item?.basic_info?.email) === email) ||
-          allSchools.find(
-            (item) => String(item?.school_id || '').trim().toLowerCase() === assignedSchoolId
-          ) ||
-          allSchools.find(
-            (item) => String(item?.school_id || '').trim().toLowerCase() === fallbackSchoolId
-          ) ||
-          null;
-        const nextHasLeadAccess = hasLeadAccessForSchool(ownSchool);
-        setHasLeadAccess(nextHasLeadAccess);
-        setAccessResolved(true);
-        if (!nextHasLeadAccess) {
-          setRows([]);
-          setSelectedId('');
-          setLoading(false);
-          return;
-        }
-      } else {
-        setHasLeadAccess(true);
-        setAccessResolved(true);
-      }
       const payload = await requestJson<{ data?: ConsultationRequest[] }>('/consultations', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -151,8 +101,6 @@ export default function RequestsPage() {
       );
     } catch (_error) {
       setRows([]);
-      setHasLeadAccess(actorRole !== 'admin');
-      setAccessResolved(true);
     } finally {
       setLoading(false);
     }
@@ -229,23 +177,6 @@ export default function RequestsPage() {
   return (
     <div className="card">
       {!canView ? <p className="muted">{t('usersForbidden')}</p> : null}
-      {canView && actorRole === 'admin' && accessResolved && !hasLeadAccess ? (
-        <div
-          style={{
-            border: '1px solid rgba(120,106,255,0.18)',
-            borderRadius: 18,
-            background: '#fff',
-            padding: 18,
-            marginBottom: 16,
-          }}
-        >
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Заявки доступны на Growth и Pro</h3>
-          <p className="muted" style={{ margin: 0 }}>
-            На Starter родители не могут отправлять заявки на консультацию. Поднимите тариф в
-            разделе «Информация о школе → Тариф и продвижение».
-          </p>
-        </div>
-      ) : null}
       <div className="requests-head">
         <h2>{t('requestsTitle')}</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -265,9 +196,7 @@ export default function RequestsPage() {
 
       {message ? <p className="status">{message}</p> : null}
 
-      {canView && actorRole === 'admin' && accessResolved && !hasLeadAccess ? (
-        <p className="muted">Лиды скрыты, пока у школы нет тарифа Growth или Pro.</p>
-      ) : loading ? (
+      {loading ? (
         <p className="muted">{t('requestsLoading')}</p>
       ) : !rows.length ? (
         <p className="muted">{t('requestsEmpty')}</p>

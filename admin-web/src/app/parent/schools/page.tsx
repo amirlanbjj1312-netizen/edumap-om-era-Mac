@@ -407,28 +407,6 @@ const getSchoolPhotoCount = (row: SchoolRow): number => extractMediaUrls(row.med
 
 const getSchoolUpdatedAt = (row: SchoolRow): number => Date.parse(toText(row.updated_at) || '') || 0;
 
-const isPromotionActive = (row: SchoolRow): boolean => {
-  const monetization = row.monetization || {};
-  const status = toText(monetization.subscription_status).trim().toLowerCase();
-  if (monetization.is_promoted !== true || status !== 'active') return false;
-  const now = Date.now();
-  const startsAt = toTimestamp(monetization.starts_at);
-  const endsAt = toTimestamp(monetization.ends_at);
-  const startsOk = !startsAt || startsAt <= now;
-  const endsOk = !endsAt || endsAt >= now;
-  return startsOk && endsOk;
-};
-
-const getPromotionPriority = (row: SchoolRow): number => {
-  if (!isPromotionActive(row)) return 0;
-  const explicitWeight = toNumber(row.monetization?.priority_weight);
-  if (explicitWeight > 0) return explicitWeight;
-  const planName = toText(row.monetization?.plan_name).trim().toLowerCase();
-  if (planName === 'pro') return 50;
-  if (planName === 'growth') return 25;
-  return 0;
-};
-
 const normalizeSchoolIdentity = (value: string): string =>
   value
     .trim()
@@ -1080,9 +1058,6 @@ export default function ParentSchoolsPage() {
       return next;
     }
     next.sort((a, b) => {
-      const promotionDiff = getPromotionPriority(b) - getPromotionPriority(a);
-      if (promotionDiff !== 0) return promotionDiff;
-
       const qualityDiff = getSchoolQualityScore(b) - getSchoolQualityScore(a);
       if (qualityDiff !== 0) return qualityDiff;
 

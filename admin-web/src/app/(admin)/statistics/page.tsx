@@ -75,6 +75,12 @@ type ReviewModerationRow = {
   created_at: string;
   status?: string;
   source?: string;
+  positives?: string;
+  concerns?: string;
+  recommendation_for?: string;
+  comment?: string;
+  experience_type?: string;
+  experience_freshness?: string;
 };
 
 type ReviewAiAssessment = {
@@ -303,6 +309,21 @@ const buildReviewAiAssessment = (review: ReviewModerationRow): ReviewAiAssessmen
   };
 };
 
+const EXPERIENCE_TYPE_LABELS: Record<string, string> = {
+  current_parent: 'Текущий родитель',
+  former_parent: 'Бывший родитель',
+  applicant_parent: 'Поступали',
+  consultation_only: 'Были на консультации',
+  other: 'Другой опыт',
+};
+
+const EXPERIENCE_FRESHNESS_LABELS: Record<string, string> = {
+  current_year: 'За последний год',
+  within_2_years: 'До 2 лет',
+  within_5_years: 'До 5 лет',
+  over_5_years: 'Более 5 лет назад',
+};
+
 export default function StatisticsPage() {
   const { t } = useAdminLocale();
   const [token, setToken] = useState('');
@@ -508,11 +529,8 @@ export default function StatisticsPage() {
       requestsMonth,
     };
   }, [consultations, ownSchool]);
-  const schoolPlan = String(ownSchool?.monetization?.plan_name || 'Starter').trim() || 'Starter';
-  const normalizedSchoolPlan = schoolPlan.toLowerCase();
-  const hasGrowthAnalytics = normalizedSchoolPlan === 'growth' || normalizedSchoolPlan === 'pro';
-  const hasProAnalytics = normalizedSchoolPlan === 'pro';
-
+  const hasGrowthAnalytics = true;
+  const hasProAnalytics = true;
   const schoolEngagementTotals = useMemo(
     () => ({
       school_card_view: Number(engagementSummary?.totals?.school_card_view || 0),
@@ -1082,20 +1100,6 @@ export default function StatisticsPage() {
             <>
               {ownSchool ? (
                 <>
-                  <div className="card" style={{ marginBottom: 16 }}>
-                    <div className="requests-head" style={{ marginBottom: 8 }}>
-                      <h3 style={{ margin: 0 }}>Доступ к статистике по тарифу</h3>
-                      <strong>{schoolPlan}</strong>
-                    </div>
-                    <p className="muted" style={{ margin: 0 }}>
-                      {normalizedSchoolPlan === 'starter'
-                        ? 'На Starter доступна только базовая сводка по заявкам, рейтингу и наполнению карточки.'
-                        : normalizedSchoolPlan === 'growth'
-                          ? 'Growth открывает базовую аналитику интереса родителей. Расширенная динамика и AI-инсайты доступны на Pro.'
-                          : 'На Pro доступна полная аналитика интереса родителей, динамика, воронка и AI-показатели.'}
-                    </p>
-                  </div>
-
                   <div className="card" style={{ marginBottom: 16 }}>
                     <div className="requests-head" style={{ marginBottom: 12 }}>
                       <h3 style={{ margin: 0 }}>
@@ -2501,9 +2505,68 @@ export default function StatisticsPage() {
                               {review.created_at ? new Date(review.created_at).toLocaleString() : '—'} · Статус:{' '}
                               {review.status || 'published'}
                             </p>
+                            {review.experience_type || review.experience_freshness ? (
+                              <p className="muted" style={{ margin: '6px 0 0' }}>
+                                Опыт:{' '}
+                                {EXPERIENCE_TYPE_LABELS[review.experience_type || ''] ||
+                                  review.experience_type ||
+                                  '—'}
+                                {' · '}
+                                Свежесть:{' '}
+                                {EXPERIENCE_FRESHNESS_LABELS[review.experience_freshness || ''] ||
+                                  review.experience_freshness ||
+                                  '—'}
+                              </p>
+                            ) : null}
                             <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
                               {review.text || '—'}
                             </p>
+                            {review.positives || review.concerns || review.recommendation_for || review.comment ? (
+                              <div
+                                style={{
+                                  marginTop: 10,
+                                  display: 'grid',
+                                  gap: 8,
+                                  padding: 10,
+                                  borderRadius: 10,
+                                  background: 'rgba(79,95,255,0.04)',
+                                  border: '1px solid rgba(120,106,255,0.12)',
+                                }}
+                              >
+                                {review.positives ? (
+                                  <div>
+                                    <strong>Что понравилось</strong>
+                                    <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
+                                      {review.positives}
+                                    </p>
+                                  </div>
+                                ) : null}
+                                {review.concerns ? (
+                                  <div>
+                                    <strong>Что важно знать</strong>
+                                    <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
+                                      {review.concerns}
+                                    </p>
+                                  </div>
+                                ) : null}
+                                {review.recommendation_for ? (
+                                  <div>
+                                    <strong>Кому бы посоветовали</strong>
+                                    <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
+                                      {review.recommendation_for}
+                                    </p>
+                                  </div>
+                                ) : null}
+                                {review.comment ? (
+                                  <div>
+                                    <strong>Дополнительный комментарий</strong>
+                                    <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>
+                                      {review.comment}
+                                    </p>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
                             <div
                               style={{
                                 marginTop: 10,

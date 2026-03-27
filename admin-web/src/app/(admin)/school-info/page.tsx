@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   autofillSchoolLocales,
   loadSchools,
-  updateSchoolMonetization,
   upsertSchool,
 } from '@/lib/api';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
@@ -34,93 +33,11 @@ import {
 } from '@/lib/admission';
 
 type SchoolProfile = ReturnType<typeof createEmptySchoolProfile>;
-type BillingPeriod = 'monthly' | 'yearly';
-type TariffPlanId = 'starter' | 'growth' | 'pro';
 
 type LoadingState = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
 const formatArrayValue = (value: unknown) =>
   Array.isArray(value) ? value.join(', ') : value ? String(value) : '';
-
-const TARIFF_PLANS: Array<{
-  id: TariffPlanId;
-  highlighted?: boolean;
-  priceMonthly: number;
-  priceYearly: number;
-  features: {
-    ru: string[];
-    en: string[];
-    kk: string[];
-  };
-}> = [
-  {
-    id: 'starter',
-    priceMonthly: 0,
-    priceYearly: 0,
-    features: {
-      ru: [
-        'Базовая карточка школы',
-        'Базовое присутствие в каталоге',
-        'Ограниченный контент и без лидов',
-      ],
-      en: [
-        'Basic school card',
-        'Basic visibility in the catalog',
-        'Limited content and no leads',
-      ],
-      kk: [
-        'Мектептің базалық карточкасы',
-        'Каталогтағы базалық көріну',
-        'Контент шектеулі және лидтер жоқ',
-      ],
-    },
-  },
-  {
-    id: 'growth',
-    highlighted: true,
-    priceMonthly: 89000,
-    priceYearly: 89000 * 10,
-    features: {
-      ru: [
-        'Приоритет в выдаче',
-        'Лиды/заявки + CRM-статусы',
-        'Расширенные лимиты по контенту и аналитика',
-      ],
-      en: [
-        'Priority in search results',
-        'Leads/requests + CRM statuses',
-        'Extended content limits and analytics',
-      ],
-      kk: [
-        'Іздеудегі басымдық',
-        'Лидтер/өтінімдер + CRM мәртебелері',
-        'Кеңейтілген контент лимиттері және аналитика',
-      ],
-    },
-  },
-  {
-    id: 'pro',
-    priceMonthly: 169000,
-    priceYearly: 169000 * 10,
-    features: {
-      ru: [
-        'Всё из Growth',
-        'Максимальная видимость в каталоге',
-        'AI-инсайты и приоритетная поддержка',
-      ],
-      en: [
-        'Everything in Growth',
-        'Maximum visibility in the catalog',
-        'AI insights and priority support',
-      ],
-      kk: [
-        'Growth-тегі барлық мүмкіндік',
-        'Каталогтағы максималды көріну',
-        'AI-инсайттар және басым қолдау',
-      ],
-    },
-  },
-];
 
 const formatKzt = (value: number) =>
   value.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
@@ -1476,10 +1393,6 @@ export default function SchoolInfoPage() {
   const [message, setMessage] = useState('');
   const [draftKey, setDraftKey] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
-  const [savingTariffPlanId, setSavingTariffPlanId] = useState('');
-  const [tariffMessage, setTariffMessage] = useState('');
-  const [tariffError, setTariffError] = useState('');
   const [activeTab, setActiveTab] = useState<
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   >('basic');
@@ -2629,209 +2542,15 @@ export default function SchoolInfoPage() {
       setMessage(detail);
     }
   };
-  const subscriptionStatus = String(getDeep(profile, 'monetization.subscription_status') || 'inactive');
-  const subscriptionPlan = String(getDeep(profile, 'monetization.plan_name') || '').trim() || '—';
-  const normalizedSubscriptionPlan = subscriptionPlan.toLowerCase();
-  const subscriptionEndsAt = String(getDeep(profile, 'monetization.ends_at') || '').trim();
-  const subscriptionEndsDate = subscriptionEndsAt ? new Date(subscriptionEndsAt) : null;
-  const subscriptionDaysLeft =
-    subscriptionEndsDate && !Number.isNaN(subscriptionEndsDate.getTime())
-      ? Math.max(0, Math.ceil((subscriptionEndsDate.getTime() - Date.now()) / 86400000))
-      : null;
   const ratingValue = String(getDeep(profile, 'system.rating') || '0');
   const reviewsCountValue = String(getDeep(profile, 'system.reviews_count') || '0');
   const viewsCountValue = String(getDeep(profile, 'system.views_count') || '0');
   const popularityScoreValue = String(getDeep(profile, 'system.popularity_score') || '0');
   const canViewSchoolSummary = viewerRole === 'moderator' || viewerRole === 'superadmin';
-  const canManageTariff = viewerRole === 'admin' || viewerRole === 'moderator' || viewerRole === 'superadmin';
-  const schoolTariffUi =
-    contentLocale === 'en'
-      ? {
-          title: 'Tariff and promotion',
-          subtitle: 'Your school already has the Starter plan. Upgrade when you need more visibility, leads, and analytics.',
-          autoApply: 'The tariff is applied to the current school automatically.',
-          currentPlan: 'Current plan',
-          currentStatus: 'Subscription status',
-          daysLeft: 'Days left',
-          noExpiry: 'No end date',
-          disablePaid: 'Switch to Starter',
-          monthly: 'Monthly',
-          yearly: 'Yearly',
-          perMonth: '/mo',
-          perYear: '/yr',
-          free: 'Free',
-          starterHint: 'Enabled by default',
-          starterCurrent: 'Current base plan',
-          chooseGrowth: 'Choose Growth',
-          choosePro: 'Choose Pro',
-          saving: 'Saving...',
-          recommended: 'Recommended',
-          plans: {
-            starter: 'Starter',
-            growth: 'Growth',
-            pro: 'Pro',
-          },
-        }
-      : contentLocale === 'kk'
-        ? {
-            title: 'Тариф және ілгерілету',
-            subtitle: 'Сіздің мектебіңізде Starter жоспары әдепкі бойынша қосулы. Көбірек көріну, лидтер және аналитика керек болса, жоғарылаңыз.',
-            autoApply: 'Тариф автоматты түрде ағымдағы мектепке қолданылады.',
-            currentPlan: 'Ағымдағы тариф',
-            currentStatus: 'Жазылым күйі',
-            daysLeft: 'Қалған күндер',
-            noExpiry: 'Аяқталу күні жоқ',
-            disablePaid: 'Starter-ге ауыстыру',
-            monthly: 'Ай сайын',
-            yearly: 'Жыл сайын',
-            perMonth: '/ай',
-            perYear: '/жыл',
-            free: 'Тегін',
-            starterHint: 'Әдепкі бойынша қосылған',
-            starterCurrent: 'Ағымдағы базалық тариф',
-            chooseGrowth: 'Growth таңдау',
-            choosePro: 'Pro таңдау',
-            saving: 'Сақталуда...',
-            recommended: 'Ұсынылады',
-            plans: {
-              starter: 'Starter',
-              growth: 'Growth',
-              pro: 'Pro',
-            },
-          }
-        : {
-            title: 'Тариф и продвижение',
-            subtitle: 'У вашей школы Starter уже включён по умолчанию. Переходите выше, когда нужны приоритет, лиды и аналитика.',
-            autoApply: 'Тариф применяется к текущей школе автоматически.',
-            currentPlan: 'Текущий тариф',
-            currentStatus: 'Статус подписки',
-            daysLeft: 'Осталось дней',
-            noExpiry: 'Дата окончания не указана',
-            disablePaid: 'Отключить платный тариф',
-            monthly: 'Ежемесячно',
-            yearly: 'Ежегодно',
-            perMonth: '/мес',
-            perYear: '/год',
-            free: 'Бесплатно',
-            starterHint: 'Включён по умолчанию',
-            starterCurrent: 'Текущий базовый тариф',
-            chooseGrowth: 'Выбрать Growth',
-            choosePro: 'Выбрать Pro',
-            saving: 'Сохраняем...',
-            recommended: 'Рекомендуем',
-            plans: {
-              starter: 'Starter',
-              growth: 'Growth',
-              pro: 'Pro',
-            },
-          };
-  const tariffCards = useMemo(
-    () =>
-      TARIFF_PLANS.map((plan) => ({
-        ...plan,
-        amount: billingPeriod === 'monthly' ? plan.priceMonthly : plan.priceYearly,
-      })),
-    [billingPeriod]
-  );
-  const applyTariff = async (planId: TariffPlanId) => {
-    const schoolIdToApply = String(profile?.school_id || '').trim();
-    if (!schoolIdToApply) {
-      setTariffError(
-        contentLocale === 'en'
-          ? 'School is not defined.'
-          : contentLocale === 'kk'
-            ? 'Мектеп анықталмаған.'
-            : 'Школа не определена.'
-      );
-      return;
-    }
-    setTariffMessage('');
-    setTariffError('');
-    const now = new Date();
-    const ends = new Date(now);
-    ends.setDate(ends.getDate() + (billingPeriod === 'monthly' ? 30 : 365));
-    const monetizationByPlan: Record<
-      TariffPlanId,
-      {
-        is_promoted: boolean;
-        subscription_status: 'inactive' | 'active';
-        plan_name: string;
-        priority_weight: number;
-        last_tariff_id: string;
-      }
-    > = {
-      starter: {
-        is_promoted: false,
-        subscription_status: 'inactive',
-        plan_name: 'Starter',
-        priority_weight: 0,
-        last_tariff_id: 'starter_30',
-      },
-      growth: {
-        is_promoted: true,
-        subscription_status: 'active',
-        plan_name: 'Growth',
-        priority_weight: 25,
-        last_tariff_id: 'growth_30',
-      },
-      pro: {
-        is_promoted: true,
-        subscription_status: 'active',
-        plan_name: 'Pro',
-        priority_weight: 50,
-        last_tariff_id: 'premium_30',
-      },
-    };
-    setSavingTariffPlanId(planId);
-    try {
-      const monetizationPayload = {
-        ...monetizationByPlan[planId],
-        starts_at: now.toISOString(),
-        ends_at: ends.toISOString(),
-      };
-      const saved = await updateSchoolMonetization(schoolIdToApply, monetizationPayload);
-      const savedMonetization = saved?.data?.monetization || monetizationPayload;
-      setProfile((prev: SchoolProfile | null) =>
-        prev ? setDeep(prev, 'monetization', savedMonetization) : prev
-      );
-      if (typeof window !== 'undefined') {
-        const nextPlan = String(savedMonetization?.plan_name || planId).trim().toLowerCase();
-        window.dispatchEvent(
-          new CustomEvent('edumap:school-lead-access-changed', {
-            detail: {
-              hasLeadAccess: nextPlan === 'growth' || nextPlan === 'pro',
-            },
-          })
-        );
-      }
-      setTariffMessage(
-        contentLocale === 'en'
-          ? `${schoolTariffUi.plans[planId]} plan applied to the school.`
-          : contentLocale === 'kk'
-            ? `${schoolTariffUi.plans[planId]} тарифі мектепке қолданылды.`
-            : `Тариф ${schoolTariffUi.plans[planId]} применён к школе.`
-      );
-    } catch (error) {
-      setTariffError(
-        error instanceof Error && error.message
-          ? error.message
-          : contentLocale === 'en'
-            ? 'Failed to update tariff.'
-            : contentLocale === 'kk'
-              ? 'Тарифті жаңарту мүмкін болмады.'
-              : 'Не удалось обновить тариф.'
-      );
-    } finally {
-      setSavingTariffPlanId('');
-    }
-  };
   const summaryUi =
     contentLocale === 'en'
       ? {
           title: 'School summary',
-          subscription: 'Subscription',
-          tariff: 'Tariff',
-          status: 'Status',
           analytics: 'Analytics',
           rating: 'Rating',
           reviews: 'Reviews',
@@ -2841,9 +2560,6 @@ export default function SchoolInfoPage() {
       : contentLocale === 'kk'
         ? {
             title: 'Мектеп сводкасы',
-            subscription: 'Жазылым',
-            tariff: 'Тариф',
-            status: 'Күйі',
             analytics: 'Аналитика',
             rating: 'Рейтинг',
             reviews: 'Пікірлер',
@@ -2852,9 +2568,6 @@ export default function SchoolInfoPage() {
         }
         : {
             title: 'Сводка школы',
-            subscription: 'Подписка',
-            tariff: 'Тариф',
-            status: 'Статус',
             analytics: 'Аналитика',
             rating: 'Рейтинг',
             reviews: 'Отзывы',
@@ -2893,16 +2606,6 @@ export default function SchoolInfoPage() {
           </div>
           <div className="form-row">
             <label className="field">
-              <span>{summaryUi.tariff}</span>
-              <input value={subscriptionPlan} readOnly />
-            </label>
-            <label className="field">
-              <span>{summaryUi.status}</span>
-              <input value={subscriptionStatus} readOnly />
-            </label>
-          </div>
-          <div className="form-row">
-            <label className="field">
               <span>{summaryUi.rating}</span>
               <input value={ratingValue} readOnly />
             </label>
@@ -2921,118 +2624,6 @@ export default function SchoolInfoPage() {
               <input value={popularityScoreValue} readOnly />
             </label>
           </div>
-        </section>
-      ) : null}
-      {canManageTariff ? (
-        <section className="card school-tariff-panel">
-          <div className="school-tariff-header">
-            <div>
-              <h2>{schoolTariffUi.title}</h2>
-              <p>{schoolTariffUi.subtitle}</p>
-            </div>
-            <button
-              type="button"
-              className={`pricing-switch ${billingPeriod === 'yearly' ? 'yearly' : ''}`}
-              onClick={() => setBillingPeriod((prev) => (prev === 'monthly' ? 'yearly' : 'monthly'))}
-              aria-label="billing period switch"
-            >
-              <span>{schoolTariffUi.monthly}</span>
-              <span className="pricing-switch-track">
-                <span className="pricing-switch-thumb" />
-              </span>
-              <span>{schoolTariffUi.yearly}</span>
-            </button>
-          </div>
-          <div className="school-tariff-summary">
-            <div className="school-tariff-summary-item">
-              <span>{schoolTariffUi.currentPlan}</span>
-              <strong>{subscriptionPlan}</strong>
-            </div>
-            <div className="school-tariff-summary-item">
-              <span>{schoolTariffUi.currentStatus}</span>
-              <strong>{subscriptionStatus}</strong>
-            </div>
-            <div className="school-tariff-summary-item">
-              <span>{schoolTariffUi.daysLeft}</span>
-              <strong>
-                {subscriptionDaysLeft == null ? schoolTariffUi.noExpiry : subscriptionDaysLeft}
-              </strong>
-            </div>
-            <div className="school-tariff-summary-item school-tariff-summary-note">
-              <span>{schoolTariffUi.autoApply}</span>
-            </div>
-          </div>
-          <div className="school-tariff-grid">
-            {tariffCards.map((plan) => {
-              const isCurrentPlan = normalizedSubscriptionPlan === plan.id;
-              const isStarter = plan.id === 'starter';
-              return (
-                <article
-                  key={plan.id}
-                  className={`school-tariff-card${plan.highlighted ? ' highlighted' : ''}${isCurrentPlan ? ' current' : ''}`}
-                >
-                  <div className="school-tariff-card-top">
-                    <h3>{schoolTariffUi.plans[plan.id]}</h3>
-                    {plan.highlighted ? (
-                      <span className="pricing-recommended">{schoolTariffUi.recommended}</span>
-                    ) : null}
-                  </div>
-                  <div className="school-tariff-price">
-                    {plan.amount === 0 ? (
-                      <strong>{schoolTariffUi.free}</strong>
-                    ) : (
-                      <>
-                        <strong>{formatKzt(plan.amount)} ₸</strong>
-                        <span>{billingPeriod === 'monthly' ? schoolTariffUi.perMonth : schoolTariffUi.perYear}</span>
-                      </>
-                    )}
-                  </div>
-                  <ul>
-                    {plan.features[contentLocale].map((feature) => (
-                      <li key={feature}>{feature}</li>
-                    ))}
-                  </ul>
-                  {isStarter ? (
-                    isCurrentPlan ? (
-                      <div className="school-tariff-card-footer">
-                        <span className="school-tariff-starter-hint">
-                          {schoolTariffUi.starterCurrent}
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="pricing-action-btn school-tariff-action school-tariff-secondary-action"
-                        onClick={() => applyTariff(plan.id)}
-                        disabled={Boolean(savingTariffPlanId)}
-                      >
-                        {savingTariffPlanId === plan.id
-                          ? schoolTariffUi.saving
-                          : schoolTariffUi.disablePaid}
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      className="pricing-action-btn school-tariff-action"
-                      onClick={() => applyTariff(plan.id)}
-                      disabled={Boolean(savingTariffPlanId) || isCurrentPlan}
-                    >
-                      {savingTariffPlanId === plan.id
-                        ? schoolTariffUi.saving
-                        : isCurrentPlan
-                          ? schoolTariffUi.currentPlan
-                          : plan.id === 'growth'
-                            ? schoolTariffUi.chooseGrowth
-                            : schoolTariffUi.choosePro}
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-          {tariffMessage ? <p className="pricing-status-ok">{tariffMessage}</p> : null}
-          {tariffError ? <p className="pricing-status-error">{tariffError}</p> : null}
         </section>
       ) : null}
       <div className="tabs-layout">
