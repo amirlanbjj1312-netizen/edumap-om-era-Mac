@@ -569,11 +569,14 @@ export async function recordEngagementEvent(payload: {
 
 export async function loadEngagementAnalytics(
   token: string,
-  options: { days?: number; limit?: number } = {}
+  options: { days?: number; limit?: number; schoolId?: string } = {}
 ) {
   const days = Number.isFinite(options.days) ? Math.max(1, Math.floor(options.days as number)) : 30;
   const limit = Number.isFinite(options.limit) ? Math.max(1, Math.floor(options.limit as number)) : 10;
-  const query = `days=${encodeURIComponent(String(days))}&limit=${encodeURIComponent(String(limit))}`;
+  const schoolId = String(options.schoolId || '').trim();
+  const query = `days=${encodeURIComponent(String(days))}&limit=${encodeURIComponent(String(limit))}${
+    schoolId ? `&schoolId=${encodeURIComponent(schoolId)}` : ''
+  }`;
   return authRequestJson<{
     data: {
       days: number;
@@ -627,6 +630,14 @@ export async function loadEngagementAnalytics(
         compare_adds: number;
         guest_views: number;
         auth_views: number;
+      }>;
+      viewer_accounts?: Array<{
+        actor_user_id: string;
+        email: string;
+        name: string;
+        role: string;
+        views_count: number;
+        last_view_at?: string | null;
       }>;
     };
   }>(`/schools/analytics/engagement?${query}`, { token });

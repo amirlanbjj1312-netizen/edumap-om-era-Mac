@@ -19,6 +19,7 @@ const {
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
   getSchoolEngagementAnalyticsSummary,
+  listSchoolViewerAccounts,
   resetEngagementAnalytics,
 } = require('../services/engagementAnalyticsStore');
 const { buildConfig } = require('../utils/config');
@@ -180,6 +181,29 @@ const buildSchoolsRouter = () => {
     const role =
       data.user?.user_metadata?.role || data.user?.app_metadata?.role || 'user';
     return { user: data.user, role };
+  };
+  const resolveUsersByIds = async (ids) => {
+    if (!supabaseAdmin) return [];
+    const uniqueIds = Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .map((item) => normalizeText(item))
+          .filter(Boolean)
+      )
+    ).slice(0, 100);
+    if (!uniqueIds.length) return [];
+    const users = await Promise.all(
+      uniqueIds.map(async (userId) => {
+        try {
+          const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+          if (error || !data?.user) return null;
+          return data.user;
+        } catch (_error) {
+          return null;
+        }
+      })
+    );
+    return users.filter(Boolean);
   };
   const resolveOptionalActor = async (req) => {
     const token = getBearerToken(req);
@@ -534,6 +558,7 @@ const buildSchoolsRouter = () => {
 
       const days = Number.parseInt(String(req.query?.days || '30'), 10);
       const limit = Number.parseInt(String(req.query?.limit || '10'), 10);
+      const requestedSchoolId = normalizeText(req.query?.schoolId);
 
       if (actorRole === 'admin') {
         const schools = await readStore();
@@ -564,6 +589,60 @@ const buildSchoolsRouter = () => {
           data: {
             ...summary,
             school_name: schoolName,
+            actor: actor.email || actor.id,
+          },
+        });
+      }
+
+      if (requestedSchoolId) {
+        const schools = await readStore();
+        const targetSchool =
+          schools.find(
+            (item) => String(item?.school_id || '').trim().toLowerCase() === requestedSchoolId.toLowerCase()
+          ) || null;
+        const schoolName =
+          targetSchool?.basic_info?.display_name?.ru ||
+          targetSchool?.basic_info?.name?.ru ||
+          targetSchool?.basic_info?.display_name?.en ||
+          targetSchool?.basic_info?.name?.en ||
+          requestedSchoolId;
+        const [summary, rawViewerAccounts] = await Promise.all([
+          getSchoolEngagementAnalyticsSummary({ schoolId: requestedSchoolId, days }),
+          listSchoolViewerAccounts({ schoolId: requestedSchoolId, days, limit: 50 }),
+        ]);
+        const users = await resolveUsersByIds(
+          rawViewerAccounts.map((item) => item.actor_user_id)
+        );
+        const userById = new Map(
+          users.map((user) => [
+            String(user.id || ''),
+            {
+              user_id: String(user.id || ''),
+              email: normalizeEmail(user.email),
+              first_name: normalizeText(user.user_metadata?.first_name || user.user_metadata?.firstName),
+              last_name: normalizeText(user.user_metadata?.last_name || user.user_metadata?.lastName),
+              role:
+                user?.user_metadata?.role || user?.app_metadata?.role || 'user',
+            },
+          ])
+        );
+
+        return res.json({
+          data: {
+            ...summary,
+            school_name: schoolName,
+            viewer_accounts: rawViewerAccounts.map((row) => {
+              const user = userById.get(String(row.actor_user_id || ''));
+              const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
+              return {
+                actor_user_id: row.actor_user_id,
+                email: user?.email || '',
+                name: fullName || user?.email || row.actor_user_id,
+                role: user?.role || 'user',
+                views_count: row.views_count,
+                last_view_at: row.last_view_at,
+              };
+            }),
             actor: actor.email || actor.id,
           },
         });

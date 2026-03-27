@@ -612,6 +612,87 @@ const getSchoolEngagementAnalyticsSummary = async ({ schoolId, days = 30 } = {})
   };
 };
 
+const listSchoolViewerAccounts = async ({ schoolId, days = 30, limit = 50 } = {}) => {
+  const resetAt = await getLastResetAt();
+  const normalizedSchoolId = cleanString(schoolId, 120);
+  const maxRows = Math.max(1, Math.min(100, Number(limit) || 50));
+  if (!normalizedSchoolId) {
+    return [];
+  }
+
+  if (!config.databaseUrl) {
+    const state = await readState();
+    const { cutoffTs } = pickCutoff(days, state.resetAt || resetAt);
+    const rowsByActor = new Map();
+
+    for (const event of state.events || []) {
+      const ts = new Date(event.createdAt || event.created_at || 0).getTime();
+      const actorType = event.actorType || event.actor_type;
+      const eventSchoolId = cleanString(event.schoolId || event.school_id, 120);
+      const eventType = event.eventType || event.event_type;
+      const actorUserId = cleanString(event.actorUserId || event.actor_user_id, 120);
+      if (
+        !Number.isFinite(ts) ||
+        ts < cutoffTs ||
+        actorType !== 'auth' ||
+        eventSchoolId !== normalizedSchoolId ||
+        eventType !== 'school_card_view' ||
+        !actorUserId
+      ) {
+        continue;
+      }
+      const current = rowsByActor.get(actorUserId) || {
+        actor_user_id: actorUserId,
+        views_count: 0,
+        last_view_at: null,
+      };
+      current.views_count += 1;
+      const createdAt = String(event.createdAt || event.created_at || '');
+      if (!current.last_view_at || createdAt > current.last_view_at) {
+        current.last_view_at = createdAt;
+      }
+      rowsByActor.set(actorUserId, current);
+    }
+
+    return Array.from(rowsByActor.values())
+      .sort(
+        (a, b) =>
+          b.views_count - a.views_count ||
+          String(b.last_view_at || '').localeCompare(String(a.last_view_at || ''))
+      )
+      .slice(0, maxRows);
+  }
+
+  const db = getPool();
+  await ensureEngagementAnalyticsTables();
+  const { cutoffTs } = pickCutoff(days, resetAt);
+  const cutoffIso = new Date(cutoffTs).toISOString();
+  const result = await db.query(
+    `
+      SELECT
+        actor_user_id,
+        COUNT(*)::INT AS views_count,
+        MAX(created_at) AS last_view_at
+      FROM engagement_analytics_events
+      WHERE created_at >= $1::timestamptz
+        AND actor_type = 'auth'
+        AND school_id = $2
+        AND event_type = 'school_card_view'
+        AND actor_user_id IS NOT NULL
+      GROUP BY actor_user_id
+      ORDER BY views_count DESC, last_view_at DESC
+      LIMIT $3
+    `,
+    [cutoffIso, normalizedSchoolId, maxRows]
+  );
+
+  return result.rows.map((row) => ({
+    actor_user_id: cleanString(row.actor_user_id, 120),
+    views_count: Number(row.views_count || 0),
+    last_view_at: row.last_view_at || null,
+  }));
+};
+
 const resetEngagementAnalytics = async ({ actorEmail } = {}) => {
   const resetAt = new Date().toISOString();
   if (!config.databaseUrl) {
@@ -636,5 +717,6 @@ module.exports = {
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
   getSchoolEngagementAnalyticsSummary,
+  listSchoolViewerAccounts,
   resetEngagementAnalytics,
 };

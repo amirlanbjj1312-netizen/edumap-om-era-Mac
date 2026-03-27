@@ -137,6 +137,14 @@ type EngagementSummaryPayload = {
     guest_views: number;
     auth_views: number;
   }>;
+  viewer_accounts?: Array<{
+    actor_user_id: string;
+    email: string;
+    name: string;
+    role: string;
+    views_count: number;
+    last_view_at?: string | null;
+  }>;
 };
 
 const ENGAGEMENT_LABELS: Record<string, string> = {
@@ -293,6 +301,8 @@ export default function StatisticsPage() {
     sampled_events: number;
   } | null>(null);
   const [engagementSummary, setEngagementSummary] = useState<EngagementSummaryPayload | null>(null);
+  const [engagementSchools, setEngagementSchools] = useState<any[]>([]);
+  const [selectedEngagementSchoolId, setSelectedEngagementSchoolId] = useState('');
   const [surveyConfig, setSurveyConfig] = useState<{
     cycle_days: number;
     updated_at?: string;
@@ -365,12 +375,18 @@ export default function StatisticsPage() {
         setSummary(null);
         setEngagementSummary(engagementResponse?.data || null);
       } else {
-        const [programResponse, engagementResponse] = await Promise.all([
+        const [programResponse, engagementResponse, schoolsResponse] = await Promise.all([
           loadProgramInfoAnalytics(token, { days, limit: 12 }),
-          loadEngagementAnalytics(token, { days, limit: 12 }),
+          loadEngagementAnalytics(token, {
+            days,
+            limit: 12,
+            schoolId: selectedEngagementSchoolId || undefined,
+          }),
+          requestJson<{ data?: any[] }>('/schools?include_inactive=1&include_hidden=1'),
         ]);
         setSummary(programResponse?.data || null);
         setEngagementSummary(engagementResponse?.data || null);
+        setEngagementSchools(Array.isArray(schoolsResponse?.data) ? schoolsResponse.data : []);
         setOwnSchool(null);
         setConsultations([]);
       }
@@ -379,7 +395,7 @@ export default function StatisticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [actorEmail, canView, days, isSchoolAdmin, t, token]);
+  }, [actorEmail, canView, days, isSchoolAdmin, selectedEngagementSchoolId, t, token]);
 
   const loadSurveyControlData = useCallback(async () => {
     if (!token) return;
@@ -658,6 +674,20 @@ export default function StatisticsPage() {
   const canManageSurveys = actorRole === 'moderator' || actorRole === 'superadmin';
   const canResetProgramAnalytics = actorRole === 'superadmin';
   const canResetEngagement = actorRole === 'superadmin';
+  const engagementSchoolOptions = useMemo(
+    () =>
+      engagementSchools
+        .map((school) => ({
+          school_id: String(school?.school_id || '').trim(),
+          school_name:
+            getLocalizedValue(school?.basic_info?.display_name, 'ru') ||
+            getLocalizedValue(school?.basic_info?.name, 'ru') ||
+            String(school?.school_id || '').trim(),
+        }))
+        .filter((school) => school.school_id)
+        .sort((a, b) => a.school_name.localeCompare(b.school_name, 'ru')),
+    [engagementSchools]
+  );
 
   const engagementByType = useMemo(() => {
     const map = new Map<string, { event_type: string; all: number; guest: number; auth: number }>();
@@ -1452,6 +1482,17 @@ export default function StatisticsPage() {
                 <div className="requests-head" style={{ marginBottom: 12 }}>
                   <h3 style={{ margin: 0 }}>Статистика родителей</h3>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <select
+                      value={selectedEngagementSchoolId}
+                      onChange={(event) => setSelectedEngagementSchoolId(event.target.value)}
+                    >
+                      <option value="">Все школы</option>
+                      {engagementSchoolOptions.map((school) => (
+                        <option key={school.school_id} value={school.school_id}>
+                          {school.school_name}
+                        </option>
+                      ))}
+                    </select>
                     {engagementSummary?.reset_at ? (
                       <span className="muted" style={{ alignSelf: 'center' }}>
                         Считаем с {new Date(engagementSummary.reset_at).toLocaleString()}
@@ -1659,6 +1700,66 @@ export default function StatisticsPage() {
                     )}
                   </div>
                 </div>
+
+                {selectedEngagementSchoolId ? (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      border: '1px solid rgba(120,106,255,0.18)',
+                      borderRadius: 16,
+                      padding: 16,
+                      background: '#fff',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <div className="requests-head" style={{ marginBottom: 8 }}>
+                      <h3 style={{ margin: 0 }}>Какие аккаунты смотрели школу</h3>
+                      <p className="muted" style={{ margin: 0 }}>
+                        Только авторизованные родители, которые открывали карточку школы.
+                      </p>
+                    </div>
+                    {engagementSummary?.viewer_accounts?.length ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Аккаунт</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Роль</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Просмотры</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Последний просмотр</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {engagementSummary.viewer_accounts.map((viewer) => (
+                            <tr key={viewer.actor_user_id}>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                <strong>{viewer.name || viewer.email || viewer.actor_user_id}</strong>
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.email || 'Нет email'}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.role || 'user'}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.views_count}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.last_view_at
+                                  ? new Date(viewer.last_view_at).toLocaleString()
+                                  : 'Нет данных'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="muted" style={{ marginBottom: 0 }}>
+                        За выбранный период авторизованные аккаунты карточку этой школы не открывали.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
 
                 <p className="muted" style={{ margin: '12px 0 0' }}>
                   Всего событий в выборке: {engagementSummary?.sampled_events || 0}
