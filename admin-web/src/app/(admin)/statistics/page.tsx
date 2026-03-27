@@ -331,6 +331,7 @@ export default function StatisticsPage() {
   const [engagementSummary, setEngagementSummary] = useState<EngagementSummaryPayload | null>(null);
   const [engagementSchools, setEngagementSchools] = useState<any[]>([]);
   const [selectedEngagementSchoolId, setSelectedEngagementSchoolId] = useState('');
+  const [selectedGlobalEventType, setSelectedGlobalEventType] = useState<string>('');
   const [surveyConfig, setSurveyConfig] = useState<{
     cycle_days: number;
     updated_at?: string;
@@ -1541,7 +1542,24 @@ export default function StatisticsPage() {
 
                 <div className="schools-admin-list">
                   {engagementCards.map((row) => (
-                    <div key={row.event_type} className="schools-admin-card">
+                    <button
+                      key={row.event_type}
+                      type="button"
+                      className="schools-admin-card"
+                      onClick={() =>
+                        setSelectedGlobalEventType((prev) =>
+                          prev === row.event_type ? '' : row.event_type
+                        )
+                      }
+                      style={{
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        border:
+                          selectedGlobalEventType === row.event_type
+                            ? '1px solid rgba(79,95,255,0.55)'
+                            : undefined,
+                      }}
+                    >
                       <p className="request-title">
                         {ENGAGEMENT_LABELS[row.event_type] || row.event_type}
                       </p>
@@ -1551,9 +1569,71 @@ export default function StatisticsPage() {
                       <p className="muted" style={{ margin: 0 }}>
                         Авторизованные: {row.auth}
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
+
+                {!selectedEngagementSchoolId && selectedGlobalEventType ? (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      border: '1px solid rgba(120,106,255,0.18)',
+                      borderRadius: 16,
+                      padding: 16,
+                      background: '#fff',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <div className="requests-head" style={{ marginBottom: 8 }}>
+                      <h3 style={{ margin: 0 }}>
+                        Кто использовал: {ENGAGEMENT_LABELS[selectedGlobalEventType] || selectedGlobalEventType}
+                      </h3>
+                      <p className="muted" style={{ margin: 0 }}>
+                        Все авторизованные аккаунты по этому действию за выбранный период.
+                      </p>
+                    </div>
+                    {(engagementSummary?.event_actor_accounts?.[selectedGlobalEventType] || []).length ? (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Аккаунт</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Роль</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Событий</th>
+                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Последнее действие</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(engagementSummary?.event_actor_accounts?.[selectedGlobalEventType] || []).map((viewer) => (
+                            <tr key={`${selectedGlobalEventType}-${viewer.actor_user_id}`}>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                <strong>{viewer.name || viewer.email || viewer.actor_user_id}</strong>
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.email || 'Нет email'}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.role || 'user'}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.events_count}
+                              </td>
+                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                {viewer.last_event_at
+                                  ? new Date(viewer.last_event_at).toLocaleString()
+                                  : 'Нет данных'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="muted" style={{ marginBottom: 0 }}>
+                        По этому действию нет авторизованных аккаунтов за выбранный период.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
 
                 <div
                   style={{

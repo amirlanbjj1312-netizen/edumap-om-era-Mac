@@ -20,6 +20,7 @@ const {
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
   getSchoolEngagementAnalyticsSummary,
+  listGlobalEventActorAccounts,
   listSchoolEventActorAccounts,
   listSchoolViewerAccounts,
   resetEngagementAnalytics,
@@ -686,6 +687,31 @@ const buildSchoolsRouter = () => {
 
       const summary = await getEngagementAnalyticsSummary({ days, limit });
       const schools = await readStore();
+      const rawEventActors = await Promise.all(
+        EVENT_TYPE_LIST.map(async (eventType) => ({
+          eventType,
+          rows: await listGlobalEventActorAccounts({
+            eventType,
+            days,
+            limit: 50,
+          }),
+        }))
+      );
+      const users = await resolveUsersByIds(
+        rawEventActors.flatMap((item) => item.rows.map((row) => row.actor_user_id))
+      );
+      const userById = new Map(
+        users.map((user) => [
+          String(user.id || ''),
+          {
+            user_id: String(user.id || ''),
+            email: normalizeEmail(user.email),
+            first_name: normalizeText(user.user_metadata?.first_name || user.user_metadata?.firstName),
+            last_name: normalizeText(user.user_metadata?.last_name || user.user_metadata?.lastName),
+            role: user?.user_metadata?.role || user?.app_metadata?.role || 'user',
+          },
+        ])
+      );
       const nameById = schools.reduce((acc, school) => {
         const schoolId = school?.school_id;
         if (!schoolId) return acc;
@@ -706,6 +732,16 @@ const buildSchoolsRouter = () => {
             ...row,
             school_name: nameById[row.school_id] || row.school_id,
           })),
+          event_actor_accounts: EVENT_TYPE_LIST.reduce((acc, eventType) => {
+            const rows = rawEventActors.find((item) => item.eventType === eventType)?.rows || [];
+            acc[eventType] = mapAnalyticsActorRows(
+              rows,
+              userById,
+              'events_count',
+              'last_event_at'
+            );
+            return acc;
+          }, {}),
           actor: actor.email || actor.id,
         },
       });

@@ -780,6 +780,84 @@ const listSchoolEventActorAccounts = async ({
   }));
 };
 
+const listGlobalEventActorAccounts = async ({ eventType, days = 30, limit = 50 } = {}) => {
+  const resetAt = await getLastResetAt();
+  const normalizedEventType = cleanString(eventType, 40);
+  const maxRows = Math.max(1, Math.min(100, Number(limit) || 50));
+  if (!EVENT_TYPES.has(normalizedEventType)) {
+    return [];
+  }
+
+  if (!config.databaseUrl) {
+    const state = await readState();
+    const { cutoffTs } = pickCutoff(days, state.resetAt || resetAt);
+    const rowsByActor = new Map();
+
+    for (const event of state.events || []) {
+      const ts = new Date(event.createdAt || event.created_at || 0).getTime();
+      const actorType = event.actorType || event.actor_type;
+      const storedEventType = event.eventType || event.event_type;
+      const actorUserId = cleanString(event.actorUserId || event.actor_user_id, 120);
+      if (
+        !Number.isFinite(ts) ||
+        ts < cutoffTs ||
+        actorType !== 'auth' ||
+        storedEventType !== normalizedEventType ||
+        !actorUserId
+      ) {
+        continue;
+      }
+      const current = rowsByActor.get(actorUserId) || {
+        actor_user_id: actorUserId,
+        events_count: 0,
+        last_event_at: null,
+      };
+      current.events_count += 1;
+      const createdAt = String(event.createdAt || event.created_at || '');
+      if (!current.last_event_at || createdAt > current.last_event_at) {
+        current.last_event_at = createdAt;
+      }
+      rowsByActor.set(actorUserId, current);
+    }
+
+    return Array.from(rowsByActor.values())
+      .sort(
+        (a, b) =>
+          b.events_count - a.events_count ||
+          String(b.last_event_at || '').localeCompare(String(a.last_event_at || ''))
+      )
+      .slice(0, maxRows);
+  }
+
+  const db = getPool();
+  await ensureEngagementAnalyticsTables();
+  const { cutoffTs } = pickCutoff(days, resetAt);
+  const cutoffIso = new Date(cutoffTs).toISOString();
+  const result = await db.query(
+    `
+      SELECT
+        actor_user_id,
+        COUNT(*)::INT AS events_count,
+        MAX(created_at) AS last_event_at
+      FROM engagement_analytics_events
+      WHERE created_at >= $1::timestamptz
+        AND actor_type = 'auth'
+        AND event_type = $2
+        AND actor_user_id IS NOT NULL
+      GROUP BY actor_user_id
+      ORDER BY events_count DESC, last_event_at DESC
+      LIMIT $3
+    `,
+    [cutoffIso, normalizedEventType, maxRows]
+  );
+
+  return result.rows.map((row) => ({
+    actor_user_id: cleanString(row.actor_user_id, 120),
+    events_count: Number(row.events_count || 0),
+    last_event_at: row.last_event_at || null,
+  }));
+};
+
 const resetEngagementAnalytics = async ({ actorEmail } = {}) => {
   const resetAt = new Date().toISOString();
   if (!config.databaseUrl) {
@@ -806,6 +884,7 @@ module.exports = {
   getEngagementAnalyticsSummary,
   getSchoolEngagementAnalyticsSummary,
   listSchoolEventActorAccounts,
+  listGlobalEventActorAccounts,
   listSchoolViewerAccounts,
   resetEngagementAnalytics,
 };
