@@ -639,6 +639,17 @@ export async function loadEngagementAnalytics(
         views_count: number;
         last_view_at?: string | null;
       }>;
+      event_actor_accounts?: Record<
+        string,
+        Array<{
+          actor_user_id: string;
+          email: string;
+          name: string;
+          role: string;
+          events_count: number;
+          last_event_at?: string | null;
+        }>
+      >;
     };
   }>(`/schools/analytics/engagement?${query}`, { token });
 }

@@ -16,9 +16,11 @@ const {
   resetProgramAnalytics,
 } = require('../services/programAnalyticsStore');
 const {
+  EVENT_TYPE_LIST,
   recordEngagementAnalyticsEvent,
   getEngagementAnalyticsSummary,
   getSchoolEngagementAnalyticsSummary,
+  listSchoolEventActorAccounts,
   listSchoolViewerAccounts,
   resetEngagementAnalytics,
 } = require('../services/engagementAnalyticsStore');
@@ -226,6 +228,19 @@ const buildSchoolsRouter = () => {
       return { actorType: 'guest', actorUserId: null, actorRole: 'guest' };
     }
   };
+  const mapAnalyticsActorRows = (rows, userById, countKey, dateKey) =>
+    rows.map((row) => {
+      const user = userById.get(String(row.actor_user_id || ''));
+      const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
+      return {
+        actor_user_id: row.actor_user_id,
+        email: user?.email || '',
+        name: fullName || user?.email || row.actor_user_id,
+        role: user?.role || 'user',
+        [countKey]: Number(row[countKey] || 0),
+        [dateKey]: row[dateKey] || null,
+      };
+    });
   const recalculateSchoolRating = async (school) => {
     if (!school) return school;
     const schoolId = String(school?.school_id || '').trim();
@@ -606,12 +621,30 @@ const buildSchoolsRouter = () => {
           targetSchool?.basic_info?.display_name?.en ||
           targetSchool?.basic_info?.name?.en ||
           requestedSchoolId;
-        const [summary, rawViewerAccounts] = await Promise.all([
+        const [summary, rawViewerAccounts, rawEventActors] = await Promise.all([
           getSchoolEngagementAnalyticsSummary({ schoolId: requestedSchoolId, days }),
           listSchoolViewerAccounts({ schoolId: requestedSchoolId, days, limit: 50 }),
+          Promise.all(
+            EVENT_TYPE_LIST.map(async (eventType) => ({
+              eventType,
+              rows: await listSchoolEventActorAccounts({
+                schoolId: requestedSchoolId,
+                days,
+                limit: 50,
+                eventType,
+              }),
+            }))
+          ),
         ]);
+        const rawEventActorMap = rawEventActors.reduce((acc, item) => {
+          acc[item.eventType] = item.rows;
+          return acc;
+        }, {});
         const users = await resolveUsersByIds(
-          rawViewerAccounts.map((item) => item.actor_user_id)
+          [
+            ...rawViewerAccounts.map((item) => item.actor_user_id),
+            ...Object.values(rawEventActorMap).flat().map((item) => item.actor_user_id),
+          ]
         );
         const userById = new Map(
           users.map((user) => [
@@ -631,18 +664,21 @@ const buildSchoolsRouter = () => {
           data: {
             ...summary,
             school_name: schoolName,
-            viewer_accounts: rawViewerAccounts.map((row) => {
-              const user = userById.get(String(row.actor_user_id || ''));
-              const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
-              return {
-                actor_user_id: row.actor_user_id,
-                email: user?.email || '',
-                name: fullName || user?.email || row.actor_user_id,
-                role: user?.role || 'user',
-                views_count: row.views_count,
-                last_view_at: row.last_view_at,
-              };
-            }),
+            viewer_accounts: mapAnalyticsActorRows(
+              rawViewerAccounts,
+              userById,
+              'views_count',
+              'last_view_at'
+            ),
+            event_actor_accounts: EVENT_TYPE_LIST.reduce((acc, eventType) => {
+              acc[eventType] = mapAnalyticsActorRows(
+                rawEventActorMap[eventType] || [],
+                userById,
+                'events_count',
+                'last_event_at'
+              );
+              return acc;
+            }, {}),
             actor: actor.email || actor.id,
           },
         });

@@ -145,6 +145,17 @@ type EngagementSummaryPayload = {
     views_count: number;
     last_view_at?: string | null;
   }>;
+  event_actor_accounts?: Record<
+    string,
+    Array<{
+      actor_user_id: string;
+      email: string;
+      name: string;
+      role: string;
+      events_count: number;
+      last_event_at?: string | null;
+    }>
+  >;
 };
 
 const ENGAGEMENT_LABELS: Record<string, string> = {
@@ -163,6 +174,23 @@ const ENGAGEMENT_LABELS: Record<string, string> = {
   ai_chat_message: 'Сообщения в AI чате',
   guest_gate_click: 'Нажатия на закрытые функции',
 };
+
+const ACTOR_EVENT_TABLE_ORDER = [
+  'school_card_view',
+  'compare_add',
+  'favorite_add',
+  'school_map_open',
+  'contact_phone_click',
+  'contact_whatsapp_click',
+  'contact_website_click',
+  'price_open',
+  'admission_open',
+  'ai_school_mention',
+  'ai_match_run',
+  'ai_chat_open',
+  'ai_chat_message',
+  'guest_gate_click',
+] as const;
 
 const normalizeEmail = (value: string) => String(value || '').trim().toLowerCase();
 const buildFallbackSchoolId = (email: string) => {
@@ -1702,62 +1730,123 @@ export default function StatisticsPage() {
                 </div>
 
                 {selectedEngagementSchoolId ? (
-                  <div
-                    style={{
-                      marginTop: 16,
-                      border: '1px solid rgba(120,106,255,0.18)',
-                      borderRadius: 16,
-                      padding: 16,
-                      background: '#fff',
-                      overflowX: 'auto',
-                    }}
-                  >
-                    <div className="requests-head" style={{ marginBottom: 8 }}>
-                      <h3 style={{ margin: 0 }}>Какие аккаунты смотрели школу</h3>
-                      <p className="muted" style={{ margin: 0 }}>
-                        Только авторизованные родители, которые открывали карточку школы.
-                      </p>
-                    </div>
-                    {engagementSummary?.viewer_accounts?.length ? (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
-                        <thead>
-                          <tr>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Аккаунт</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Роль</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Просмотры</th>
-                            <th style={{ textAlign: 'left', padding: '6px 8px' }}>Последний просмотр</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {engagementSummary.viewer_accounts.map((viewer) => (
-                            <tr key={viewer.actor_user_id}>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                <strong>{viewer.name || viewer.email || viewer.actor_user_id}</strong>
-                              </td>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                {viewer.email || 'Нет email'}
-                              </td>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                {viewer.role || 'user'}
-                              </td>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                {viewer.views_count}
-                              </td>
-                              <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
-                                {viewer.last_view_at
-                                  ? new Date(viewer.last_view_at).toLocaleString()
-                                  : 'Нет данных'}
-                              </td>
+                  <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
+                    <div
+                      style={{
+                        border: '1px solid rgba(120,106,255,0.18)',
+                        borderRadius: 16,
+                        padding: 16,
+                        background: '#fff',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      <div className="requests-head" style={{ marginBottom: 8 }}>
+                        <h3 style={{ margin: 0 }}>Какие аккаунты смотрели школу</h3>
+                        <p className="muted" style={{ margin: 0 }}>
+                          Только авторизованные родители, которые открывали карточку школы.
+                        </p>
+                      </div>
+                      {engagementSummary?.viewer_accounts?.length ? (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Аккаунт</th>
+                              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
+                              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Роль</th>
+                              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Просмотры</th>
+                              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Последний просмотр</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p className="muted" style={{ marginBottom: 0 }}>
-                        За выбранный период авторизованные аккаунты карточку этой школы не открывали.
-                      </p>
-                    )}
+                          </thead>
+                          <tbody>
+                            {engagementSummary.viewer_accounts.map((viewer) => (
+                              <tr key={viewer.actor_user_id}>
+                                <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                  <strong>{viewer.name || viewer.email || viewer.actor_user_id}</strong>
+                                </td>
+                                <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                  {viewer.email || 'Нет email'}
+                                </td>
+                                <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                  {viewer.role || 'user'}
+                                </td>
+                                <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                  {viewer.views_count}
+                                </td>
+                                <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                  {viewer.last_view_at
+                                    ? new Date(viewer.last_view_at).toLocaleString()
+                                    : 'Нет данных'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="muted" style={{ marginBottom: 0 }}>
+                          За выбранный период авторизованные аккаунты карточку этой школы не открывали.
+                        </p>
+                      )}
+                    </div>
+
+                    {ACTOR_EVENT_TABLE_ORDER.map((eventType) => {
+                      const rows = engagementSummary?.event_actor_accounts?.[eventType] || [];
+                      if (!rows.length) return null;
+                      return (
+                        <div
+                          key={eventType}
+                          style={{
+                            border: '1px solid rgba(120,106,255,0.18)',
+                            borderRadius: 16,
+                            padding: 16,
+                            background: '#fff',
+                            overflowX: 'auto',
+                          }}
+                        >
+                          <div className="requests-head" style={{ marginBottom: 8 }}>
+                            <h3 style={{ margin: 0 }}>
+                              Кто использовал: {ENGAGEMENT_LABELS[eventType] || eventType}
+                            </h3>
+                            <p className="muted" style={{ margin: 0 }}>
+                              Только авторизованные аккаунты по выбранному действию.
+                            </p>
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Аккаунт</th>
+                                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
+                                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Роль</th>
+                                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Событий</th>
+                                <th style={{ textAlign: 'left', padding: '6px 8px' }}>Последнее действие</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.map((viewer) => (
+                                <tr key={`${eventType}-${viewer.actor_user_id}`}>
+                                  <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                    <strong>{viewer.name || viewer.email || viewer.actor_user_id}</strong>
+                                  </td>
+                                  <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                    {viewer.email || 'Нет email'}
+                                  </td>
+                                  <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                    {viewer.role || 'user'}
+                                  </td>
+                                  <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                    {viewer.events_count}
+                                  </td>
+                                  <td style={{ padding: '8px', borderTop: '1px solid rgba(120,106,255,0.15)' }}>
+                                    {viewer.last_event_at
+                                      ? new Date(viewer.last_event_at).toLocaleString()
+                                      : 'Нет данных'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : null}
 
