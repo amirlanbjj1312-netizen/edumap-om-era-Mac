@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useParentLocale } from '@/lib/parentLocale';
 import { clearCompareIds, getCompareIds, subscribeCompareIds, toggleCompareId } from '@/lib/parentCompare';
 import { getFavoriteIds, subscribeFavoriteIds, toggleFavoriteId } from '@/lib/parentFavorites';
-import { formatSchoolFee, getComparableMonthlyFee } from '@/lib/schoolFinance';
+import { formatSchoolFee, getComparableFeeInKzt, type SchoolFeePeriod } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
 import { countClubsInServices } from '@/lib/clubsSchedule';
 import { matchesSearch } from '@/lib/textSearch';
@@ -501,7 +501,7 @@ const dedupeSchoolRows = (rows: SchoolRow[], locale: 'ru' | 'en' | 'kk'): School
 };
 
 const getSchoolQualityScore = (row: SchoolRow): number => {
-  const monthlyFee = getComparableMonthlyFee(row);
+  const monthlyFee = getComparableFeeInKzt(row, 'monthly');
   const programsCount = getSchoolProgramsCount(row);
   const photosCount = getSchoolPhotoCount(row);
   const clubsCount = Math.max(countClubsInServices(row.services), toNumber(row.services?.clubs_count));
@@ -543,6 +543,7 @@ export default function ParentSchoolsPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [minRating, setMinRating] = useState(0);
   const [privatePriceLimit, setPrivatePriceLimit] = useState<number | null>(null);
+  const [pricePeriodFilter, setPricePeriodFilter] = useState<SchoolFeePeriod>('monthly');
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedAccreditation, setSelectedAccreditation] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -687,6 +688,9 @@ export default function ParentSchoolsPage() {
     anyType: { ru: 'Любой тип', en: 'Any type', kk: 'Кез келген түр' },
     ratingFrom: { ru: 'Рейтинг от', en: 'Rating from', kk: 'Рейтинг кемінде' },
     privatePriceTo: { ru: 'Цена до (₸)', en: 'Price up to (₸)', kk: 'Баға дейін (₸)' },
+    pricePeriod: { ru: 'Период цены', en: 'Price period', kk: 'Баға кезеңі' },
+    perMonth: { ru: 'В месяц', en: 'Per month', kk: 'Айына' },
+    perYear: { ru: 'В год', en: 'Per year', kk: 'Жылына' },
     languageOfInstruction: { ru: 'Язык обучения', en: 'Language of instruction', kk: 'Оқыту тілі' },
     accreditation: { ru: 'Аккредитация', en: 'Accreditation', kk: 'Аккредитация' },
     programs: { ru: 'Программы', en: 'Programs', kk: 'Бағдарламалар' },
@@ -918,14 +922,14 @@ export default function ParentSchoolsPage() {
     const prices = rows
       .filter((row) => hasRequiredParentFields(row, locale))
       .filter((row) => isPrivateType(toText(row.basic_info?.type)))
-      .map((row) => getComparableMonthlyFee(row))
+      .map((row) => getComparableFeeInKzt(row, pricePeriodFilter))
       .filter((price) => Number.isFinite(price) && price > 0);
     const max = prices.length ? Math.max(...prices) : 500000;
     return {
       min: 0,
       max: Math.ceil(max / 10000) * 10000,
     };
-  }, [rows, locale]);
+  }, [rows, locale, pricePeriodFilter]);
 
   const maxPrivatePrice = useMemo(() => {
     if (privatePriceLimit == null) return privatePriceBounds.max;
@@ -940,7 +944,7 @@ export default function ParentSchoolsPage() {
       const name = toText(row.basic_info?.name);
       const schoolTypeValues = getSchoolTypes(row.basic_info?.type);
       const rating = Number(row.system?.rating ?? 0);
-      const monthlyFee = getComparableMonthlyFee(row);
+      const comparableFee = getComparableFeeInKzt(row, pricePeriodFilter);
       const textOk = matchesSearch(
         [
           displayName,
@@ -959,7 +963,7 @@ export default function ParentSchoolsPage() {
       const typeOk = !typeFilter || schoolTypeValues.includes(typeFilter);
       const ratingOk = rating >= minRating;
       const privatePriceOk =
-        !isPrivateType(typeFilter) || monthlyFee <= maxPrivatePrice || monthlyFee <= 0;
+        !isPrivateType(typeFilter) || comparableFee <= maxPrivatePrice || comparableFee <= 0;
       const schoolLanguages = toList(row.education?.languages).map(normalize);
       const languagesOk =
         !selectedLanguages.length ||
@@ -1063,6 +1067,7 @@ export default function ParentSchoolsPage() {
     typeFilter,
     minRating,
     maxPrivatePrice,
+    pricePeriodFilter,
     selectedLanguages,
     selectedAccreditation,
     selectedPrograms,
@@ -1095,8 +1100,12 @@ export default function ParentSchoolsPage() {
       next.sort((a, b) => {
         const aType = toText(a.basic_info?.type);
         const bType = toText(b.basic_info?.type);
-        const aPrice = isPrivateType(aType) ? getComparableMonthlyFee(a) || Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
-        const bPrice = isPrivateType(bType) ? getComparableMonthlyFee(b) || Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+        const aPrice = isPrivateType(aType)
+          ? getComparableFeeInKzt(a, pricePeriodFilter) || Number.MAX_SAFE_INTEGER
+          : Number.MAX_SAFE_INTEGER;
+        const bPrice = isPrivateType(bType)
+          ? getComparableFeeInKzt(b, pricePeriodFilter) || Number.MAX_SAFE_INTEGER
+          : Number.MAX_SAFE_INTEGER;
         return aPrice - bPrice;
       });
       return next;
@@ -1105,8 +1114,8 @@ export default function ParentSchoolsPage() {
       next.sort((a, b) => {
         const aType = toText(a.basic_info?.type);
         const bType = toText(b.basic_info?.type);
-        const aRaw = isPrivateType(aType) ? getComparableMonthlyFee(a) : 0;
-        const bRaw = isPrivateType(bType) ? getComparableMonthlyFee(b) : 0;
+        const aRaw = isPrivateType(aType) ? getComparableFeeInKzt(a, pricePeriodFilter) : 0;
+        const bRaw = isPrivateType(bType) ? getComparableFeeInKzt(b, pricePeriodFilter) : 0;
         const aPrice = aRaw > 0 ? aRaw : -1;
         const bPrice = bRaw > 0 ? bRaw : -1;
         return bPrice - aPrice;
@@ -1140,7 +1149,7 @@ export default function ParentSchoolsPage() {
       });
     });
     return next;
-  }, [filtered, sortMode, locale]);
+  }, [filtered, sortMode, locale, pricePeriodFilter]);
 
   useEffect(() => {
     if (!sortModalOpen) return undefined;
@@ -1224,6 +1233,7 @@ export default function ParentSchoolsPage() {
     setTypeFilter('');
     setMinRating(0);
     setPrivatePriceLimit(null);
+    setPricePeriodFilter('monthly');
     setSelectedLanguages([]);
     setSelectedAccreditation([]);
     setSelectedPrograms([]);
@@ -1241,6 +1251,7 @@ export default function ParentSchoolsPage() {
     districtFilter,
     typeFilter,
     privatePriceLimit != null ? 'price' : '',
+    pricePeriodFilter !== 'monthly' ? 'price_period' : '',
     selectedLanguages.length ? 'languages' : '',
     gradeRangeFilter ? 'grades' : '',
   ].filter(Boolean).length;
@@ -1286,19 +1297,32 @@ export default function ParentSchoolsPage() {
         </select>
       </label>
       {isPrivateType(typeFilter) ? (
-        <label className="field">
-          <span>
-            {ft('privatePriceTo')}: {maxPrivatePrice.toLocaleString('ru-RU')}
-          </span>
-          <input
-            type="range"
-            min={privatePriceBounds.min}
-            max={privatePriceBounds.max}
-            step={10000}
-            value={maxPrivatePrice}
-            onChange={(e) => setPrivatePriceLimit(Number(e.target.value))}
-          />
-        </label>
+        <>
+          <label className="field">
+            <span>{ft('pricePeriod')}</span>
+            <select
+              className="input"
+              value={pricePeriodFilter}
+              onChange={(e) => setPricePeriodFilter(e.target.value as SchoolFeePeriod)}
+            >
+              <option value="monthly">{ft('perMonth')}</option>
+              <option value="yearly">{ft('perYear')}</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>
+              {ft('privatePriceTo')} {pricePeriodFilter === 'yearly' ? `(${ft('perYear').toLowerCase()})` : `(${ft('perMonth').toLowerCase()})`}: {maxPrivatePrice.toLocaleString('ru-RU')}
+            </span>
+            <input
+              type="range"
+              min={privatePriceBounds.min}
+              max={privatePriceBounds.max}
+              step={10000}
+              value={maxPrivatePrice}
+              onChange={(e) => setPrivatePriceLimit(Number(e.target.value))}
+            />
+          </label>
+        </>
       ) : null}
       <div className="schools-filter-section">
         <p className="schools-filter-label">{ft('languageOfInstruction')}</p>

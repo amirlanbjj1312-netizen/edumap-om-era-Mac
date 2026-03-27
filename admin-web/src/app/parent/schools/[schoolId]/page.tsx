@@ -2187,7 +2187,7 @@ export default function ParentSchoolDetailsPage() {
                     {feeRules.map((rule, index) => (
                       <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
                         <span>{ui.priceFromTo}: {rule.from_grade}-{rule.to_grade}</span>
-                        <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : '€'}`}</strong>
+                        <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€'}`}</strong>
                       </div>
                     ))}
                     {financeDiscounts ? (

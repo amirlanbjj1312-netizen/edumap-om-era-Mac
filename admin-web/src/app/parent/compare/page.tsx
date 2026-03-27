@@ -102,6 +102,26 @@ const toList = (value: unknown): string[] =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const summarizeCompareText = (value: string, maxLength = 180) => {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '—';
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}…`;
+};
+
+const formatCompareGrades = (value: unknown) => {
+  const raw = toText(value).trim();
+  if (!raw) return '—';
+  const numbers = Array.from(
+    new Set(
+      (raw.match(/\d{1,2}/g) || [])
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item >= 0 && item <= 12)
+    )
+  ).sort((a, b) => a - b);
+  return numbers.length ? numbers.join(', ') : raw;
+};
+
 const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   Almaty: { ru: 'Алматы', en: 'Almaty', kk: 'Алматы' },
   Astana: { ru: 'Астана', en: 'Astana', kk: 'Астана' },
@@ -324,7 +344,7 @@ const formatGradeFees = (
   const byCurrency = new Map<string, string[]>();
   rules.forEach((rule) => {
     const range = rule.from_grade === rule.to_grade ? `${rule.from_grade}` : `${rule.from_grade}-${rule.to_grade}`;
-    const symbol = rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : '€';
+    const symbol = rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€';
     const periodLabel =
       locale === 'en'
         ? rule.period === 'yearly'
@@ -456,7 +476,7 @@ export default function ParentComparePage() {
         case 'languages':
           return localizeUniqueList(school.education?.languages, locale).join(', ') || '—';
         case 'grades':
-          return toText(getIn(school, 'education.grades')).trim() || '—';
+          return formatCompareGrades(getIn(school, 'education.grades'));
         case 'curricula': {
           const items = [
             ...localizeUniqueList(getIn(school, 'education.curricula.national'), locale),
@@ -466,7 +486,7 @@ export default function ParentComparePage() {
           ]
             .map((v) => String(v).trim())
             .filter(Boolean);
-          return items.length ? Array.from(new Set(items)).join(' · ') : '—';
+          return items.length ? summarizeCompareText(Array.from(new Set(items)).join(' · '), 160) : '—';
         }
         case 'admission':
           return asBoolText(getIn(school, 'education.entrance_exam.required'), locale);
@@ -580,26 +600,44 @@ export default function ParentComparePage() {
       {!selectedRows.length ? (
         <p className="muted" style={{ marginTop: 14 }}>{text.empty}</p>
       ) : (
-        <div className="compare-table-wrap">
-          <table className="compare-table">
-            <thead>
-              <tr>
-                <th className="compare-col-criteria">{text.criteria}</th>
-                <th className="compare-col-school">{leftName}</th>
-                <th className="compare-col-school">{rightName}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {criteriaRows.map((row) => (
-                <tr key={row.key}>
-                  <td className="compare-criteria-cell"><strong>{row.label}</strong></td>
-                  <td className="compare-value-cell">{row.left || '—'}</td>
-                  <td className="compare-value-cell">{row.right || '—'}</td>
+        <>
+          <div className="compare-table-wrap compare-desktop-only">
+            <table className="compare-table">
+              <thead>
+                <tr>
+                  <th className="compare-col-criteria">{text.criteria}</th>
+                  <th className="compare-col-school">{leftName}</th>
+                  <th className="compare-col-school">{rightName}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {criteriaRows.map((row) => (
+                  <tr key={row.key}>
+                    <td className="compare-criteria-cell"><strong>{row.label}</strong></td>
+                    <td className="compare-value-cell">{row.left || '—'}</td>
+                    <td className="compare-value-cell">{row.right || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="compare-mobile-list">
+            {criteriaRows.map((row) => (
+              <article key={row.key} className="compare-mobile-card">
+                <p className="compare-mobile-label">{row.label}</p>
+                <div className="compare-mobile-school-row">
+                  <span className="compare-mobile-school-name">{leftName}</span>
+                  <strong className="compare-mobile-school-value">{row.left || '—'}</strong>
+                </div>
+                <div className="compare-mobile-school-row">
+                  <span className="compare-mobile-school-name">{rightName}</span>
+                  <strong className="compare-mobile-school-value">{row.right || '—'}</strong>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

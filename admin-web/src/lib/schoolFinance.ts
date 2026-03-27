@@ -1,5 +1,5 @@
 type Locale = 'ru' | 'en' | 'kk';
-type FeeCurrency = 'KZT' | 'USD' | 'EUR';
+type FeeCurrency = 'KZT' | 'USD' | 'EUR' | 'GBP';
 export type SchoolFeePeriod = 'monthly' | 'yearly';
 
 export type SchoolFeeRule = {
@@ -26,9 +26,17 @@ const CURRENCY_SYMBOLS: Record<FeeCurrency, string> = {
   KZT: '₸',
   USD: '$',
   EUR: '€',
+  GBP: '£',
 };
 
-export const SCHOOL_FEE_CURRENCIES: FeeCurrency[] = ['KZT', 'USD', 'EUR'];
+const KZT_PER_CURRENCY: Record<FeeCurrency, number> = {
+  KZT: 1,
+  USD: 500,
+  EUR: 540,
+  GBP: 630,
+};
+
+export const SCHOOL_FEE_CURRENCIES: FeeCurrency[] = ['KZT', 'USD', 'EUR', 'GBP'];
 export const SCHOOL_FEE_PERIODS: SchoolFeePeriod[] = ['monthly', 'yearly'];
 export const SCHOOL_GRADE_OPTIONS = Array.from({ length: 14 }, (_, index) => index);
 
@@ -58,7 +66,7 @@ const toGradeNumber = (value: unknown): number => {
 
 const toCurrency = (value: unknown): FeeCurrency => {
   const raw = toText(value).trim().toUpperCase();
-  if (raw === 'USD' || raw === 'EUR' || raw === 'KZT') return raw;
+  if (raw === 'USD' || raw === 'EUR' || raw === 'KZT' || raw === 'GBP') return raw;
   return DEFAULT_CURRENCY;
 };
 
@@ -245,17 +253,31 @@ export const getSchoolFeeSummary = (row: {
   };
 };
 
-export const getComparableMonthlyFee = (
-  row: Parameters<typeof getSchoolFeeSummary>[0]
+export const getComparableFeeInKzt = (
+  row: Parameters<typeof getSchoolFeeSummary>[0],
+  targetPeriod: SchoolFeePeriod = 'monthly'
 ): number => {
   const summary = getSchoolFeeSummary(row);
   if (!summary.hasAnyFee) return 0;
-  if (summary.currency && summary.currency !== 'KZT') return 0;
-  if (summary.period === 'yearly') {
-    return Math.round(summary.min / 12);
+  const rate = summary.currency ? KZT_PER_CURRENCY[summary.currency] : 0;
+  if (!rate) return 0;
+  const normalized = summary.min * rate;
+  if (summary.period === targetPeriod) {
+    return Math.round(normalized);
   }
-  return summary.min;
+  if (summary.period === 'yearly' && targetPeriod === 'monthly') {
+    return Math.round(normalized / 12);
+  }
+  if (summary.period === 'monthly' && targetPeriod === 'yearly') {
+    return Math.round(normalized * 12);
+  }
+  return Math.round(normalized);
 };
+
+export const getComparableMonthlyFee = (row: Parameters<typeof getSchoolFeeSummary>[0]): number =>
+  getComparableFeeInKzt(row, 'monthly');
+
+export const getFeeCurrencySymbol = (currency: FeeCurrency) => CURRENCY_SYMBOLS[currency] || currency;
 
 const formatCurrency = (value: number, currency: FeeCurrency) =>
   `${value.toLocaleString('ru-RU')} ${CURRENCY_SYMBOLS[currency]}`;
