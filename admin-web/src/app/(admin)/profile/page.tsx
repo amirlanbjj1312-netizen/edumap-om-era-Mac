@@ -69,47 +69,16 @@ const toProfileForm = (user: any): ProfileForm => {
   };
 };
 
-const EditableField = ({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-  readOnly = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-  readOnly?: boolean;
-}) => (
-  <label className="field">
-    <span>{label}</span>
-    <input
-      className="input"
-      value={value}
-      type={type}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  </label>
-);
-
 export default function ProfilePage() {
   const { locale, setLocale, t } = useAdminLocale();
   const [form, setForm] = useState<ProfileForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<StatusState>('idle');
   const [message, setMessage] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftFirstName, setDraftFirstName] = useState('');
-  const [draftLastName, setDraftLastName] = useState('');
-  const [draftName, setDraftName] = useState('');
-  const [draftOrganization, setDraftOrganization] = useState('');
-  const [draftPhone, setDraftPhone] = useState('');
-  const [draftWebsite, setDraftWebsite] = useState('');
+  const [isPasswordEditing, setIsPasswordEditing] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [nextPassword, setNextPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [hasLeadAccess, setHasLeadAccess] = useState(false);
 
   useEffect(() => {
@@ -120,12 +89,6 @@ export default function ProfilePage() {
       const sessionUser = data.session?.user;
       const nextForm = toProfileForm(sessionUser);
       setForm(nextForm);
-      setDraftFirstName(nextForm.firstName);
-      setDraftLastName(nextForm.lastName);
-      setDraftName(nextForm.name);
-      setDraftOrganization(nextForm.organization);
-      setDraftPhone(nextForm.contactPhone);
-      setDraftWebsite(nextForm.website);
       try {
         const email = normalizeEmail(nextForm.email);
         const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
@@ -152,102 +115,58 @@ export default function ProfilePage() {
     return parts.join(' ').trim() || form.name;
   }, [form]);
 
-  const saveProfile = async () => {
+  const changePassword = async () => {
     if (!form) return;
-    setStatus('saving');
-    setMessage('');
-    const firstName = draftFirstName.trim();
-    const lastName = draftLastName.trim();
-    const name = draftName.trim() || [firstName, lastName].filter(Boolean).join(' ').trim();
-    const organization = draftOrganization.trim();
-    const contactPhone = formatKzPhone(draftPhone);
-    const website = draftWebsite.trim();
-
-    const metadata = {
-      firstName,
-      lastName,
-      name: name || computedFullName,
-      email: form.email.trim(),
-      organization,
-      contactPhone,
-      website,
-      bin: form.bin.trim(),
-      iin: form.iin.trim(),
-      licenseNumber: form.licenseNumber.trim(),
-      licenseIssuedAt: form.licenseIssuedAt.trim(),
-      licenseExpiresAt: form.licenseExpiresAt.trim(),
-    };
-
-    const { error } = await supabase.auth.updateUser({ data: metadata });
-    if (error) {
+    const normalizedEmail = normalizeEmail(form.email);
+    if (!normalizedEmail) {
       setStatus('error');
-      setMessage(error.message || t('saveError'));
+      setMessage('Email аккаунта не найден.');
+      return;
+    }
+    if (!currentPassword.trim()) {
+      setStatus('error');
+      setMessage('Введите текущий пароль.');
+      return;
+    }
+    if (nextPassword.length < 8) {
+      setStatus('error');
+      setMessage('Новый пароль должен содержать минимум 8 символов.');
+      return;
+    }
+    if (nextPassword !== confirmPassword) {
+      setStatus('error');
+      setMessage('Новый пароль и подтверждение не совпадают.');
+      return;
+    }
+    if (currentPassword === nextPassword) {
+      setStatus('error');
+      setMessage('Новый пароль должен отличаться от текущего.');
       return;
     }
 
-    // Sync key profile fields into school profile used by school-info/parent views.
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData.session?.user;
-      const email = normalizeEmail(form.email);
-      const schoolId = resolveSessionSchoolId(sessionUser) || buildFallbackSchoolId(email);
-      const result = await loadSchools();
-      const existing = result.data.find((item: any) => {
-        const itemEmail = normalizeEmail(item?.basic_info?.email);
-        return item?.school_id === schoolId || (itemEmail && itemEmail === email);
-      });
-      const nextProfile = existing
-        ? createEmptySchoolProfile(existing)
-        : createEmptySchoolProfile({ school_id: schoolId });
-      const targetSchoolId = existing?.school_id || schoolId;
-
-      const org = organization;
-      if (org) {
-        nextProfile.basic_info.display_name.ru = org;
-        nextProfile.basic_info.display_name.en = org;
-        nextProfile.basic_info.display_name.kk = org;
-        nextProfile.basic_info.name.ru = org;
-        nextProfile.basic_info.name.en = org;
-        nextProfile.basic_info.name.kk = org;
-      }
-      if (contactPhone.trim()) {
-        nextProfile.basic_info.phone = contactPhone;
-      }
-      if (website.trim()) {
-        nextProfile.basic_info.website = website;
-      }
-      if (form.licenseNumber.trim()) {
-        nextProfile.basic_info.license_details.number = form.licenseNumber.trim();
-      }
-      if (form.licenseIssuedAt.trim()) {
-        nextProfile.basic_info.license_details.issued_at = form.licenseIssuedAt.trim();
-      }
-      if (form.licenseExpiresAt.trim()) {
-        nextProfile.basic_info.license_details.valid_until = form.licenseExpiresAt.trim();
-      }
-
-      nextProfile.school_id = targetSchoolId;
-      await upsertSchool(nextProfile);
-    } catch {
-      // Keep profile save successful even if school profile sync fails.
+    setStatus('saving');
+    setMessage('');
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: currentPassword,
+    });
+    if (signInError) {
+      setStatus('error');
+      setMessage('Текущий пароль введен неверно.');
+      return;
     }
-
-    setForm((prev) =>
-      prev
-        ? {
-            ...prev,
-            firstName,
-            lastName,
-            name,
-            organization,
-            contactPhone,
-            website,
-          }
-        : prev
-    );
-    setIsEditing(false);
+    const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
+    if (updateError) {
+      setStatus('error');
+      setMessage(updateError.message || t('saveError'));
+      return;
+    }
+    setCurrentPassword('');
+    setNextPassword('');
+    setConfirmPassword('');
+    setIsPasswordEditing(false);
     setStatus('saved');
-    setMessage(t('saved'));
+    setMessage('Пароль обновлен.');
     setTimeout(() => setStatus('idle'), 1500);
   };
 
@@ -299,7 +218,7 @@ export default function ProfilePage() {
       ? {
           greeting: 'Hello',
           cabinet: 'School account',
-          editProfile: 'Edit profile',
+          editProfile: 'Change password',
           cancel: 'Cancel',
           languageTitle: 'Language',
           languageHint: 'Language is applied to the whole account.',
@@ -311,7 +230,7 @@ export default function ProfilePage() {
         ? {
             greeting: 'Сәлеметсіз бе',
             cabinet: 'Мектеп кабинеті',
-            editProfile: 'Профильді өңдеу',
+            editProfile: 'Құпиясөзді өзгерту',
             cancel: 'Бас тарту',
             languageTitle: 'Тіл',
             languageHint: 'Тіл бүкіл кабинетке қолданылады.',
@@ -322,7 +241,7 @@ export default function ProfilePage() {
         : {
             greeting: 'Здравствуйте',
             cabinet: 'Кабинет школы',
-            editProfile: 'Редактировать профиль',
+            editProfile: 'Сменить пароль',
             cancel: 'Отмена',
             languageTitle: 'Язык',
             languageHint: 'Изменение языка применяется ко всему кабинету.',
@@ -383,89 +302,66 @@ export default function ProfilePage() {
               type="button"
               className="button secondary"
               onClick={() => {
-                if (isEditing) {
-                  setDraftFirstName(form.firstName);
-                  setDraftLastName(form.lastName);
-                  setDraftName(form.name);
-                  setDraftOrganization(form.organization);
-                  setDraftPhone(form.contactPhone);
-                  setDraftWebsite(form.website);
+                if (isPasswordEditing) {
+                  setCurrentPassword('');
+                  setNextPassword('');
+                  setConfirmPassword('');
                 }
-                setIsEditing((prev) => !prev);
+                setIsPasswordEditing((prev) => !prev);
                 setMessage('');
               }}
               disabled={status === 'saving' || status === 'deleting'}
             >
-              {isEditing ? ui.cancel : ui.editProfile}
+              {isPasswordEditing ? ui.cancel : ui.editProfile}
             </button>
           </div>
-          {isEditing ? (
+          {isPasswordEditing ? (
             <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-              <div className="form-row">
-                <EditableField
-                  label={t('firstName')}
-                  value={draftFirstName}
-                  onChange={setDraftFirstName}
+              <label className="field">
+                <span>Текущий пароль</span>
+                <input
+                  className="input"
+                  value={currentPassword}
+                  type="password"
+                  onChange={(event) => setCurrentPassword(event.target.value)}
                 />
-                <EditableField
-                  label={t('lastName')}
-                  value={draftLastName}
-                  onChange={setDraftLastName}
+              </label>
+              <label className="field">
+                <span>Новый пароль</span>
+                <input
+                  className="input"
+                  value={nextPassword}
+                  type="password"
+                  onChange={(event) => setNextPassword(event.target.value)}
                 />
-              </div>
-              <EditableField
-                label={t('fullName')}
-                value={draftName}
-                onChange={setDraftName}
-              />
-              <div className="form-row">
-                <EditableField
-                  label={t('organization')}
-                  value={draftOrganization}
-                  onChange={setDraftOrganization}
+              </label>
+              <label className="field">
+                <span>Подтвердите новый пароль</span>
+                <input
+                  className="input"
+                  value={confirmPassword}
+                  type="password"
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                 />
-                <EditableField
-                  label={t('contactPhone')}
-                  value={draftPhone}
-                  type="tel"
-                  placeholder="+7 (___) ___-__-__"
-                  onChange={(value) => setDraftPhone(formatKzPhone(value))}
-                />
-              </div>
-              <div className="form-row">
-                <EditableField
-                  label={t('website')}
-                  value={draftWebsite}
-                  onChange={setDraftWebsite}
-                />
-                <EditableField
-                  label={t('email')}
-                  value={form.email}
-                  readOnly
-                  onChange={() => {}}
-                />
-              </div>
+              </label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="button"
                   disabled={status === 'saving' || status === 'deleting'}
-                  onClick={saveProfile}
+                  onClick={changePassword}
                 >
-                  {status === 'saving' ? t('saving') : t('save')}
+                  {status === 'saving' ? t('saving') : 'Сохранить пароль'}
                 </button>
                 <button
                   type="button"
                   className="button secondary"
                   disabled={status === 'saving' || status === 'deleting'}
                   onClick={() => {
-                    setDraftFirstName(form.firstName);
-                    setDraftLastName(form.lastName);
-                    setDraftName(form.name);
-                    setDraftOrganization(form.organization);
-                    setDraftPhone(form.contactPhone);
-                    setDraftWebsite(form.website);
-                    setIsEditing(false);
+                    setCurrentPassword('');
+                    setNextPassword('');
+                    setConfirmPassword('');
+                    setIsPasswordEditing(false);
                     setMessage('');
                   }}
                 >
