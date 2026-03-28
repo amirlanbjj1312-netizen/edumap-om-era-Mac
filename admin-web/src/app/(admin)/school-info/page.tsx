@@ -421,6 +421,17 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Что нужно предоставить': { en: 'What must be submitted', kk: 'Не тапсыру керек' },
   'Этапы отбора': { en: 'Selection stages', kk: 'Іріктеу кезеңдері' },
   'Типы отбора': { en: 'Selection types', kk: 'Іріктеу түрлері' },
+  'Канал подачи': { en: 'Application channel', kk: 'Өтініш беру арнасы' },
+  'Ссылка на подачу': { en: 'Application link', kk: 'Өтініш беру сілтемесі' },
+  'Прикрепление по адресу': { en: 'Residential assignment', kk: 'Мекенжай бойынша бекіту' },
+  'Прием в 1 класс': { en: 'First grade admission', kk: '1-сыныпқа қабылдау' },
+  'Перевод из другой школы': { en: 'Transfer from another school', kk: 'Басқа мектептен ауысу' },
+  'Нужна прописка/адрес': { en: 'Residence required', kk: 'Тіркеу/мекенжай қажет' },
+  'Есть конкурсный отбор': { en: 'Competitive selection', kk: 'Конкурстық іріктеу бар' },
+  'Есть языковые/спецклассы': {
+    en: 'Specialized/language classes',
+    kk: 'Тілдік/мамандандырылған сыныптар бар',
+  },
   'Документы': { en: 'Documents', kk: 'Құжаттар' },
   'Другое в этапах': { en: 'Other in stages', kk: 'Кезеңдердегі басқа' },
   'Другое в документах': { en: 'Other in documents', kk: 'Құжаттардағы басқа' },
@@ -431,6 +442,16 @@ const LABELS: Record<string, { en: string; kk: string }> = {
     {
       en: 'Show admission as separate scenarios: grades, stages, documents, portfolio, interview, etc.',
       kk: 'Қабылдауды әртүрлі сценарийлермен көрсетіңіз: сыныптар, кезеңдер, құжаттар, портфолио, сұхбат және т.б.',
+    },
+  'Для госшкол лучше показывать понятный сценарий подачи через eGov, Sakura или напрямую через школу. Поля конкурсного отбора включайте только если они реально есть.':
+    {
+      en: 'For state schools, show a clear application flow via eGov, Sakura, or directly through the school. Enable selection fields only when they are actually used.',
+      kk: 'Мемлекеттік мектептер үшін eGov, Sakura немесе мектеп арқылы өтініш беру сценарийін нақты көрсетіңіз. Іріктеу өрістерін тек шынымен қолданылса ғана қосыңыз.',
+    },
+  'Для обычной госшколы без конкурса блоки про эссе, портфолио и видео-визитку лучше не заполнять.':
+    {
+      en: 'For a regular state school without competition, leave essay, portfolio, and video-intro fields empty.',
+      kk: 'Конкурссыз қарапайым мемлекеттік мектеп үшін эссе, портфолио және бейне-визитка өрістерін толтырмаңыз.',
     },
   Цена: { en: 'Price', kk: 'Бағасы' },
   Валюта: { en: 'Currency', kk: 'Валюта' },
@@ -755,6 +776,10 @@ const OPTION_LABELS: Record<
   trial_day: { ru: 'Пробный день', en: 'Trial day', kk: 'Сынақ күні' },
   competition: { ru: 'Конкурс', en: 'Competition', kk: 'Байқау' },
   other: { ru: 'Другое', en: 'Other', kk: 'Басқа' },
+  egov: { ru: 'Через eGov', en: 'Via eGov', kk: 'eGov арқылы' },
+  sakura: { ru: 'Через Sakura', en: 'Via Sakura', kk: 'Sakura арқылы' },
+  school: { ru: 'Через школу', en: 'Via school', kk: 'Мектеп арқылы' },
+  mixed: { ru: 'Смешанный вариант', en: 'Mixed option', kk: 'Аралас нұсқа' },
   application_form: { ru: 'Заявление', en: 'Application form', kk: 'Өтініш' },
   transcript: { ru: 'Табель / выписка', en: 'Transcript', kk: 'Табель / көшірме' },
   recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
@@ -907,6 +932,16 @@ const CURRICULA_GROUPS = {
   ],
   additional: ['Bilingual Program', 'Author program'],
 };
+
+const STATE_ADMISSION_CHANNEL_OPTIONS = ['egov', 'sakura', 'school', 'mixed'];
+const STATE_BASIC_DOCUMENT_OPTIONS = [
+  'application_form',
+  'transcript',
+  'medical_certificate',
+  'birth_certificate',
+  'parent_id',
+  'other',
+];
 
 const GRADE_OPTIONS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 const TEACHING_LANGUAGE_OPTIONS = [
@@ -1415,6 +1450,7 @@ export default function SchoolInfoPage() {
     () => normalizeSchoolType(getDeep(profile, 'basic_info.type', '')),
     [profile]
   );
+  const isStateSchool = useMemo(() => schoolTypeValue === 'State', [schoolTypeValue]);
   const paymentOptionsValue = useMemo(() => {
     const explicit = normalizeListValue(getDeep(profile, 'finance.payment_options', ''));
     if (explicit.length) return explicit;
@@ -1897,6 +1933,32 @@ export default function SchoolInfoPage() {
     [profile, seatGradesValue.length]
   );
   const admissionRules = useMemo(() => normalizeAdmissionRules(profile), [profile]);
+  const stateAdmissionChannel = useMemo(
+    () => String(getDeep(profile, 'education.admission_details.application_channel', '') || ''),
+    [profile]
+  );
+  const stateCompetitiveSelection = useMemo(
+    () => Boolean(getDeep(profile, 'education.admission_details.competitive_selection')),
+    [profile]
+  );
+  const stateSpecializedClasses = useMemo(
+    () => Boolean(getDeep(profile, 'education.admission_details.specialized_classes')),
+    [profile]
+  );
+  const showStateSelectionFields = useMemo(
+    () =>
+      !isStateSchool ||
+      stateCompetitiveSelection ||
+      stateSpecializedClasses ||
+      stateAdmissionChannel === 'school' ||
+      stateAdmissionChannel === 'mixed',
+    [isStateSchool, stateCompetitiveSelection, stateSpecializedClasses, stateAdmissionChannel]
+  );
+  const availableAdmissionDocumentOptions = useMemo(
+    () =>
+      showStateSelectionFields ? ADMISSION_DOCUMENT_OPTIONS : STATE_BASIC_DOCUMENT_OPTIONS,
+    [showStateSelectionFields]
+  );
   const setAdmissionRules = (nextRules: any[]) => {
     updateField('education.admission_rules', nextRules);
   };
@@ -3656,9 +3718,13 @@ export default function SchoolInfoPage() {
             <Section title="Поступление">
               <div className="teacher-actions">
                 <p className="muted">
-                  {t(
-                    'Покажите поступление по разным сценариям: классы, этапы, документы, портфолио, собеседование и т.д.'
-                  )}
+                  {isStateSchool
+                    ? t(
+                        'Для госшкол лучше показывать понятный сценарий подачи через eGov, Sakura или напрямую через школу. Поля конкурсного отбора включайте только если они реально есть.'
+                      )
+                    : t(
+                        'Покажите поступление по разным сценариям: классы, этапы, документы, портфолио, собеседование и т.д.'
+                      )}
                 </p>
                 <button
                   type="button"
@@ -3668,6 +3734,97 @@ export default function SchoolInfoPage() {
                   {t('Добавить блок поступления')}
                 </button>
               </div>
+
+              {isStateSchool ? (
+                <>
+                  <FieldRow>
+                    <Select
+                      label="Канал подачи"
+                      value={stateAdmissionChannel}
+                      onChange={(value: string) =>
+                        updateField('education.admission_details.application_channel', value)
+                      }
+                      options={[
+                        { value: '', label: t('Не выбрано') },
+                        ...STATE_ADMISSION_CHANNEL_OPTIONS.map((item) => ({
+                          value: item,
+                          label: translateOption(item, contentLocale),
+                        })),
+                      ]}
+                    />
+                    <Input
+                      label="Ссылка на подачу"
+                      value={String(
+                        getDeep(profile, 'education.admission_details.application_link', '') || ''
+                      )}
+                      onChange={(value: string) =>
+                        updateField('education.admission_details.application_link', value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Toggle
+                      label="Прикрепление по адресу"
+                      checked={Boolean(
+                        getDeep(profile, 'education.admission_details.residential_assignment')
+                      )}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.residential_assignment', value)
+                      }
+                    />
+                    <Toggle
+                      label="Прием в 1 класс"
+                      checked={Boolean(
+                        getDeep(profile, 'education.admission_details.admission_first_grade')
+                      )}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.admission_first_grade', value)
+                      }
+                    />
+                    <Toggle
+                      label="Перевод из другой школы"
+                      checked={Boolean(
+                        getDeep(profile, 'education.admission_details.admission_transfer')
+                      )}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.admission_transfer', value)
+                      }
+                    />
+                  </FieldRow>
+                  <FieldRow>
+                    <Toggle
+                      label="Нужна прописка/адрес"
+                      checked={Boolean(
+                        getDeep(profile, 'education.admission_details.residence_required')
+                      )}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.residence_required', value)
+                      }
+                    />
+                    <Toggle
+                      label="Есть конкурсный отбор"
+                      checked={stateCompetitiveSelection}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.competitive_selection', value)
+                      }
+                    />
+                    <Toggle
+                      label="Есть языковые/спецклассы"
+                      checked={stateSpecializedClasses}
+                      onChange={(value: boolean) =>
+                        updateField('education.admission_details.specialized_classes', value)
+                      }
+                    />
+                  </FieldRow>
+                  {!showStateSelectionFields ? (
+                    <p className="muted">
+                      {t(
+                        'Для обычной госшколы без конкурса блоки про эссе, портфолио и видео-визитку лучше не заполнять.'
+                      )}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
 
               {admissionRules.length ? (
                 <div className="teacher-list">
@@ -3734,28 +3891,32 @@ export default function SchoolInfoPage() {
                           }
                         />
                       </FieldRow>
-                      <CheckboxGroup
-                        label="Типы отбора"
-                        options={ADMISSION_ASSESSMENT_OPTIONS}
-                        values={Array.isArray(rule.assessment_types) ? rule.assessment_types : []}
-                        onChange={(next: string[]) =>
-                          updateAdmissionRuleListField(index, 'assessment_types', next)
-                        }
-                      />
-                      {(Array.isArray(rule.assessment_types) ? rule.assessment_types : []).includes('other') ? (
-                        <FieldRow>
-                          <Input
-                            label="Другое в этапах"
-                            value={String(rule?.assessment_other?.[contentLocale] || '')}
-                            onChange={(value: string) =>
-                              updateAdmissionRuleLocalizedField(index, 'assessment_other', value)
+                      {showStateSelectionFields ? (
+                        <>
+                          <CheckboxGroup
+                            label="Типы отбора"
+                            options={ADMISSION_ASSESSMENT_OPTIONS}
+                            values={Array.isArray(rule.assessment_types) ? rule.assessment_types : []}
+                            onChange={(next: string[]) =>
+                              updateAdmissionRuleListField(index, 'assessment_types', next)
                             }
                           />
-                        </FieldRow>
+                          {(Array.isArray(rule.assessment_types) ? rule.assessment_types : []).includes('other') ? (
+                            <FieldRow>
+                              <Input
+                                label="Другое в этапах"
+                                value={String(rule?.assessment_other?.[contentLocale] || '')}
+                                onChange={(value: string) =>
+                                  updateAdmissionRuleLocalizedField(index, 'assessment_other', value)
+                                }
+                              />
+                            </FieldRow>
+                          ) : null}
+                        </>
                       ) : null}
                       <CheckboxGroup
                         label="Документы"
-                        options={ADMISSION_DOCUMENT_OPTIONS}
+                        options={availableAdmissionDocumentOptions}
                         values={Array.isArray(rule.required_documents) ? rule.required_documents : []}
                         onChange={(next: string[]) =>
                           updateAdmissionRuleListField(index, 'required_documents', next)
@@ -3783,14 +3944,18 @@ export default function SchoolInfoPage() {
                         />
                       </FieldRow>
                       <FieldRow>
-                        <TextArea
-                          label="Что оценивают"
-                          rows={3}
-                          value={String(rule?.requirements?.[contentLocale] || '')}
-                          onChange={(value: string) =>
-                            updateAdmissionRuleLocalizedField(index, 'requirements', value)
-                          }
-                        />
+                        {showStateSelectionFields ? (
+                          <TextArea
+                            label="Что оценивают"
+                            rows={3}
+                            value={String(rule?.requirements?.[contentLocale] || '')}
+                            onChange={(value: string) =>
+                              updateAdmissionRuleLocalizedField(index, 'requirements', value)
+                            }
+                          />
+                        ) : (
+                          <div />
+                        )}
                         <TextArea
                           label="Что нужно предоставить"
                           rows={3}
@@ -3809,14 +3974,18 @@ export default function SchoolInfoPage() {
                             updateAdmissionRuleLocalizedField(index, 'comment', value)
                           }
                         />
-                        <TextArea
-                          label="Критерии оценки"
-                          rows={3}
-                          value={String(rule?.evaluation?.[contentLocale] || '')}
-                          onChange={(value: string) =>
-                            updateAdmissionRuleLocalizedField(index, 'evaluation', value)
-                          }
-                        />
+                        {showStateSelectionFields ? (
+                          <TextArea
+                            label="Критерии оценки"
+                            rows={3}
+                            value={String(rule?.evaluation?.[contentLocale] || '')}
+                            onChange={(value: string) =>
+                              updateAdmissionRuleLocalizedField(index, 'evaluation', value)
+                            }
+                          />
+                        ) : (
+                          <div />
+                        )}
                       </FieldRow>
                     </div>
                   ))}
