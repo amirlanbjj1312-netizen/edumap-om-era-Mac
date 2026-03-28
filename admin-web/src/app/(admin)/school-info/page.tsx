@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth } from '@/lib/supabaseAuth';
+import { supabaseStorage } from '@/lib/supabaseStorage';
 import {
   autofillSchoolLocales,
   loadSchools,
@@ -889,7 +890,6 @@ const CITY_NAMES = CITY_OPTIONS.map((option) => option.name);
 const CURRICULA_GROUPS = {
   national: [
     'State program (Kazakhstan)',
-    'Updated content',
     'NIS Integrated Program',
     'Cambridge Primary',
     'Cambridge Lower Secondary',
@@ -2107,7 +2107,7 @@ export default function SchoolInfoPage() {
 
       let uploaded = false;
       for (const bucket of buckets) {
-        const { error } = await supabase.storage.from(bucket).upload(path, file, {
+        const { error } = await supabaseStorage.storage.from(bucket).upload(path, file, {
           upsert: true,
           contentType: file.type || undefined,
         });
@@ -2118,7 +2118,7 @@ export default function SchoolInfoPage() {
           }
           throw error;
         }
-        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        const { data } = supabaseStorage.storage.from(bucket).getPublicUrl(path);
         const publicUrl =
           data?.publicUrl ||
           (supabaseUrl
@@ -2144,7 +2144,7 @@ export default function SchoolInfoPage() {
     let ignore = false;
     const load = async () => {
       setState('loading');
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabaseAuth.auth.getSession();
       const session = sessionData.session;
       if (!session) {
         router.replace('/login');
@@ -2430,7 +2430,7 @@ export default function SchoolInfoPage() {
       const curricula = education.curricula || ({} as SchoolProfile['education']['curricula']);
       const sessionSchoolId =
         typeof window !== 'undefined'
-          ? resolveSessionSchoolId((await supabase.auth.getSession()).data.session?.user)
+          ? resolveSessionSchoolId((await supabaseAuth.auth.getSession()).data.session?.user)
           : '';
       const ensuredId =
         currentProfile.school_id || schoolId || sessionSchoolId || fallbackSchoolId || 'school-unassigned';
