@@ -97,7 +97,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         document_deadlines: '',
         admission_stages_detail: { ru: '', en: '', kk: '' },
         competition_per_seat: '',
-        application_channel: '',
+        application_channel: [],
         application_link: '',
         residential_assignment: false,
         admission_first_grade: false,
@@ -105,6 +105,8 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         residence_required: false,
         competitive_selection: false,
         specialized_classes: false,
+        documents_detail: { ru: '', en: '', kk: '' },
+        parent_comment: { ru: '', en: '', kk: '' },
       },
       admission_rules: [],
       results: {
