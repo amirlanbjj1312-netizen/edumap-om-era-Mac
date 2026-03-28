@@ -13,6 +13,7 @@ type SchoolRow = {
     type?: unknown;
     city?: unknown;
     district?: unknown;
+    address?: unknown;
     license_details?: {
       number?: unknown;
     };
@@ -83,6 +84,7 @@ type MapSchool = {
   id: string;
   name: string;
   city: string;
+  address: string;
   lat: number;
   lng: number;
   kind?: 'main' | 'branch';
@@ -681,6 +683,7 @@ export default function ParentSchoolsMapPage() {
             id: schoolId || `${lat}-${lng}`,
             name: schoolName,
             city: schoolCity,
+            address: toText(row.basic_info?.address).trim(),
             lat: lat as number,
             lng: lng as number,
             kind: 'main',
@@ -711,6 +714,7 @@ export default function ParentSchoolsMapPage() {
                   ? `${schoolName} - ${index + 1}-филиал`
                   : `${schoolName} - Филиал ${index + 1}`,
             city: branchCity,
+            address: toText(location?.address).trim(),
             lat: branchLat as number,
             lng: branchLng as number,
             kind: 'branch',
@@ -793,8 +797,18 @@ export default function ParentSchoolsMapPage() {
             { icon: markerIcon }
           )
         : L.marker([school.lat, school.lng]);
+      const popupAddress = school.address || school.city || noCityText;
+      const popupAction = school.schoolId
+        ? `<a class="schools-map-popup-link" href="/parent/schools/${encodeURIComponent(
+            school.schoolId
+          )}">Открыть карточку</a>`
+        : '';
       marker.bindPopup(
-        `<strong>${escapeHtml(school.name)}</strong><br/>${escapeHtml(school.city || noCityText)}`
+        `<div class="schools-map-popup"><strong class="schools-map-popup-title">${escapeHtml(
+          school.name
+        )}</strong><div class="schools-map-popup-address">${escapeHtml(
+          popupAddress
+        )}</div>${popupAction}</div>`
       );
       marker.addTo(layer);
       if (isFocused) marker.openPopup();
