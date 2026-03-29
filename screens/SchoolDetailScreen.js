@@ -84,11 +84,23 @@ const initialReviewForm = {
   text: '',
 };
 
-const splitToList = (value) =>
-  (value || '')
+const splitToList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => splitToList(item))
+      .filter((item) => item.length);
+  }
+  if (typeof value === 'object') {
+    return Object.values(value)
+      .flatMap((item) => splitToList(item))
+      .filter((item) => item.length);
+  }
+  return String(value)
     .split(',')
     .map((item) => item.trim())
     .filter((item) => item.length);
+};
 
 const isValidRemoteImage = (value) => {
   if (!value) return false;
