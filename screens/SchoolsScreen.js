@@ -401,7 +401,7 @@ const getCityLabel = (school) => {
 };
 
 const getLogoSource = (logo) => {
-  if (!logo) return images.school2;
+  if (!logo) return images.authLogo;
   if (typeof logo === 'number') return logo;
   return { uri: logo };
 };
@@ -669,7 +669,6 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
   const cityLabel = getCityLabel(item);
   const phoneText = item.phone || (t ? t('schools.phoneMissing') : 'Phone not provided');
   const hasLogo = Boolean(item.logo);
-  const firstLetter = item.name ? item.name.charAt(0).toUpperCase() : '?';
   const ratingValue = Number(item.rating);
   const hasRating = Number.isFinite(ratingValue);
   const monthlyFee = Number(item.monthlyFee);
@@ -726,9 +725,13 @@ const SchoolCard = ({ item, onPress, t, locale }) => {
               : { resizeMode: 'cover' })}
           />
         ) : (
-          <Text className="text-bgPurple font-exoSemibold text-2xl">
-            {firstLetter}
-          </Text>
+          <ImageComponent
+            source={images.authLogo}
+            style={{ width: '82%', height: '82%' }}
+            {...(ExpoImageComponent
+              ? { contentFit: 'contain' }
+              : { resizeMode: 'contain' })}
+          />
         )}
       </View>
 
