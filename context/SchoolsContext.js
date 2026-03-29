@@ -65,6 +65,37 @@ const getLocalizedMapText = (value, locale) => {
   return '';
 };
 
+const hasContent = (value) => {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some((item) => hasContent(item));
+  if (value && typeof value === 'object') {
+    return Object.values(value).some((item) => hasContent(item));
+  }
+  return Boolean(value);
+};
+
+const hasRequiredParentFields = (profile, locale) => {
+  const safeProfile = profile || {};
+  const basicInfo = safeProfile.basic_info || {};
+  const media = safeProfile.media || {};
+  const name =
+    getLocalizedText(basicInfo.display_name, locale).trim() ||
+    getLocalizedText(basicInfo.brand_name, locale).trim() ||
+    getLocalizedText(basicInfo.short_name, locale).trim();
+  const type = String(basicInfo.type || '').trim();
+  const city = String(basicInfo.city || '').trim();
+  const district = String(basicInfo.district || '').trim();
+  const languages = Array.isArray(safeProfile.education?.languages)
+    ? safeProfile.education.languages
+    : String(safeProfile.education?.languages || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+  const hasLogo = Boolean(media.logo || media.logo_local_uri);
+
+  return Boolean(name && type && city && district && languages.length && hasLogo);
+};
+
 const toSchoolCard = (profile, locale, t) => {
   const safeProfile = profile || {};
   const basic_info = safeProfile.basic_info || {};
@@ -95,7 +126,7 @@ const toSchoolCard = (profile, locale, t) => {
     Boolean(licenseDetails?.number?.trim?.()) ||
     Boolean(licenseDetails?.issued_at?.trim?.()) ||
     Boolean(licenseDetails?.valid_until?.trim?.());
-  const hasCertificates = Boolean(safeProfile.media?.certificates?.trim());
+  const hasCertificates = hasContent(safeProfile.media?.certificates);
   const entranceExamRequired = Boolean(
     safeProfile.education?.entrance_exam?.format &&
       safeProfile.education?.entrance_exam?.format !== 'None'
@@ -259,7 +290,10 @@ export const SchoolsProvider = ({ children }) => {
   }, []);
 
   const schoolCards = useMemo(
-    () => profiles.map((profile) => toSchoolCard(profile, locale, t)),
+    () =>
+      profiles
+        .filter((profile) => hasRequiredParentFields(profile, locale))
+        .map((profile) => toSchoolCard(profile, locale, t)),
     [profiles, locale, t]
   );
 
