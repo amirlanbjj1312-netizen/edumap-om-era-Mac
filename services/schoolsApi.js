@@ -1,20 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildApiUrl } from '../config/apiConfig';
 import { supabase } from './supabaseClient';
-
-const STORAGE_KEY = 'EDUMAP_SCHOOLS_V2';
-
-const loadLocalProfiles = async () => {
-  try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.warn('[schoolsApi] failed to load local profiles', error);
-    return [];
-  }
-};
 
 const requestJson = async (path, options = {}) => {
   try {
@@ -45,22 +30,8 @@ const getAccessToken = async () => {
 };
 
 export const loadSchoolsProfiles = async () => {
-  try {
-    const payload = await requestJson('/schools');
-    const data = Array.isArray(payload?.data) ? payload.data : [];
-    if (data.length) {
-      return data;
-    }
-    const local = await loadLocalProfiles();
-    if (local.length) {
-      await Promise.all(local.map((profile) => upsertSchoolProfile(profile)));
-      return local;
-    }
-    return [];
-  } catch (error) {
-    const local = await loadLocalProfiles();
-    return local;
-  }
+  const payload = await requestJson('/schools');
+  return Array.isArray(payload?.data) ? payload.data : [];
 };
 
 export const upsertSchoolProfile = async (profile) => {
