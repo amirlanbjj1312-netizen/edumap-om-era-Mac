@@ -176,13 +176,13 @@ const SCHOOL_TYPE_I18N: Record<string, { ru: string; en: string; kk: string }> =
 };
 
 const SCHOOL_SUBTYPE_I18N: Record<string, { ru: string; en: string; kk: string }> = {
-  'General School': { ru: 'Обычная средняя школа', en: 'General school', kk: 'Жалпы орта мектеп' },
+  'General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Autonomous School': { ru: 'Автономная школа', en: 'Autonomous school', kk: 'Автономды мектеп' },
   Gymnasium: { ru: 'Гимназия', en: 'Gymnasium', kk: 'Гимназия' },
   Lyceum: { ru: 'Лицей', en: 'Lyceum', kk: 'Лицей' },
   'Specialized School': { ru: 'Специализированная школа', en: 'Specialized school', kk: 'Мамандандырылған мектеп' },
   'International School': { ru: 'Международная школа', en: 'International school', kk: 'Халықаралық мектеп' },
-  'Private General School': { ru: 'Частная общеобразовательная школа', en: 'Private general school', kk: 'Жеке жалпы білім беретін мектеп' },
+  'Private General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Innovative School': { ru: 'Инновационная школа', en: 'Innovative school', kk: 'Инновациялық мектеп' },
   'Advanced Subjects School': { ru: 'Школа с углублённым изучением предметов', en: 'Advanced subjects school', kk: 'Пәндерді тереңдетіп оқытатын мектеп' },
   'Author School': { ru: 'Авторская школа', en: 'Author school', kk: 'Авторлық мектеп' },
@@ -208,24 +208,11 @@ const localizeSchoolSubtype = (value: string, locale: 'ru' | 'en' | 'kk'): strin
   return hit ? hit[locale] : normalized;
 };
 
-const toRuTypePrefix = (typeKey: string, subtypeRu: string): string => {
-  const isPrivate = typeKey === 'Private';
-  if (subtypeRu.toLowerCase().startsWith('лицей')) return isPrivate ? 'Частный' : 'Государственный';
-  return isPrivate ? 'Частная' : 'Государственная';
-};
-
 const formatComposedSchoolType = (typeValue: unknown, subtypeValue: unknown, locale: 'ru' | 'en' | 'kk'): string => {
   const primaryType = getSchoolTypes(typeValue)[0] || '';
   const localizedType = localizeSchoolType(primaryType || toLocaleText(typeValue, locale).trim(), locale);
   const localizedSubtype = localizeSchoolSubtype(toText(subtypeValue), locale);
-  if (!localizedSubtype) return localizedType;
-
-  if (locale === 'ru') {
-    const prefix = toRuTypePrefix(primaryType, localizedSubtype);
-    const subtypeLowered = localizedSubtype.charAt(0).toLowerCase() + localizedSubtype.slice(1);
-    return `${prefix} ${subtypeLowered}`.trim();
-  }
-  return `${localizedType} ${localizedSubtype}`.trim();
+  return localizedSubtype || localizedType;
 };
 
 const formatSchoolTypes = (value: unknown, locale: 'ru' | 'en' | 'kk'): string => {

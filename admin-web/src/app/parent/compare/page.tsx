@@ -256,13 +256,13 @@ const SCHOOL_TYPE_I18N: Record<string, { ru: string; en: string; kk: string }> =
 };
 
 const SCHOOL_SUBTYPE_I18N: Record<string, { ru: string; en: string; kk: string }> = {
-  'General School': { ru: 'Обычная средняя школа', en: 'General school', kk: 'Жалпы орта мектеп' },
+  'General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Autonomous School': { ru: 'Автономная школа', en: 'Autonomous school', kk: 'Автономды мектеп' },
   Gymnasium: { ru: 'Гимназия', en: 'Gymnasium', kk: 'Гимназия' },
   Lyceum: { ru: 'Лицей', en: 'Lyceum', kk: 'Лицей' },
   'Specialized School': { ru: 'Специализированная школа', en: 'Specialized school', kk: 'Мамандандырылған мектеп' },
   'International School': { ru: 'Международная школа', en: 'International school', kk: 'Халықаралық мектеп' },
-  'Private General School': { ru: 'Частная общеобразовательная школа', en: 'Private general school', kk: 'Жеке жалпы білім беретін мектеп' },
+  'Private General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Innovative School': { ru: 'Инновационная школа', en: 'Innovative school', kk: 'Инновациялық мектеп' },
   'Advanced Subjects School': { ru: 'Школа с углублённым изучением предметов', en: 'Advanced subjects school', kk: 'Пәндерді тереңдетіп оқытатын мектеп' },
   'Author School': { ru: 'Авторская школа', en: 'Author school', kk: 'Авторлық мектеп' },
@@ -292,15 +292,7 @@ const formatComposedSchoolType = (typeValue: unknown, subtypeValue: unknown, loc
   const typeKey = getSchoolType(typeValue);
   const typeLabel = localizeSchoolType(typeKey || toLocaleText(typeValue, locale), locale);
   const subtypeLabel = localizeSchoolSubtype(toText(subtypeValue), locale);
-  if (!subtypeLabel) return typeLabel;
-  if (locale === 'ru') {
-    const prefix = subtypeLabel.toLowerCase().startsWith('лицей')
-      ? typeKey === 'Private' ? 'Частный' : 'Государственный'
-      : typeKey === 'Private' ? 'Частная' : 'Государственная';
-    const lowered = subtypeLabel.charAt(0).toLowerCase() + subtypeLabel.slice(1);
-    return `${prefix} ${lowered}`;
-  }
-  return `${typeLabel} ${subtypeLabel}`.trim();
+  return subtypeLabel || typeLabel;
 };
 
 const formatSchoolTypes = (value: unknown, locale: 'ru' | 'en' | 'kk'): string => {

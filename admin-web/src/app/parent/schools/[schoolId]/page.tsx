@@ -510,13 +510,13 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   'Speech therapist': { ru: 'Логопед', en: 'Speech therapist', kk: 'Логопед' },
   'Social worker': { ru: 'Социальный работник', en: 'Social worker', kk: 'Әлеуметтік қызметкер' },
   Nurse: { ru: 'Медсестра', en: 'Nurse', kk: 'Медбике' },
-  'General School': { ru: 'Обычная средняя школа', en: 'General school', kk: 'Жалпы орта мектеп' },
+  'General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Autonomous School': { ru: 'Автономная школа', en: 'Autonomous school', kk: 'Автономды мектеп' },
   Gymnasium: { ru: 'Гимназия', en: 'Gymnasium', kk: 'Гимназия' },
   Lyceum: { ru: 'Лицей', en: 'Lyceum', kk: 'Лицей' },
   'Specialized School': { ru: 'Специализированная школа', en: 'Specialized school', kk: 'Мамандандырылған мектеп' },
   'International School': { ru: 'Международная школа', en: 'International school', kk: 'Халықаралық мектеп' },
-  'Private General School': { ru: 'Частная общеобразовательная школа', en: 'Private general school', kk: 'Жеке жалпы білім беретін мектеп' },
+  'Private General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Innovative School': { ru: 'Инновационная школа', en: 'Innovative school', kk: 'Инновациялық мектеп' },
   'Advanced Subjects School': { ru: 'Школа с углублённым изучением предметов', en: 'Advanced subjects school', kk: 'Пәндерді тереңдетіп оқытатын мектеп' },
   'Author School': { ru: 'Авторская школа', en: 'Author school', kk: 'Авторлық мектеп' },
@@ -676,18 +676,7 @@ const formatCombinedType = (typeRaw: string, subtypeRaw: string, locale: 'ru' | 
   if (!typeKey && !subtypeRaw.trim()) return '';
   const typeLabel = localizeOption(typeKey || typeRaw, locale);
   const subtypeLabel = localizeOption(subtypeRaw, locale);
-  if (!subtypeLabel) return typeLabel;
-  if (locale === 'ru') {
-    const prefix = subtypeLabel.toLowerCase().startsWith('лицей')
-      ? typeKey === 'Private'
-        ? 'Частный'
-        : 'Государственный'
-      : typeKey === 'Private'
-        ? 'Частная'
-        : 'Государственная';
-    return `${prefix} ${subtypeLabel.charAt(0).toLowerCase()}${subtypeLabel.slice(1)}`;
-  }
-  return `${typeLabel} ${subtypeLabel}`.trim();
+  return subtypeLabel || typeLabel;
 };
 
 const formatMealsValue = (

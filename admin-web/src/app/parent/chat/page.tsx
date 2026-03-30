@@ -110,8 +110,7 @@ const schoolTypeLabel = (row: SchoolRow, locale: 'ru' | 'en' | 'kk') => {
   const key = normalizeTypeKey(raw);
   const base = key ? TYPE_LABELS[key][locale] : '';
   const subtype = toLocaleText(row.basic_info?.subtype, locale).trim() || toText(row.basic_info?.subtype).trim();
-  if (base && subtype) return `${base} ${subtype}`.trim();
-  return base || subtype || raw;
+  return subtype || base || raw;
 };
 
 const composeAnswer = (
