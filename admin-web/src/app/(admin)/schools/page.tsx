@@ -14,7 +14,7 @@ import {
   deleteSchoolAccessLogEntryFull,
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 const SELECTED_SCHOOL_STORAGE_KEY = 'EDUMAP_ADMIN_SELECTED_SCHOOL_ID';
 type SchoolAccessLogItem = {
@@ -240,6 +240,12 @@ const getPaymentHistory = (
     .filter((item: { id: string }) => Boolean(item.id));
 };
 
+const getSchoolDisplayName = (profile: any) =>
+  normalizeLocalizedText(profile?.basic_info?.display_name) ||
+  normalizeLocalizedText(profile?.basic_info?.brand_name) ||
+  normalizeLocalizedText(profile?.basic_info?.name) ||
+  normalizeText(profile?.school_id);
+
 export default function SchoolsPage() {
   const { t, locale } = useAdminLocale();
   const accessLogUi =
@@ -250,7 +256,7 @@ export default function SchoolsPage() {
           clearConfirm: 'Clear issued access log?',
           loadError: 'Log failed to load',
           empty: 'Log is empty.',
-          headers: ['Date', 'Email', 'Password', 'School ID', 'Status', 'Action'],
+          headers: ['Date', 'Email', 'Password', 'School ID', 'School name', 'Status', 'Action'],
           statusCreated: 'created',
           statusIssued: 'issued',
           statusFilled: 'completed',
@@ -267,7 +273,7 @@ export default function SchoolsPage() {
             clearConfirm: 'Берілген қолжетімділік журналын тазалау керек пе?',
             loadError: 'Журнал жүктелмеді',
             empty: 'Журнал әзірге бос.',
-            headers: ['Күні', 'Email', 'Құпиясөз', 'School ID', 'Мәртебе', 'Әрекет'],
+            headers: ['Күні', 'Email', 'Құпиясөз', 'School ID', 'Мектеп атауы', 'Мәртебе', 'Әрекет'],
             statusCreated: 'құрылды',
             statusIssued: 'берілді',
             statusFilled: 'толтырылды',
@@ -283,7 +289,7 @@ export default function SchoolsPage() {
             clearConfirm: 'Очистить журнал выданных доступов?',
             loadError: 'Журнал не загрузился',
             empty: 'Журнал пока пуст.',
-            headers: ['Дата', 'Email', 'Пароль', 'School ID', 'Статус', 'Действие'],
+            headers: ['Дата', 'Email', 'Пароль', 'School ID', 'Название школы', 'Статус', 'Действие'],
             statusCreated: 'создан',
             statusIssued: 'выдан',
             statusFilled: 'заполнен',
@@ -884,6 +890,19 @@ export default function SchoolsPage() {
       null
     );
   }, [detailsRow, items]);
+  const getLogRowSchoolName = useCallback(
+    (row: SchoolAccessLogItem) => {
+      const schoolId = normalizeText(row.schoolId);
+      const email = normalizeText(row.email).toLowerCase();
+      const profile =
+        items.find((item) => normalizeText(item?.school_id) === schoolId) ||
+        items.find((item) => normalizeText(item?.basic_info?.email).toLowerCase() === email) ||
+        items.find((item) => normalizeText(item?.admin_email).toLowerCase() === email) ||
+        null;
+      return profile ? getSchoolDisplayName(profile) : '—';
+    },
+    [items]
+  );
   const detailsChecklist = useMemo(
     () => (detailsProfile ? buildSchoolDetailChecklist(detailsProfile) : null),
     [detailsProfile]
@@ -1049,7 +1068,7 @@ export default function SchoolsPage() {
                         : detailsRow.schoolId || detailsRow.email}
                     </h3>
                     <p className="muted" style={{ margin: '6px 0 0' }}>
-                      {detailsRow.email} · {detailsRow.schoolId || 'School ID не задан'}
+                      {detailsRow.email} · {detailsRow.schoolId || 'School ID не задан'} · {getLogRowSchoolName(detailsRow)}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1157,7 +1176,7 @@ export default function SchoolsPage() {
               </p>
             ) : null}
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 940 }}>
                 <thead>
                   <tr>
                     {accessLogUi.headers.map((head) => (
@@ -1211,6 +1230,9 @@ export default function SchoolsPage() {
                       </td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
                         {row.schoolId || '—'}
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
+                        {getLogRowSchoolName(row)}
                       </td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--line)' }}>
                         {(() => {
