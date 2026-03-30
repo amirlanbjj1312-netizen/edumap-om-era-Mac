@@ -50,6 +50,8 @@ import ParentSubscriptionScreen from '../screens/ParentSubscriptionScreen';
 import SchoolClubsScreen from '../screens/SchoolClubsScreen';
 import SchoolClubDetailScreen from '../screens/SchoolClubDetailScreen';
 import ClubTeacherProfileScreen from '../screens/ClubTeacherProfileScreen';
+import SchoolAdmissionScreen from '../screens/SchoolAdmissionScreen';
+import SchoolPrideScreen from '../screens/SchoolPrideScreen';
 import { navigationRef } from './navigationRef';
 
 const Tab = createBottomTabNavigator();
@@ -196,6 +198,16 @@ export default function AppNavigation() {
           name="SchoolClubDetail"
           options={{ headerShown: false }}
           component={SchoolClubDetailScreen}
+        />
+        <Stack.Screen
+          name="SchoolAdmission"
+          options={{ headerShown: false }}
+          component={SchoolAdmissionScreen}
+        />
+        <Stack.Screen
+          name="SchoolPride"
+          options={{ headerShown: false }}
+          component={SchoolPrideScreen}
         />
         <Stack.Screen
           name="ClubTeacherProfile"

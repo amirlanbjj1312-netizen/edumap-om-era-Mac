@@ -130,21 +130,6 @@ const clampRatingValue = (value) => {
   return Math.min(5, Math.max(0, numeric));
 };
 
-const localizeAdmissionOption = (value, locale) => {
-  const normalized = String(value || '').trim().toLowerCase();
-  const labels = {
-    egov: { ru: 'eGov', en: 'eGov', kk: 'eGov' },
-    sakura: { ru: 'Sakura', en: 'Sakura', kk: 'Sakura' },
-    through_school: { ru: 'Через школу', en: 'Through school', kk: 'Мектеп арқылы' },
-    school: { ru: 'Через школу', en: 'Through school', kk: 'Мектеп арқылы' },
-    mixed: { ru: 'Смешанный вариант', en: 'Mixed option', kk: 'Аралас нұсқа' },
-    mixed_variant: { ru: 'Смешанный вариант', en: 'Mixed option', kk: 'Аралас нұсқа' },
-  };
-  const item = labels[normalized];
-  if (item) return item[locale] || item.ru;
-  return String(value || '').trim();
-};
-
 const formatReviewDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -364,8 +349,6 @@ export default function SchoolDetailScreen() {
 
   const [expanded, setExpanded] = useState({
     studying: true,
-    admission: false,
-    pride: false,
     contacts: false,
     socials: false,
     services: false,
@@ -401,7 +384,6 @@ export default function SchoolDetailScreen() {
   const [staffLanguageFilter, setStaffLanguageFilter] = useState('all');
   const [staffExamOnly, setStaffExamOnly] = useState(false);
   const [isSubmittingReview, setSubmittingReview] = useState(false);
-  const [activeSuccessStoryIndex, setActiveSuccessStoryIndex] = useState(0);
   const [programModal, setProgramModal] = useState({
     visible: false,
     label: '',
@@ -624,55 +606,6 @@ export default function SchoolDetailScreen() {
     t('schoolDetail.value.unknown');
   const displayPaymentLabel =
     displayPayment || normalizeDisplayValue(finance?.payment_system);
-  const entranceExam = education?.entrance_exam || {};
-  const admissionDetails = education?.admission_details || {};
-  const admissionChannels = dedupeList(
-    (Array.isArray(admissionDetails.application_channel)
-      ? admissionDetails.application_channel
-      : splitToList(admissionDetails.application_channel)
-    ).map((item) => localizeAdmissionOption(item, locale))
-  );
-  const admissionLink = getLocalizedText(admissionDetails.application_link, locale).trim();
-  const admissionDeadline = getLocalizedText(admissionDetails.document_deadlines, locale).trim();
-  const admissionStages = getLocalizedText(
-    admissionDetails.admission_stages_detail,
-    locale
-  ).trim();
-  const admissionDocuments = getLocalizedText(
-    admissionDetails.documents_detail,
-    locale
-  ).trim();
-  const admissionParentComment = getLocalizedText(
-    admissionDetails.parent_comment,
-    locale
-  ).trim();
-  const entranceExamRequired = Boolean(entranceExam.required);
-  const entranceExamFormat = getLocalizedText(entranceExam.format, locale).trim();
-  const entranceExamFormatOther = getLocalizedText(
-    entranceExam.format_other,
-    locale
-  ).trim();
-  const entranceExamSubjects = dedupeList(
-    splitToList(getLocalizedText(entranceExam.subjects, locale))
-  );
-  const admissionInfoExists = Boolean(
-    admissionChannels.length ||
-      admissionLink ||
-      admissionDeadline ||
-      admissionStages ||
-      admissionDocuments ||
-      admissionParentComment ||
-      entranceExamRequired ||
-      entranceExamFormat ||
-      entranceExamFormatOther ||
-      entranceExamSubjects.length
-  );
-  const successStories = Array.isArray(education?.results?.student_success_stories)
-    ? education.results.student_success_stories.filter(Boolean)
-    : [];
-  const activeSuccessStory =
-    successStories[Math.min(activeSuccessStoryIndex, Math.max(successStories.length - 1, 0))] ||
-    null;
   const mealsStatus = services.meals_status || services.meals;
   const mealsBaseLabel =
     translateLabel(t, MEAL_LABEL_KEYS, mealsStatus) ||
@@ -819,10 +752,6 @@ export default function SchoolDetailScreen() {
       setLocalReviews([]);
     }
   }, [profile]);
-
-  useEffect(() => {
-    setActiveSuccessStoryIndex(0);
-  }, [profile?.school_id]);
 
   const normalizedMapQuery = mapSearchQuery.trim().toLowerCase();
 
@@ -1355,6 +1284,49 @@ export default function SchoolDetailScreen() {
             )}
           </View>
 
+          <View style={styles.featureRow}>
+            <Pressable
+              style={styles.featureCard}
+              onPress={() =>
+                navigation.navigate('SchoolAdmission', {
+                  schoolId: currentSchoolId,
+                })
+              }
+            >
+              <View style={styles.featureIconBadge}>
+                <FontAwesome6
+                  name="file-signature"
+                  size={16}
+                  color="#1D4ED8"
+                  iconStyle="solid"
+                />
+              </View>
+              <Text style={styles.featureTitle}>
+                {t('schoolDetail.section.admission')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.featureCard}
+              onPress={() =>
+                navigation.navigate('SchoolPride', {
+                  schoolId: currentSchoolId,
+                })
+              }
+            >
+              <View style={styles.featureIconBadge}>
+                <FontAwesome6
+                  name="trophy"
+                  size={16}
+                  color="#1D4ED8"
+                  iconStyle="solid"
+                />
+              </View>
+              <Text style={styles.featureTitle}>
+                {t('schoolDetail.section.pride')}
+              </Text>
+            </Pressable>
+          </View>
+
           <ExpandableSection
             iconName="graduation-cap"
             title={t('schoolDetail.section.studying')}
@@ -1414,148 +1386,6 @@ export default function SchoolDetailScreen() {
                 </Text>
               </View>
             ) : null}
-          </ExpandableSection>
-
-          <ExpandableSection
-            iconName="file-signature"
-            title={t('schoolDetail.section.admission')}
-            isOpen={expanded.admission}
-            onToggle={() => toggle('admission')}
-          >
-            {admissionInfoExists ? (
-              <>
-                <DetailRow
-                  label={t('schoolDetail.field.applicationChannel')}
-                  value={admissionChannels.join(', ')}
-                  valueStyle={styles.detailValuePrimary}
-                />
-                <DetailRow
-                  label={t('schoolDetail.field.admissionDeadline')}
-                  value={admissionDeadline}
-                />
-                <DetailRow
-                  label={t('schoolDetail.field.admissionStages')}
-                  value={admissionStages || getLocalizedText(entranceExam.stages, locale)}
-                />
-                <DetailRow
-                  label={t('schoolDetail.field.documents')}
-                  value={admissionDocuments}
-                />
-                <DetailRow
-                  label={t('schoolDetail.field.parentComment')}
-                  value={admissionParentComment}
-                />
-                {admissionLink ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>
-                      {t('schoolDetail.field.applicationLink')}
-                    </Text>
-                    <Pressable onPress={() => openSocialLink(admissionLink)}>
-                      <Text style={styles.detailValueLink}>{admissionLink}</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-                {(entranceExamRequired || entranceExamFormat || entranceExamFormatOther) ? (
-                  <DetailRow
-                    label={t('schoolDetail.field.entranceExam')}
-                    value={
-                      entranceExamRequired
-                        ? entranceExamFormat || entranceExamFormatOther || t('schoolDetail.value.yes')
-                        : t('schoolDetail.value.no')
-                    }
-                  />
-                ) : null}
-                {entranceExamSubjects.length ? (
-                  <DetailRow
-                    label={t('schoolDetail.field.admissionSubjects')}
-                    value={entranceExamSubjects.join(', ')}
-                  />
-                ) : null}
-              </>
-            ) : (
-              <Text style={styles.reviewEmptyText}>
-                {t('schoolDetail.admission.empty')}
-              </Text>
-            )}
-          </ExpandableSection>
-
-          <ExpandableSection
-            iconName="trophy"
-            title={t('schoolDetail.section.pride')}
-            isOpen={expanded.pride}
-            onToggle={() => toggle('pride')}
-          >
-            {successStories.length ? (
-              <View style={styles.prideWrap}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.prideChipRow}>
-                    {successStories.map((story, index) => {
-                      const studentName =
-                        getLocalizedText(story.student_name, locale) ||
-                        `${t('schoolDetail.pride.graduate')} ${index + 1}`;
-                      const isActive = index === activeSuccessStoryIndex;
-                      return (
-                        <Pressable
-                          key={`${studentName}-${index}`}
-                          style={[
-                            styles.prideChip,
-                            isActive && styles.prideChipActive,
-                          ]}
-                          onPress={() => setActiveSuccessStoryIndex(index)}
-                        >
-                          <Text
-                            style={[
-                              styles.prideChipText,
-                              isActive && styles.prideChipTextActive,
-                            ]}
-                          >
-                            {studentName}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-                {activeSuccessStory ? (
-                  <View style={styles.prideCard}>
-                    <Text style={styles.prideName}>
-                      {getLocalizedText(activeSuccessStory.student_name, locale) ||
-                        t('schoolDetail.pride.graduate')}
-                    </Text>
-                    <DetailRow
-                      label={t('schoolDetail.field.admittedTo')}
-                      value={getLocalizedText(activeSuccessStory.admitted_to, locale)}
-                    />
-                    <DetailRow
-                      label={t('schoolDetail.field.schoolGpa')}
-                      value={getLocalizedText(activeSuccessStory.school_average_score, locale)}
-                    />
-                    <DetailRow
-                      label={t('schoolDetail.field.scores')}
-                      value={[
-                        activeSuccessStory.ent_score ? `ENT: ${activeSuccessStory.ent_score}` : '',
-                        activeSuccessStory.ielts_score ? `IELTS: ${activeSuccessStory.ielts_score}` : '',
-                        activeSuccessStory.sat_score ? `SAT: ${activeSuccessStory.sat_score}` : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' • ')}
-                    />
-                    <DetailRow
-                      label={t('schoolDetail.field.achievements')}
-                      value={getLocalizedText(activeSuccessStory.achievements, locale)}
-                    />
-                    <DetailRow
-                      label={t('schoolDetail.field.admissionDeadline')}
-                      value={getLocalizedText(activeSuccessStory.application_deadline, locale)}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={styles.reviewEmptyText}>
-                {t('schoolDetail.pride.empty')}
-              </Text>
-            )}
           </ExpandableSection>
 
           <ExpandableSection
@@ -3037,44 +2867,35 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     color: '#111827',
   },
-  prideWrap: {
-    gap: 10,
-  },
-  prideChipRow: {
+  featureRow: {
     flexDirection: 'row',
     gap: 8,
-    paddingBottom: 2,
   },
-  prideChip: {
-    borderRadius: 999,
+  featureCard: {
+    flex: 1,
+    minHeight: 112,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(79,70,229,0.2)',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    justifyContent: 'space-between',
+    shadowColor: '#101828',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    elevation: 2,
   },
-  prideChipActive: {
+  featureIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: '#EEF2FF',
-    borderColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  prideChipText: {
-    fontFamily: 'exo',
-    fontSize: 12,
-    color: '#334155',
-  },
-  prideChipTextActive: {
-    fontFamily: 'exoSemibold',
-    color: '#3730A3',
-  },
-  prideCard: {
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.22)',
-    padding: 12,
-    gap: 8,
-  },
-  prideName: {
+  featureTitle: {
     fontFamily: 'exoSemibold',
     fontSize: 16,
     color: '#0F172A',
