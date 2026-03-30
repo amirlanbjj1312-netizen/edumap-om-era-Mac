@@ -124,24 +124,77 @@ a {
 .rich-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 8px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid #d8e2f3;
+  background: linear-gradient(180deg, #2d3340, #252b36);
 }
 
 .rich-btn {
-  min-width: 34px;
-  height: 30px;
+  min-width: 40px;
+  min-height: 36px;
+  padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid #d8e2f3;
-  background: #f8fbff;
-  color: #1f2a44;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #343c4a;
+  color: #f4f7ff;
   font-weight: 700;
   cursor: pointer;
 }
 
 .rich-btn:hover {
-  background: #eef4ff;
-  border-color: #c8d8f3;
+  background: #414b5d;
+}
+
+.rich-select {
+  min-width: 150px;
+  max-width: 220px;
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: #343c4a;
+  color: #f4f7ff;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.rich-select-size {
+  min-width: 80px;
+}
+
+.rich-italic {
+  font-style: italic;
+}
+
+.rich-underline {
+  text-decoration: underline;
+}
+
+.rich-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #343c4a;
+  color: #f4f7ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rich-color input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
 }
 
 .input-wrap {

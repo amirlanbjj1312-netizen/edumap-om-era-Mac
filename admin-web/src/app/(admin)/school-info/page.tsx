@@ -1163,26 +1163,11 @@ const Input = ({ label, value, onChange, placeholder, type = 'text', ...inputPro
   );
 };
 
-const TextArea = ({ label, value, onChange, placeholder, rows = 3 }: any) => {
-  const locale = useContext(LocaleContext);
-  return (
-    <label className="field">
-      <span>{translateLabel(label, locale)}</span>
-    <textarea
-      value={value}
-      placeholder={placeholder}
-      rows={rows}
-      onChange={(event) => onChange(event.target.value)}
-    />
-    </label>
-  );
-};
-
 const applyTextFormat = (
   value: string,
   selectionStart: number,
   selectionEnd: number,
-  mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash'
+  mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash' | 'numbered' | 'h1' | 'h2'
 ) => {
   const text = String(value || '');
   const start = Math.max(0, selectionStart || 0);
@@ -1203,6 +1188,14 @@ const applyTextFormat = (
     const wrapped = `__${selected || 'текст'}__`;
     return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 2, nextEnd: start + wrapped.length - 2 };
   }
+  if (mode === 'h1') {
+    const wrapped = `# ${selected || 'Заголовок'}`;
+    return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 2, nextEnd: start + wrapped.length };
+  }
+  if (mode === 'h2') {
+    const wrapped = `## ${selected || 'Подзаголовок'}`;
+    return { nextValue: `${before}${wrapped}${after}`, nextStart: start + 3, nextEnd: start + wrapped.length };
+  }
 
   const lineStart = text.lastIndexOf('\n', start - 1) + 1;
   const lineEndRaw = text.indexOf('\n', end);
@@ -1210,9 +1203,9 @@ const applyTextFormat = (
   const lineChunk = text.slice(lineStart, lineEnd);
   const prefixed = lineChunk
     .split('\n')
-    .map((line) => {
+    .map((line, index) => {
       if (!line.trim()) return line;
-      const prefix = mode === 'bullet' ? '• ' : '- ';
+      const prefix = mode === 'bullet' ? '• ' : mode === 'numbered' ? `${index + 1}. ` : '- ';
       if (line.startsWith(prefix)) return line;
       return `${prefix}${line}`;
     })
@@ -1221,16 +1214,32 @@ const applyTextFormat = (
   return { nextValue, nextStart: start, nextEnd: end + 2 };
 };
 
-const RichTextArea = ({ label, value, onChange, placeholder, rows = 4 }: any) => {
+const insertSnippet = (
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  beforeSnippet: string,
+  afterSnippet = ''
+) => {
+  const text = String(value || '');
+  const start = Math.max(0, selectionStart || 0);
+  const end = Math.max(start, selectionEnd || 0);
+  const selected = text.slice(start, end);
+  const fallback = selected || '';
+  const nextValue = `${text.slice(0, start)}${beforeSnippet}${fallback}${afterSnippet}${text.slice(end)}`;
+  const cursor = start + beforeSnippet.length + fallback.length;
+  return { nextValue, nextStart: cursor, nextEnd: cursor };
+};
+
+const FormattedTextArea = ({ label, value, onChange, placeholder, rows = 4 }: any) => {
   const locale = useContext(LocaleContext);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [fontFamily, setFontFamily] = useState('Times New Roman');
+  const [fontSize, setFontSize] = useState('16');
+  const [textColor, setTextColor] = useState('#1f2a44');
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right' | 'justify'>('left');
 
-  const apply = (mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash') => {
-    const el = textareaRef.current;
-    const start = el?.selectionStart || 0;
-    const end = el?.selectionEnd || 0;
-    const { nextValue, nextStart, nextEnd } = applyTextFormat(String(value || ''), start, end, mode);
-    onChange(nextValue);
+  const focusSelection = (nextStart: number, nextEnd: number) => {
     requestAnimationFrame(() => {
       if (!textareaRef.current) return;
       textareaRef.current.focus();
@@ -1238,26 +1247,93 @@ const RichTextArea = ({ label, value, onChange, placeholder, rows = 4 }: any) =>
     });
   };
 
+  const apply = (mode: 'bold' | 'italic' | 'underline' | 'bullet' | 'dash' | 'numbered' | 'h1' | 'h2') => {
+    const el = textareaRef.current;
+    const start = el?.selectionStart || 0;
+    const end = el?.selectionEnd || 0;
+    const { nextValue, nextStart, nextEnd } = applyTextFormat(String(value || ''), start, end, mode);
+    onChange(nextValue);
+    focusSelection(nextStart, nextEnd);
+  };
+
+  const applySnippet = (beforeSnippet: string, afterSnippet = '') => {
+    const el = textareaRef.current;
+    const start = el?.selectionStart || 0;
+    const end = el?.selectionEnd || 0;
+    const { nextValue, nextStart, nextEnd } = insertSnippet(String(value || ''), start, end, beforeSnippet, afterSnippet);
+    onChange(nextValue);
+    focusSelection(nextStart, nextEnd);
+  };
+
   return (
     <label className="field">
       <span>{translateLabel(label, locale)}</span>
       <div className="rich-toolbar">
-        <button type="button" className="rich-btn" onClick={() => apply('bold')}>Ж</button>
-        <button type="button" className="rich-btn" onClick={() => apply('italic')}>К</button>
-        <button type="button" className="rich-btn" onClick={() => apply('underline')}>Ч</button>
-        <button type="button" className="rich-btn" onClick={() => apply('bullet')}>•</button>
-        <button type="button" className="rich-btn" onClick={() => apply('dash')}>—</button>
+        <select className="rich-select" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)}>
+          {['Times New Roman', 'Arial', 'Georgia', 'Verdana', 'Tahoma'].map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+        <select className="rich-select rich-select-size" value={fontSize} onChange={(event) => setFontSize(event.target.value)}>
+          {['12', '14', '16', '18', '20', '24'].map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+        <button type="button" className="rich-btn" onClick={() => apply('bold')}>B</button>
+        <button type="button" className="rich-btn rich-italic" onClick={() => apply('italic')}>I</button>
+        <button type="button" className="rich-btn rich-underline" onClick={() => apply('underline')}>U</button>
+        <button type="button" className="rich-btn" onClick={() => apply('h1')}>H1</button>
+        <button type="button" className="rich-btn" onClick={() => apply('h2')}>H2</button>
+        <button type="button" className="rich-btn" onClick={() => apply('bullet')}>• Список</button>
+        <button type="button" className="rich-btn" onClick={() => apply('numbered')}>1. Список</button>
+        <button type="button" className="rich-btn" onClick={() => applySnippet('https://')}>Ссылка</button>
+        <button type="button" className="rich-btn" onClick={() => applySnippet('\nФото: https://\n')}>Фото</button>
+        <button type="button" className="rich-btn" onClick={() => applySnippet('\nВидео: https://\n')}>Видео</button>
+        <label className="rich-color">
+          <span>Цвет</span>
+          <input type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} />
+        </label>
+        <button type="button" className="rich-btn" onClick={() => setTextAlign('left')}>Лево</button>
+        <button type="button" className="rich-btn" onClick={() => setTextAlign('center')}>Центр</button>
+        <button type="button" className="rich-btn" onClick={() => setTextAlign('right')}>Право</button>
+        <button type="button" className="rich-btn" onClick={() => setTextAlign('justify')}>Ширина</button>
       </div>
       <textarea
         ref={textareaRef}
         value={value}
         placeholder={placeholder}
         rows={rows}
+        style={{
+          fontFamily,
+          fontSize: `${fontSize}px`,
+          color: textColor,
+          textAlign,
+        }}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
   );
 };
+
+const TextArea = ({ label, value, onChange, placeholder, rows = 3 }: any) => (
+  <FormattedTextArea
+    label={label}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    rows={rows}
+  />
+);
+
+const RichTextArea = ({ label, value, onChange, placeholder, rows = 4 }: any) => (
+  <FormattedTextArea
+    label={label}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    rows={rows}
+  />
+);
 
 const Toggle = ({ label, checked, onChange }: any) => {
   const locale = useContext(LocaleContext);
