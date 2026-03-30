@@ -4045,14 +4045,6 @@ export default function SchoolInfoPage() {
                             updateAdmissionRuleLocalizedField(index, 'requirements', value)
                           }
                         />
-                        <TextArea
-                          label="Что нужно предоставить"
-                          rows={3}
-                          value={String(rule?.documents?.[contentLocale] || '')}
-                          onChange={(value: string) =>
-                            updateAdmissionRuleLocalizedField(index, 'documents', value)
-                          }
-                        />
                       </FieldRow>
                       <FieldRow>
                         <TextArea

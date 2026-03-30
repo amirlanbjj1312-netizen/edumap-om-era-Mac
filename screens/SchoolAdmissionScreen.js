@@ -284,7 +284,6 @@ export default function SchoolAdmissionScreen() {
                 localizeStructuredOption(rule.format, locale);
               const steps = getLocalizedText(rule.stages, locale).trim();
               const requirements = getLocalizedText(rule.requirements, locale).trim();
-              const documents = getLocalizedText(rule.documents, locale).trim();
               const evaluation = getLocalizedText(rule.evaluation, locale).trim();
               const note = getLocalizedText(rule.comment, locale).trim();
 
@@ -310,10 +309,6 @@ export default function SchoolAdmissionScreen() {
                   <TagGroup
                     label={locale === 'en' ? 'Documents' : locale === 'kk' ? 'Құжаттар' : 'Документы'}
                     items={documentTypes}
-                  />
-                  <DetailSection
-                    label={locale === 'en' ? 'What to submit' : locale === 'kk' ? 'Не тапсыру керек' : 'Что нужно предоставить'}
-                    value={documents}
                   />
                   <DetailSection
                     label={locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий'}

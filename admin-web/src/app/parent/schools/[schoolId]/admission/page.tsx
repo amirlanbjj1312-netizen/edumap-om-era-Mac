@@ -166,7 +166,7 @@ export default function ParentSchoolAdmissionPage() {
     ruleTitle: locale === 'en' ? 'Admission scenarios' : locale === 'kk' ? 'Қабылдау сценарийлері' : 'Сценарии поступления',
     steps: locale === 'en' ? 'What to complete' : locale === 'kk' ? 'Не өту керек' : 'Что нужно пройти',
     requirements: locale === 'en' ? 'What is assessed' : locale === 'kk' ? 'Не бағаланады' : 'Что оценивают',
-    documents: locale === 'en' ? 'What to submit' : locale === 'kk' ? 'Не тапсыру керек' : 'Что нужно предоставить',
+    documents: locale === 'en' ? 'Documents' : locale === 'kk' ? 'Құжаттар' : 'Документы',
     note: locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
     selectionTypes: locale === 'en' ? 'Selection types' : locale === 'kk' ? 'Іріктеу түрлері' : 'Типы отбора',
   };
@@ -262,7 +262,6 @@ export default function ParentSchoolAdmissionPage() {
               {admissionRules.map((rule, index) => {
                 const steps = pickLocalizedText(rule.stages, currentLocale);
                 const requirements = pickLocalizedText(rule.requirements, currentLocale);
-                const documents = pickLocalizedText(rule.documents, currentLocale);
                 const note = pickLocalizedText(rule.comment, currentLocale);
                 const assessmentOther = pickLocalizedText(rule.assessment_other, currentLocale);
                 const documentOther = pickLocalizedText(rule.documents_other, currentLocale);
@@ -313,12 +312,6 @@ export default function ParentSchoolAdmissionPage() {
                       <div className="school-admission-rule-section">
                         <p>{ui.requirements}</p>
                         <div>{requirements}</div>
-                      </div>
-                    ) : null}
-                    {documents ? (
-                      <div className="school-admission-rule-section">
-                        <p>{ui.documents}</p>
-                        <div>{documents}</div>
                       </div>
                     ) : null}
                     {documentTypes.length ? (
