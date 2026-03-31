@@ -1892,17 +1892,31 @@ export default function SchoolInfoPage() {
 
   const getPhoneEntries = () => {
     const items = getDeep(profile, 'basic_info.phones', []);
-    if (!Array.isArray(items)) return [];
-    return items.map((item: any, index: number) => ({
-      id: String(item?.id || `phone-${index}`),
-      label: String(item?.label || ''),
-      number: String(item?.number || ''),
-    }));
+    if (Array.isArray(items) && items.length) {
+      return items.map((item: any, index: number) => ({
+        id: String(item?.id || `phone-${index}`),
+        label: String(item?.label || ''),
+        number: String(item?.number || ''),
+      }));
+    }
+    const legacyPhone = String(getDeep(profile, 'basic_info.phone', '') || '');
+    if (legacyPhone.trim()) {
+      return [
+        {
+          ...createPhoneEntry(),
+          id: 'legacy-phone',
+          label: '',
+          number: legacyPhone,
+        },
+      ];
+    }
+    return [];
   };
 
   const setPhoneEntries = (items: Array<any>, shouldSave = false) => {
     if (!profile) return;
-    const nextProfile = setDeep(profile, 'basic_info.phones', items);
+    let nextProfile = setDeep(profile, 'basic_info.phones', items);
+    nextProfile = setDeep(nextProfile, 'basic_info.phone', String(items[0]?.number || ''));
     setProfile(nextProfile);
     if (shouldSave) save(nextProfile);
   };
@@ -3448,13 +3462,6 @@ export default function SchoolInfoPage() {
           {activeTab === 'contacts' && (
             <Section title="Контакты">
               <FieldRow>
-                <Input
-                  label="Основной телефон"
-                  value={getDeep(profile, 'basic_info.phone')}
-                  type="tel"
-                  placeholder="+7 (___) ___-__-__"
-                  onChange={(value: string) => updateField('basic_info.phone', formatKzPhone(value))}
-                />
                 <Input
                   label="WhatsApp"
                   value={getDeep(profile, 'basic_info.whatsapp_phone')}
