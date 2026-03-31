@@ -1542,6 +1542,18 @@ export default function ParentSchoolDetailsPage() {
   const phoneDigits = phone.replaceAll(/[^\d]/g, '');
   const whatsappValue = formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone']));
   const whatsappDigits = whatsappValue.replaceAll(/[^\d]/g, '');
+  const extraPhonesSource = getIn(school, 'basic_info.phones');
+  const extraPhoneItems = (Array.isArray(extraPhonesSource) ? (extraPhonesSource as any[]) : [])
+    .map((item: any) => {
+      const value = formatKzPhone(toText(item?.number));
+      const digits = value.replaceAll(/[^\d]/g, '');
+      return {
+        label: toText(item?.label) || (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
+        value,
+        href: isMobileViewport && digits ? `tel:${digits}` : undefined,
+      };
+    })
+    .filter((item: { value: string }) => item.value);
   const contactItems: ContactItem[] = [
     {
       label: locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон',
@@ -1559,6 +1571,7 @@ export default function ParentSchoolDetailsPage() {
       value: pickFirstText(school, ['basic_info.website']),
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
+    ...extraPhoneItems,
   ].filter((item) => item.value);
   const visibleAdditionalAddresses = additionalAddresses.slice(0, 1);
   const totalAddressCount = (addressLabel ? 1 : 0) + visibleAdditionalAddresses.length;

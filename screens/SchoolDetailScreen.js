@@ -1399,6 +1399,18 @@ export default function SchoolDetailScreen() {
               value={basic_info.phone}
               labelColor="#2563EB"
             />
+            {Array.isArray(basic_info.phones)
+              ? basic_info.phones
+                  .filter((item) => item?.number)
+                  .map((item, index) => (
+                    <DetailRow
+                      key={item?.id || `extra-phone-${index}`}
+                      label={item?.label || t('schoolDetail.field.phone')}
+                      value={item?.number}
+                      labelColor="#2563EB"
+                    />
+                  ))
+              : null}
             {schoolWhatsApp ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>

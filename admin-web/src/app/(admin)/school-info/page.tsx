@@ -1512,7 +1512,8 @@ export default function SchoolInfoPage() {
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   >('basic');
   const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
-  const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | 'deputy_principal' | null>(null);
+  const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | null>(null);
+  const [expandedDeputyDirectorIndex, setExpandedDeputyDirectorIndex] = useState<number | null>(null);
   const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
   const [expandedSuccessStoryIndex, setExpandedSuccessStoryIndex] = useState<number | null>(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -1688,6 +1689,18 @@ export default function SchoolInfoPage() {
   const createLeadershipMember = (role: 'principal' | 'deputy_principal') => ({
     full_name: '',
     position: role === 'principal' ? 'Директор' : 'Зам. директора',
+    photo_url: '',
+    bio: { ru: '', en: '', kk: '' },
+  });
+  const createPhoneEntry = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label: '',
+    number: '',
+  });
+  const createDeputyDirectorEntry = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    full_name: '',
+    position: 'Зам. директора',
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
@@ -1873,16 +1886,120 @@ export default function SchoolInfoPage() {
   };
 
   const leadershipMembers = useMemo(
-    () => [
-      { key: 'principal' as const, title: 'Директор', member: getLeadershipMember('principal') },
-      {
-        key: 'deputy_principal' as const,
-        title: 'Зам. директора',
-        member: getLeadershipMember('deputy_principal'),
-      },
-    ],
+    () => [{ key: 'principal' as const, title: 'Директор', member: getLeadershipMember('principal') }],
     [profile]
   );
+
+  const getPhoneEntries = () => {
+    const items = getDeep(profile, 'basic_info.phones', []);
+    if (!Array.isArray(items)) return [];
+    return items.map((item: any, index: number) => ({
+      id: String(item?.id || `phone-${index}`),
+      label: String(item?.label || ''),
+      number: String(item?.number || ''),
+    }));
+  };
+
+  const setPhoneEntries = (items: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    const nextProfile = setDeep(profile, 'basic_info.phones', items);
+    setProfile(nextProfile);
+    if (shouldSave) save(nextProfile);
+  };
+
+  const updatePhoneEntry = (index: number, patch: Record<string, unknown>, shouldSave = false) => {
+    const items = getPhoneEntries();
+    if (!items[index]) return;
+    setPhoneEntries(
+      items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              ...patch,
+              number:
+                patch.number !== undefined ? formatKzPhone(String(patch.number || '')) : item.number,
+            }
+          : item
+      ),
+      shouldSave
+    );
+  };
+
+  const removePhoneEntry = (index: number) => {
+    const items = getPhoneEntries();
+    setPhoneEntries(items.filter((_item, itemIndex) => itemIndex !== index), true);
+  };
+
+  const phoneEntries = useMemo(() => getPhoneEntries(), [profile]);
+
+  const getDeputyDirectorMembers = () => {
+    const items = getDeep(profile, 'basic_info.team.deputy_directors', []);
+    if (Array.isArray(items) && items.length) {
+      return items.map((item: any, index: number) => ({
+        ...createDeputyDirectorEntry(),
+        ...(item && typeof item === 'object' ? item : {}),
+        id: String(item?.id || `deputy-${index}`),
+        full_name: String(item?.full_name || ''),
+        position: String(item?.position || 'Зам. директора'),
+        photo_url: String(item?.photo_url || ''),
+        bio: {
+          ru: String(item?.bio?.ru || ''),
+          en: String(item?.bio?.en || ''),
+          kk: String(item?.bio?.kk || ''),
+        },
+      }));
+    }
+
+    const legacyMember = getLeadershipMember('deputy_principal');
+    if (
+      String(legacyMember?.full_name || '').trim() ||
+      String(legacyMember?.photo_url || '').trim() ||
+      String(legacyMember?.bio?.ru || '').trim() ||
+      String(legacyMember?.bio?.en || '').trim() ||
+      String(legacyMember?.bio?.kk || '').trim()
+    ) {
+      return [{ ...createDeputyDirectorEntry(), id: 'legacy-deputy', ...legacyMember }];
+    }
+
+    return [];
+  };
+
+  const setDeputyDirectorMembers = (items: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    let nextProfile = setDeep(profile, 'basic_info.team.deputy_directors', items);
+    nextProfile = setDeep(nextProfile, 'basic_info.team.deputy_principal', '');
+    nextProfile = setDeep(nextProfile, 'basic_info.team.leadership.deputy_principal', createLeadershipMember('deputy_principal'));
+    setProfile(nextProfile);
+    if (shouldSave) save(nextProfile);
+  };
+
+  const updateDeputyDirectorMember = (
+    index: number,
+    patch: Record<string, unknown>,
+    shouldSave = false
+  ) => {
+    const items = getDeputyDirectorMembers();
+    if (!items[index]) return;
+    setDeputyDirectorMembers(
+      items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+      shouldSave
+    );
+  };
+
+  const removeDeputyDirectorMember = (index: number) => {
+    const items = getDeputyDirectorMembers();
+    setDeputyDirectorMembers(items.filter((_item, itemIndex) => itemIndex !== index), true);
+  };
+
+  const deputyDirectorMembers = useMemo(() => getDeputyDirectorMembers(), [profile]);
+  useEffect(() => {
+    setExpandedDeputyDirectorIndex((prev) => {
+      if (!deputyDirectorMembers.length) return null;
+      if (prev == null) return null;
+      if (prev >= deputyDirectorMembers.length) return deputyDirectorMembers.length - 1;
+      return prev;
+    });
+  }, [deputyDirectorMembers.length]);
 
   const getClubsCatalog = () => {
     const legacySource = getDeep(profile, 'services.clubs_catalog', []);
@@ -3332,7 +3449,7 @@ export default function SchoolInfoPage() {
             <Section title="Контакты">
               <FieldRow>
                 <Input
-                  label="Телефон"
+                  label="Основной телефон"
                   value={getDeep(profile, 'basic_info.phone')}
                   type="tel"
                   placeholder="+7 (___) ___-__-__"
@@ -3360,6 +3477,47 @@ export default function SchoolInfoPage() {
                   onChange={(value: string) => updateField('basic_info.website', value)}
                 />
               </FieldRow>
+              <div className="teacher-actions">
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => setPhoneEntries([...phoneEntries, createPhoneEntry()])}
+                >
+                  {t('Добавить телефон')}
+                </button>
+              </div>
+              {phoneEntries.length ? (
+                <div className="teacher-list">
+                  {phoneEntries.map((phone: any, index: number) => (
+                    <div key={phone?.id || `phone-${index}`} className="teacher-card">
+                      <div className="teacher-card-head">
+                        <h3>{t('Дополнительный телефон')} #{index + 1}</h3>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => removePhoneEntry(index)}
+                        >
+                          {t('Удалить')}
+                        </button>
+                      </div>
+                      <FieldRow>
+                        <Input
+                          label="Подпись"
+                          value={phone?.label || ''}
+                          onChange={(value: string) => updatePhoneEntry(index, { label: value })}
+                        />
+                        <Input
+                          label="Телефон"
+                          type="tel"
+                          placeholder="+7 (___) ___-__-__"
+                          value={phone?.number || ''}
+                          onChange={(value: string) => updatePhoneEntry(index, { number: value })}
+                        />
+                      </FieldRow>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </Section>
           )}
 
@@ -4333,6 +4491,147 @@ export default function SchoolInfoPage() {
               );
             })}
           </div>
+          <div className="teacher-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                const nextItems = [...deputyDirectorMembers, createDeputyDirectorEntry()];
+                setDeputyDirectorMembers(nextItems);
+                setExpandedDeputyDirectorIndex(nextItems.length - 1);
+              }}
+            >
+              {t('Добавить завуча')}
+            </button>
+          </div>
+          {deputyDirectorMembers.length ? (
+            <div className="teacher-list">
+              {deputyDirectorMembers.map((member: any, index: number) => {
+                const isExpanded = expandedDeputyDirectorIndex === index;
+                const summaryParts = [
+                  String(member?.full_name || '').trim(),
+                  translateOption(String(member?.position || ''), contentLocale).trim(),
+                  String(member?.bio?.[contentLocale] || '').trim(),
+                ].filter(Boolean);
+                return (
+                  <div key={member?.id || `deputy-${index}`} className="teacher-card">
+                    <div className="teacher-card-head">
+                      <h3>
+                        {t('Завуч')} #{index + 1}
+                      </h3>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() =>
+                            setExpandedDeputyDirectorIndex((prev) =>
+                              prev === index ? null : index
+                            )
+                          }
+                        >
+                          {isExpanded ? t('Свернуть') : t('Развернуть')}
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => removeDeputyDirectorMember(index)}
+                        >
+                          {t('Удалить')}
+                        </button>
+                      </div>
+                    </div>
+                    {!isExpanded ? (
+                      <p className="muted" style={{ marginTop: 8 }}>
+                        {summaryParts.join(' • ') || t('Не заполнено')}
+                      </p>
+                    ) : null}
+                    {isExpanded ? (
+                      <>
+                        <FieldRow>
+                          <Input
+                            label="ФИО"
+                            value={member?.full_name || ''}
+                            onChange={(value: string) =>
+                              updateDeputyDirectorMember(index, { full_name: value })
+                            }
+                          />
+                          <Input
+                            label="Должность"
+                            value={member?.position || ''}
+                            onChange={(value: string) =>
+                              updateDeputyDirectorMember(index, { position: value })
+                            }
+                          />
+                        </FieldRow>
+                        <FieldRow>
+                          <label className="field">
+                            <span>{t('Фото завуча (файл)')}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (event) => {
+                                const input = event.currentTarget;
+                                const file = input.files?.[0];
+                                if (!file) return;
+                                try {
+                                  setMediaMessage('');
+                                  const preparedFiles = await prepareImageFiles([file], {
+                                    title: t('Фото завуча (файл)'),
+                                    aspect: 1,
+                                  });
+                                  if (!preparedFiles?.length) return;
+                                  const urls = await uploadMediaFiles(preparedFiles, 'leadership');
+                                  if (urls[0]) {
+                                    updateDeputyDirectorMember(index, { photo_url: urls[0] }, true);
+                                  }
+                                } catch (error: any) {
+                                  setMediaMessage(
+                                    error?.message ||
+                                      'Не удалось загрузить фото завуча. Проверьте bucket в Supabase.'
+                                  );
+                                } finally {
+                                  input.value = '';
+                                }
+                              }}
+                            />
+                            {member?.photo_url ? (
+                              <div className="teacher-photo-preview">
+                                <img src={member.photo_url} alt={member.full_name || `Завуч ${index + 1}`} />
+                                <button
+                                  type="button"
+                                  className="button secondary"
+                                  onClick={() =>
+                                    updateDeputyDirectorMember(index, { photo_url: '' }, true)
+                                  }
+                                >
+                                  {t('Удалить фото')}
+                                </button>
+                              </div>
+                            ) : null}
+                          </label>
+                        </FieldRow>
+                        <FieldRow>
+                          <TextArea
+                            label="Короткое описание"
+                            rows={3}
+                            value={member?.bio?.[contentLocale] || ''}
+                            onChange={(value: string) =>
+                              updateDeputyDirectorMember(index, {
+                                bio: {
+                                  ...(member?.bio || { ru: '', en: '', kk: '' }),
+                                  [contentLocale]: value,
+                                },
+                              })
+                            }
+                          />
+                        </FieldRow>
+                      </>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </Section>
         <Section title="Наш преподавательский состав">
           <div className="teacher-actions">
