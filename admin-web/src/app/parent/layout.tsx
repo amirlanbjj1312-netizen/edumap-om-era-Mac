@@ -21,6 +21,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [guest, setGuest] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [footerSettings, setFooterSettings] = useState<any>(null);
   const { t, locale } = useParentLocale();
   const isMapFullscreen = pathname === '/parent/schools/map' || pathname.startsWith('/parent/schools/map/');
@@ -156,6 +157,10 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
     router.replace('/login');
   };
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   if (!ready) {
     return (
       <div className="page">
@@ -196,6 +201,41 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                 </button>
               )}
             </nav>
+            <div className="topbar-mobile-actions">
+              {guest ? (
+                <Link href="/login" className="topnav-logout">
+                  {t('sign_in')}
+                </Link>
+              ) : (
+                <button type="button" className="topnav-logout" onClick={handleSignOut}>
+                  {t('logout')}
+                </button>
+              )}
+              <button
+                type="button"
+                className={`topbar-menu-toggle${mobileMenuOpen ? ' active' : ''}`}
+                aria-label="Открыть меню"
+                aria-expanded={mobileMenuOpen}
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+            {mobileMenuOpen ? (
+              <div className="topbar-mobile-menu">
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'active' : ''}
+                  >
+                    {t(item.labelKey)}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </header>
         ) : null}
         <main className="parent-layout-main">{children}</main>

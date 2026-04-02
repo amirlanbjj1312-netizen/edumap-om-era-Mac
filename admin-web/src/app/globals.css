@@ -550,6 +550,51 @@ a {
   background: #dfe6ff;
 }
 
+.topbar-mobile-actions,
+.topbar-mobile-menu,
+.topbar-menu-toggle {
+  display: none;
+}
+
+.topbar-menu-toggle {
+  appearance: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #d2dcf1;
+  background: #f3f6ff;
+  padding: 0;
+  cursor: pointer;
+}
+
+.topbar-menu-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 4px auto;
+  border-radius: 999px;
+  background: #41537a;
+}
+
+.topbar-mobile-menu {
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(191, 205, 234, 0.95);
+  display: grid;
+  gap: 6px;
+}
+
+.topbar-mobile-menu a {
+  padding: 10px 4px;
+  color: #5f6f90;
+  font-weight: 700;
+}
+
+.topbar-mobile-menu a.active {
+  color: #4154f5;
+}
+
 .app-footer {
   margin-top: 22px;
   border-radius: 0;
@@ -5314,16 +5359,26 @@ a {
     font-size: 24px;
   }
 
+  .page {
+    padding: 18px 10px 72px;
+    gap: 12px;
+  }
+
   .container {
-    padding: 0 16px;
+    padding: 0 10px;
+  }
+
+  .card {
+    padding: 18px 14px;
+    border-radius: 20px;
   }
 
   .topbar {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     overflow: hidden;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .topbar-brand-wrap {
@@ -5346,23 +5401,25 @@ a {
   }
 
   .topnav {
-    width: auto;
-    flex: 1 1 auto;
-    justify-content: flex-start;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .topnav::-webkit-scrollbar {
     display: none;
   }
 
-  .topnav a,
-  .topnav-logout {
-    padding: 8px 14px;
+  .topbar-mobile-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .topbar-mobile-actions .topnav-logout {
+    padding: 8px 12px;
     border-radius: 12px;
-    font-size: 15px;
+    font-size: 14px;
+  }
+
+  .topbar-menu-toggle {
+    display: inline-block;
   }
 
   .parent-news-tabs {
@@ -5449,8 +5506,8 @@ a {
   }
 
   .market-hero {
-    padding: 18px 14px 16px;
-    margin-bottom: 12px;
+    padding: 14px 10px 12px;
+    margin-bottom: 10px;
   }
 
   .market-title {
@@ -5522,6 +5579,12 @@ a {
   .schools-mobile-action-filter-inline,
   .schools-mobile-action-map {
     order: 1;
+    min-height: 52px;
+    padding: 0 8px;
+    font-size: 12px;
+    gap: 4px;
+    letter-spacing: -0.01em;
+    font-weight: 900;
   }
 
   .schools-mobile-action-filter-inline {

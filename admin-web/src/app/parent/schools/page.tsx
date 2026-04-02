@@ -1406,7 +1406,14 @@ export default function ParentSchoolsPage() {
           aria-expanded={sortModalOpen}
           aria-haspopup="menu"
         >
-          <span aria-hidden="true">⇅</span>
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 4v16" />
+              <path d="m4 8 4-4 4 4" />
+              <path d="M16 20V4" />
+              <path d="m12 16 4 4 4-4" />
+            </svg>
+          </span>
           <span>{sortUi.button}</span>
         </button>
         <button
@@ -1422,13 +1429,29 @@ export default function ParentSchoolsPage() {
           aria-expanded={mobileFiltersOpen}
           aria-controls="schools-mobile-filters"
         >
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <circle cx="9" cy="6" r="2" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <circle cx="15" cy="12" r="2" />
+              <line x1="4" y1="18" x2="20" y2="18" />
+              <circle cx="11" cy="18" r="2" />
+            </svg>
+          </span>
           <span>
             {ft('filters')}
             {activeFiltersCount ? ` (${activeFiltersCount})` : ''}
           </span>
         </button>
         <Link href="/parent/schools/map" className="schools-mobile-action schools-mobile-action-map">
-          <span aria-hidden="true">⌘</span>
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18 3 20V6l6-2 6 2 6-2v14l-6 2-6-2Z" />
+              <path d="M9 4v14" />
+              <path d="M15 6v14" />
+            </svg>
+          </span>
           <span>{t('map')}</span>
         </Link>
         <button
