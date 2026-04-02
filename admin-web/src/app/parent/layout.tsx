@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { isGuestMode, setGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
@@ -177,7 +177,6 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
               </Link>
             </div>
             <nav className={`topnav ${guest ? 'guest-nav' : ''}`}>
-              {guest ? <span className="guest-pill">{t('guest')}</span> : null}
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}

@@ -435,9 +435,7 @@ const hasRequiredParentFields = (row: SchoolRow, locale: 'ru' | 'en' | 'kk'): bo
   const name = getBrandTitle(row, locale);
   const type = toText(row.basic_info?.type).trim();
   const city = toText(row.basic_info?.city).trim();
-  const district = toText(row.basic_info?.district).trim();
-  const languages = toList(row.education?.languages);
-  return Boolean(name && type && city && district && languages.length && hasLogo(row));
+  return Boolean(name && type && city);
 };
 
 const getSchoolProgramsCount = (row: SchoolRow): number =>
@@ -1361,7 +1359,7 @@ export default function ParentSchoolsPage() {
           </button>
         </div>
         <div className="market-chips">
-          <Link href="/parent/schools/map" className="market-chip market-chip-map">
+          <Link href="/parent/schools/map" className="market-chip action-chip market-chip-map">
             {t('map')}
           </Link>
           <Link
@@ -1650,19 +1648,24 @@ export default function ParentSchoolsPage() {
                 >
                   <article className="parent-school-card">
                     <div className="market-school-row">
-                      <div className={`school-image-placeholder${imageSrc ? ' has-image' : ''}`}>
-                        <span className="school-image-fallback">{schoolTitle.slice(0, 1).toUpperCase() || 'Ш'}</span>
-                        {imageSrc ? (
-                          <img
-                            src={imageSrc}
-                            alt={schoolTitle}
-                            loading="lazy"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.parentElement?.classList.remove('has-image');
-                            }}
-                          />
-                        ) : null}
+                      <div className="market-school-visual">
+                        <div className={`school-image-placeholder${imageSrc ? ' has-image' : ''}`}>
+                          <span className="school-image-fallback">{schoolTitle.slice(0, 1).toUpperCase() || 'Ш'}</span>
+                          {imageSrc ? (
+                            <img
+                              src={imageSrc}
+                              alt={schoolTitle}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement?.classList.remove('has-image');
+                              }}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="parent-school-meta parent-school-meta-visual">
+                          <span className="market-stars">☆☆☆☆☆</span>
+                        </div>
                       </div>
                       <div className="market-school-main">
                         <p className="parent-school-name">{schoolTitle}</p>
@@ -1806,16 +1809,6 @@ export default function ParentSchoolsPage() {
                           ) : null}
                         </div>
                       </div>
-                    </div>
-
-                    <div className="parent-school-meta">
-                      <span className="market-stars">☆☆☆☆☆</span>
-                      <span className="school-chip">
-                        {row.system?.rating ?? '0.0'}
-                      </span>
-                      <span className="school-chip">
-                        {row.system?.reviews_count ?? 0} {t('reviews_word')}
-                      </span>
                     </div>
                     <p className="parent-school-expand-hint">{t('open_school_card')}</p>
                   </article>
