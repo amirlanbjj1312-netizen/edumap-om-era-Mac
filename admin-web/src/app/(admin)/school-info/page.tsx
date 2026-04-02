@@ -1531,7 +1531,15 @@ export default function SchoolInfoPage() {
     () => normalizeSchoolType(getDeep(profile, 'basic_info.type', '')),
     [profile]
   );
+  const schoolSubtypeValue = useMemo(
+    () => String(getDeep(profile, 'basic_info.school_subtype', '') || '').trim(),
+    [profile]
+  );
   const isStateSchool = useMemo(() => schoolTypeValue === 'State', [schoolTypeValue]);
+  const useStateAdmissionFlow = useMemo(
+    () => isStateSchool && schoolSubtypeValue !== 'Autonomous School',
+    [isStateSchool, schoolSubtypeValue]
+  );
   const paymentOptionsValue = useMemo(() => {
     const explicit = normalizeListValue(getDeep(profile, 'finance.payment_options', ''));
     if (explicit.length) return explicit;
@@ -3939,7 +3947,7 @@ export default function SchoolInfoPage() {
 
           {activeTab === 'admission' && (
             <Section title="Поступление">
-              {isStateSchool ? (
+              {useStateAdmissionFlow ? (
                 <>
                   <p className="muted">
                     {t(
