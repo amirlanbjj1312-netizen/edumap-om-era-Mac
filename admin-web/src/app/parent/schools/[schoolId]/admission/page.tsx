@@ -106,6 +106,47 @@ const localizeOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
   return OPTION_I18N[alias]?.[locale] || raw;
 };
 
+const renderStageContent = (value: string) => {
+  const lines = String(value || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return null;
+  }
+
+  const isNumbered = lines.every((line) => /^\d+\.\s+/.test(line));
+  if (isNumbered) {
+    return (
+      <ol className="school-admission-stage-list school-admission-stage-list-numbered">
+        {lines.map((line, index) => (
+          <li key={`${line}-${index}`}>{line.replace(/^\d+\.\s+/, '')}</li>
+        ))}
+      </ol>
+    );
+  }
+
+  const isBulleted = lines.every((line) => /^(?:•|-)\s+/.test(line));
+  if (isBulleted) {
+    return (
+      <ul className="school-admission-stage-list school-admission-stage-list-bulleted">
+        {lines.map((line, index) => (
+          <li key={`${line}-${index}`}>{line.replace(/^(?:•|-)\s+/, '')}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <div className="school-admission-stage-rich">
+      {lines.map((line, index) => (
+        <p key={`${line}-${index}`}>{line}</p>
+      ))}
+    </div>
+  );
+};
+
 export default function ParentSchoolAdmissionPage() {
   const { locale } = useParentLocale();
   const params = useParams<{ schoolId: string }>();
@@ -252,7 +293,7 @@ export default function ParentSchoolAdmissionPage() {
         {!loading && stages ? (
           <div className="school-admission-stage-box">
             <p className="school-admission-stage-label">{ui.stageHint}</p>
-            <div className="school-admission-stage-content">{stages}</div>
+            <div className="school-admission-stage-content">{renderStageContent(stages)}</div>
           </div>
         ) : null}
         {!loading && admissionRules.length ? (

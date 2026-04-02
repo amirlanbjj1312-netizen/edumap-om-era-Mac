@@ -4029,6 +4029,26 @@ a {
   white-space: pre-wrap;
 }
 
+.school-admission-stage-rich {
+  display: grid;
+  gap: 10px;
+}
+
+.school-admission-stage-rich p {
+  margin: 0;
+}
+
+.school-admission-stage-list {
+  margin: 0;
+  padding-left: 1.35em;
+  display: grid;
+  gap: 8px;
+}
+
+.school-admission-stage-list li {
+  margin: 0;
+}
+
 .school-admission-actions {
   margin-top: 14px;
   display: grid;
@@ -5997,6 +6017,11 @@ a {
 
   .school-admission-stage-content {
     font-size: 18px;
+  }
+
+  .school-admission-stage-list {
+    gap: 6px;
+    padding-left: 1.2em;
   }
 
   .school-admission-actions {
