@@ -7,7 +7,7 @@ import {
   setAuthUserStatus,
   updateAuthUserSettings,
 } from '@/lib/api';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 const CAN_MANAGE_ROLES = new Set(['moderator', 'superadmin']);
 
@@ -153,8 +153,8 @@ export default function UsersPage() {
     const visibleUsers = users.filter((item) =>
       USERS_PAGE_VISIBLE_ROLES.has(normalizeRole(item.role))
     );
-    const sorted = [...visibleUsers].sort((a, b) =>
-      String(a.email || '').localeCompare(String(b.email || ''))
+    const sorted = [...visibleUsers].sort(
+      (a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0)
     );
     if (!q) return sorted;
     return sorted.filter((item) =>
@@ -319,7 +319,7 @@ export default function UsersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
               <tr>
-                {['Email', 'Имя', 'Фамилия', 'Роль', 'Статус', 'Действия'].map((head) => (
+                {['Дата появления', 'Email', 'Имя', 'Фамилия', 'Роль', 'Статус', 'Действия'].map((head) => (
                   <th
                     key={head}
                     style={{
@@ -342,6 +342,9 @@ export default function UsersPage() {
                   typeof user.isActive === 'boolean' ? user.isActive : !user.bannedUntil;
                 return (
                   <tr key={user.id}>
+                    <td style={{ padding: '10px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap' }}>
+                      {user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '—'}
+                    </td>
                     <td style={{ padding: '10px', borderBottom: '1px solid var(--line)' }}>
                       {user.email || '—'}
                     </td>
