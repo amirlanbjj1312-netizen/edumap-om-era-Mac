@@ -20,6 +20,9 @@ body {
   padding: 0;
   margin: 0;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   color: var(--ink);
   background: none;
   background-color: var(--bg-start);
@@ -43,12 +46,16 @@ a {
   padding: 32px 16px 80px;
   display: grid;
   gap: 18px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .container {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
+  min-width: 0;
 }
 
 .parent-page {
