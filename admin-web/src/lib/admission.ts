@@ -82,6 +82,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const textPreserve = (value: unknown) => (typeof value === 'string' ? value : '');
 
 const createLocalizedText = (seed = ''): LocalizedText => ({
   ru: seed,
@@ -92,12 +93,12 @@ const createLocalizedText = (seed = ''): LocalizedText => ({
 export const normalizeLocalizedText = (value: unknown): LocalizedText => {
   if (isObject(value)) {
     return {
-      ru: text(value.ru),
-      en: text(value.en),
-      kk: text(value.kk),
+      ru: textPreserve(value.ru),
+      en: textPreserve(value.en),
+      kk: textPreserve(value.kk),
     };
   }
-  return createLocalizedText(text(value));
+  return createLocalizedText(textPreserve(value));
 };
 
 export const pickLocalizedText = (
@@ -163,20 +164,20 @@ export const normalizeAdmissionRule = (value: unknown): AdmissionRule => {
 
 export const admissionRuleHasContent = (rule: AdmissionRule) =>
   Boolean(
-    pickLocalizedText(rule.title, 'ru') ||
+    pickLocalizedText(rule.title, 'ru').trim() ||
       rule.from_grade ||
       rule.to_grade ||
       rule.assessment_types.length ||
-      pickLocalizedText(rule.assessment_other, 'ru') ||
+      pickLocalizedText(rule.assessment_other, 'ru').trim() ||
       rule.required_documents.length ||
-      pickLocalizedText(rule.documents_other, 'ru') ||
+      pickLocalizedText(rule.documents_other, 'ru').trim() ||
       rule.format ||
-      pickLocalizedText(rule.format_other, 'ru') ||
-      pickLocalizedText(rule.stages, 'ru') ||
-      pickLocalizedText(rule.requirements, 'ru') ||
-      pickLocalizedText(rule.documents, 'ru') ||
-      pickLocalizedText(rule.evaluation, 'ru') ||
-      pickLocalizedText(rule.comment, 'ru') ||
+      pickLocalizedText(rule.format_other, 'ru').trim() ||
+      pickLocalizedText(rule.stages, 'ru').trim() ||
+      pickLocalizedText(rule.requirements, 'ru').trim() ||
+      pickLocalizedText(rule.documents, 'ru').trim() ||
+      pickLocalizedText(rule.evaluation, 'ru').trim() ||
+      pickLocalizedText(rule.comment, 'ru').trim() ||
       rule.deadline
   );
 
