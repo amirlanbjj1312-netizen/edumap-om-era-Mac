@@ -1728,18 +1728,6 @@ export default function ParentSchoolDetailsPage() {
     },
     { label: locale === 'en' ? 'Average class size' : locale === 'kk' ? 'Сыныптың орташа көлемі' : 'Средний размер класса', value: pickFirstText(school, ['education.average_class_size'], '—') },
     {
-      label: locale === 'en' ? 'Class size (primary)' : locale === 'kk' ? 'Бастауыш сынып көлемі' : 'Размер класса (начальная школа)',
-      value: classSizePrimary,
-    },
-    {
-      label: locale === 'en' ? 'Class size (middle)' : locale === 'kk' ? 'Орта буын сынып көлемі' : 'Размер класса (средняя школа)',
-      value: classSizeMiddle,
-    },
-    {
-      label: locale === 'en' ? 'Class size (high)' : locale === 'kk' ? 'Жоғары сынып көлемі' : 'Размер класса (старшая школа)',
-      value: classSizeHigh,
-    },
-    {
       label: locale === 'en' ? 'Shift mode' : locale === 'kk' ? 'Оқу ауысымы' : 'Сменность обучения',
       value: shiftMode,
     },
@@ -1761,18 +1749,6 @@ export default function ParentSchoolDetailsPage() {
       label: ui.averageShort,
       value: pickFirstText(school, ['education.average_class_size'], ''),
     },
-    {
-      label: ui.primaryShort,
-      value: classSizePrimary,
-    },
-    {
-      label: ui.middleShort,
-      value: classSizeMiddle,
-    },
-    {
-      label: ui.highShort,
-      value: classSizeHigh,
-    },
   ].filter((item) => item.value && item.value.trim());
   const educationRows = educationItems.filter(
     (item) =>
@@ -1782,9 +1758,6 @@ export default function ParentSchoolDetailsPage() {
       item.value !== '—' &&
       ![
         locale === 'en' ? 'Average class size' : locale === 'kk' ? 'Сыныптың орташа көлемі' : 'Средний размер класса',
-        locale === 'en' ? 'Class size (primary)' : locale === 'kk' ? 'Бастауыш сынып көлемі' : 'Размер класса (начальная школа)',
-        locale === 'en' ? 'Class size (middle)' : locale === 'kk' ? 'Орта буын сынып көлемі' : 'Размер класса (средняя школа)',
-        locale === 'en' ? 'Class size (high)' : locale === 'kk' ? 'Жоғары сынып көлемі' : 'Размер класса (старшая школа)',
         ui.entranceExam,
       ].includes(item.label)
   );
