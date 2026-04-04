@@ -87,6 +87,27 @@ const TYPE_LABELS: Record<'State' | 'Private', Record<'ru' | 'en' | 'kk', string
 const normalizeTypeKey = (value: string): 'State' | 'Private' | '' =>
   TYPE_ALIASES[normalize(value)] || '';
 
+const LANGUAGE_I18N: Record<string, { ru: string; en: string; kk: string }> = {
+  english: { ru: 'Английский', en: 'English', kk: 'Ағылшын' },
+  russian: { ru: 'Русский', en: 'Russian', kk: 'Орыс' },
+  kazakh: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ' },
+  англииский: { ru: 'Английский', en: 'English', kk: 'Ағылшын' },
+  английский: { ru: 'Английский', en: 'English', kk: 'Ағылшын' },
+  русский: { ru: 'Русский', en: 'Russian', kk: 'Орыс' },
+  казахский: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ' },
+  қазақ: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ' },
+  орыс: { ru: 'Русский', en: 'Russian', kk: 'Орыс' },
+  ағылшын: { ru: 'Английский', en: 'English', kk: 'Ағылшын' },
+  en: { ru: 'Английский', en: 'English', kk: 'Ағылшын' },
+  ru: { ru: 'Русский', en: 'Russian', kk: 'Орыс' },
+  kk: { ru: 'Казахский', en: 'Kazakh', kk: 'Қазақ' },
+};
+
+const localizeLanguage = (value: string, locale: 'ru' | 'en' | 'kk') => {
+  const raw = normalize(value);
+  return LANGUAGE_I18N[raw]?.[locale] || value;
+};
+
 const isHighPriceQuestion = (question: string, locale: 'ru' | 'en' | 'kk') => {
   const q = normalize(question);
   const keywords =
@@ -102,8 +123,7 @@ const schoolName = (row: SchoolRow, locale: 'ru' | 'en' | 'kk') =>
   toLocaleText(row.basic_info?.display_name, locale).trim() ||
   toLocaleText(row.basic_info?.brand_name, locale).trim() ||
   toLocaleText(row.basic_info?.short_name, locale).trim() ||
-  toText(row.basic_info?.name).trim() ||
-  toText(row.school_id).trim();
+  toText(row.basic_info?.name).trim();
 
 const schoolTypeLabel = (row: SchoolRow, locale: 'ru' | 'en' | 'kk') => {
   const raw = toText(row.basic_info?.type).trim();
@@ -144,7 +164,7 @@ const buildLinesFromRows = (
       const name = schoolName(row, locale);
       const city = toText(row.basic_info?.city);
       const type = schoolTypeLabel(row, locale);
-      const langs = toList(row.education?.languages);
+      const langs = toList(row.education?.languages).map((item) => localizeLanguage(item, locale));
       const feeSummary = getSchoolFeeSummary(row as Parameters<typeof getSchoolFeeSummary>[0]);
       return { row, name, city, type, langs, feeSummary };
     })
