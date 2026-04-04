@@ -715,7 +715,7 @@ const OPTION_LABELS: Record<
   'Data Science': { ru: 'Наука о данных', en: 'Data Science', kk: 'Деректер ғылымы' },
   Economics: { ru: 'Экономика', en: 'Economics', kk: 'Экономика' },
   Business: { ru: 'Бизнес', en: 'Business', kk: 'Бизнес' },
-  Entrepreneurship: { ru: 'Предпринимательство', en: 'Entrepreneurship', kk: 'Кәсіпкерлік' },
+  Entrepreneurship: { ru: 'Бизнес', en: 'Business', kk: 'Бизнес' },
   'English Language': { ru: 'Английский язык', en: 'English Language', kk: 'Ағылшын тілі' },
   'World History': { ru: 'Всемирная история', en: 'World History', kk: 'Әлем тарихы' },
   Geography: { ru: 'География', en: 'Geography', kk: 'География' },
