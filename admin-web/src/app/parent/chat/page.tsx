@@ -11,7 +11,12 @@ import { useParentLocale } from '@/lib/parentLocale';
 import { getSchoolFeeSummary } from '@/lib/schoolFinance';
 
 type Role = 'user' | 'assistant';
-type ChatMessage = { id: string; role: Role; text: string };
+type ChatMessage = {
+  id: string;
+  role: Role;
+  text: string;
+  links?: { label: string; href: string }[];
+};
 
 type SchoolRow = {
   school_id?: string;
@@ -181,6 +186,33 @@ const buildLinesFromRows = (
     })
     .filter((item) => item.name)
     .map(buildSchoolLine);
+};
+
+const buildLinkItemsFromRows = (
+  locale: 'ru' | 'en' | 'kk',
+  rows: SchoolRow[],
+  ids?: string[]
+) => {
+  const source = ids?.length
+    ? ids
+        .map((id) => rows.find((row) => String(row.school_id || '').trim() === id))
+        .filter(Boolean) as SchoolRow[]
+    : rows;
+
+  return source
+    .map((row) => {
+      const name = schoolName(row, locale);
+      const city = toText(row.basic_info?.city);
+      const type = schoolTypeLabel(row, locale);
+      const langs = toList(row.education?.languages).map((item) => localizeLanguage(item, locale));
+      const feeSummary = getSchoolFeeSummary(row as Parameters<typeof getSchoolFeeSummary>[0]);
+      return { row, name, city, type, langs, feeSummary };
+    })
+    .filter((item) => item.name && item.row.school_id)
+    .map((item, index) => ({
+      label: buildSchoolLine(item, index).replace(/^\d+\.\s*/, ''),
+      href: `/parent/schools/${String(item.row.school_id || '').trim()}`,
+    }));
 };
 
 const composeAnswer = (
@@ -421,6 +453,9 @@ export default function ParentChatPage() {
       const answer = reply
         ? [reply, replyHasList ? '' : listLines].filter(Boolean).join('\n')
         : fallbackAnswer;
+      const linkItems = recommendedSchoolIds.length
+        ? buildLinkItemsFromRows(locale, rows, recommendedSchoolIds)
+        : buildLinkItemsFromRows(locale, rows);
 
       const userMessage: ChatMessage = {
         id: `${Date.now()}-u`,
@@ -431,6 +466,7 @@ export default function ParentChatPage() {
         id: `${Date.now()}-a`,
         role: 'assistant',
         text: answer,
+        links: linkItems.length ? linkItems : undefined,
       };
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setLeft(typeof usage.left === 'number' ? usage.left : 0);
@@ -506,6 +542,15 @@ export default function ParentChatPage() {
               {message.role === 'assistant' ? 'EDUMAP AI' : 'You'}
             </p>
             <p className="parent-ai-chat-text">{message.text}</p>
+            {message.role === 'assistant' && message.links?.length ? (
+              <ol className="parent-ai-chat-links">
+                {message.links.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
           </div>
         ))}
         <div ref={messagesEndRef} />

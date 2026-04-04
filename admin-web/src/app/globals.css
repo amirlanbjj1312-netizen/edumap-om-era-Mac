@@ -899,6 +899,18 @@ a {
   white-space: pre-wrap;
 }
 
+.parent-ai-chat-links {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.parent-ai-chat-links a {
+  color: #2f4de0;
+  text-decoration: underline;
+}
+
 .parent-ai-chat-compose {
   border-top: 1px solid rgba(120, 106, 255, 0.16);
   background: #f7f9ff;
