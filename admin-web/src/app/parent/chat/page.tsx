@@ -113,6 +113,45 @@ const schoolTypeLabel = (row: SchoolRow, locale: 'ru' | 'en' | 'kk') => {
   return subtype || base || raw;
 };
 
+const buildSchoolLine = (
+  item: { row: SchoolRow; name: string; city: string; type: string; langs: string[]; feeSummary: ReturnType<typeof getSchoolFeeSummary> },
+  index: number
+) => {
+  const parts = [item.city, item.type].filter(Boolean);
+  const fee =
+    item.feeSummary.hasAnyFee && item.feeSummary.max > 0
+      ? `${item.feeSummary.min.toLocaleString('ru-RU')}–${item.feeSummary.max.toLocaleString('ru-RU')} ${item.feeSummary.currency || 'KZT'}`
+      : '';
+  const suffix = [parts.join(', '), item.langs.length ? item.langs.join(', ') : '', fee]
+    .filter(Boolean)
+    .join(' | ');
+  return `${index + 1}. ${item.name}${suffix ? ` — ${suffix}` : ''}`;
+};
+
+const buildLinesFromRows = (
+  locale: 'ru' | 'en' | 'kk',
+  rows: SchoolRow[],
+  ids?: string[]
+) => {
+  const source = ids?.length
+    ? ids
+        .map((id) => rows.find((row) => String(row.school_id || '').trim() === id))
+        .filter(Boolean) as SchoolRow[]
+    : rows;
+
+  return source
+    .map((row) => {
+      const name = schoolName(row, locale);
+      const city = toText(row.basic_info?.city);
+      const type = schoolTypeLabel(row, locale);
+      const langs = toList(row.education?.languages);
+      const feeSummary = getSchoolFeeSummary(row as Parameters<typeof getSchoolFeeSummary>[0]);
+      return { row, name, city, type, langs, feeSummary };
+    })
+    .filter((item) => item.name)
+    .map(buildSchoolLine);
+};
+
 const composeAnswer = (
   locale: 'ru' | 'en' | 'kk',
   question: string,
@@ -172,17 +211,7 @@ const composeAnswer = (
         ? 'Сұранысыңызға сай келуі мүмкін мектептер:'
         : 'Вот школы, которые могут подойти по вашему запросу:';
 
-  const lines = finalResult.map((item, index) => {
-    const parts = [item.city, item.type].filter(Boolean);
-    const fee =
-      item.feeSummary.hasAnyFee && item.feeSummary.max > 0
-        ? `${item.feeSummary.min.toLocaleString('ru-RU')}–${item.feeSummary.max.toLocaleString('ru-RU')} ${item.feeSummary.currency || 'KZT'}`
-        : '';
-    const suffix = [parts.join(', '), item.langs.length ? item.langs.join(', ') : '', fee]
-      .filter(Boolean)
-      .join(' | ');
-    return `${index + 1}. ${item.name}${suffix ? ` — ${suffix}` : ''}`;
-  });
+  const lines = finalResult.map(buildSchoolLine);
 
   const foot =
     locale === 'en'
@@ -353,9 +382,14 @@ export default function ParentChatPage() {
           source: 'ai_chat_results',
         }).catch(() => undefined);
       });
-      const answer =
-        reply ||
-        composeAnswer(locale, body, rows);
+      const replyHasList = /(^|\n)\s*(\d+\.|•|-)\s+/.test(reply);
+      const fallbackAnswer = composeAnswer(locale, body, rows);
+      const listLines = recommendedSchoolIds.length
+        ? buildLinesFromRows(locale, rows, recommendedSchoolIds).join('\n')
+        : buildLinesFromRows(locale, rows).join('\n');
+      const answer = reply
+        ? [reply, replyHasList ? '' : listLines].filter(Boolean).join('\n')
+        : fallbackAnswer;
 
       const userMessage: ChatMessage = {
         id: `${Date.now()}-u`,
