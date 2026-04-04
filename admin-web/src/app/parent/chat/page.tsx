@@ -108,6 +108,17 @@ const localizeLanguage = (value: string, locale: 'ru' | 'en' | 'kk') => {
   return LANGUAGE_I18N[raw]?.[locale] || value;
 };
 
+const localizeReplyLanguages = (value: string, locale: 'ru' | 'en' | 'kk') => {
+  if (!value || locale === 'en') return value;
+  const map = locale === 'kk'
+    ? { English: 'Ағылшын', Russian: 'Орыс', Kazakh: 'Қазақ' }
+    : { English: 'Английский', Russian: 'Русский', Kazakh: 'Казахский' };
+  return value
+    .replace(/\bEnglish\b/gi, map.English)
+    .replace(/\bRussian\b/gi, map.Russian)
+    .replace(/\bKazakh\b/gi, map.Kazakh);
+};
+
 const isHighPriceQuestion = (question: string, locale: 'ru' | 'en' | 'kk') => {
   const q = normalize(question);
   const keywords =
@@ -390,7 +401,7 @@ export default function ParentChatPage() {
         message: body,
         schoolIds,
       });
-      const reply = String(aiResponse?.data?.reply || '').trim();
+      const reply = localizeReplyLanguages(String(aiResponse?.data?.reply || '').trim(), locale);
       const recommendedSchoolIds = Array.isArray(aiResponse?.data?.recommendedSchoolIds)
         ? aiResponse.data.recommendedSchoolIds.map((id) => String(id || '').trim()).filter(Boolean)
         : [];
