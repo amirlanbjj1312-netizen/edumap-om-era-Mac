@@ -1546,15 +1546,21 @@ export default function SchoolInfoPage() {
     const legacy = String(getDeep(profile, 'finance.payment_system', '') || '').trim();
     return legacy ? [legacy] : [];
   }, [profile]);
-  const getLocalizedFinanceValue = (pathBase: string) =>
-    String(
-      getDeep(profile, `${pathBase}.${contentLocale}`, '') ||
+  const getLocalizedFinanceValue = (pathBase: string, preferLocaleOnly = false) => {
+    const localeValue = getDeep(profile, `${pathBase}.${contentLocale}`, '');
+    const legacyValue = getDeep(profile, pathBase, '');
+    if (preferLocaleOnly) {
+      return String(localeValue || legacyValue || '');
+    }
+    return String(
+      localeValue ||
         getDeep(profile, `${pathBase}.ru`, '') ||
         getDeep(profile, `${pathBase}.kk`, '') ||
         getDeep(profile, `${pathBase}.en`, '') ||
-        getDeep(profile, pathBase, '') ||
+        legacyValue ||
         ''
     );
+  };
   const discountsValue = useMemo(
     () => getLocalizedFinanceValue('finance.discounts_info') || String(getDeep(profile, 'finance.grants_discounts', '') || ''),
     [profile, contentLocale]
@@ -1568,11 +1574,11 @@ export default function SchoolInfoPage() {
     [profile, contentLocale]
   );
   const includedInTuitionValue = useMemo(
-    () => getLocalizedFinanceValue('finance.included_in_tuition'),
+    () => getLocalizedFinanceValue('finance.included_in_tuition', true),
     [profile, contentLocale]
   );
   const extraFeesValue = useMemo(
-    () => getLocalizedFinanceValue('finance.extra_fees'),
+    () => getLocalizedFinanceValue('finance.extra_fees', true),
     [profile, contentLocale]
   );
   const additionalLocations = useMemo(() => {
