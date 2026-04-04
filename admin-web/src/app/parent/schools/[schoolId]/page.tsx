@@ -144,9 +144,9 @@ const FIELD_LABELS: Record<string, string> = {
 
 const SECTION_LABELS: Array<{ key: string; icon: IconKind }> = [
   { key: 'education', icon: 'education' },
+  { key: 'services', icon: 'shield' },
   { key: 'basic_info', icon: 'info' },
   { key: 'media', icon: 'globe' },
-  { key: 'services', icon: 'shield' },
   { key: 'reviews', icon: 'chat' },
   { key: 'staff', icon: 'user' },
 ];
@@ -2231,33 +2231,6 @@ export default function ParentSchoolDetailsPage() {
             ))}
           </section>
 
-          {hasMap ? (
-            <section className="school-mobile-map-card">
-              <iframe
-                title="Карта школы"
-                src={mapSrc}
-                className="school-mobile-map"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-              <Link
-                href={fullMapHref}
-                className="school-mobile-map-cta"
-                onClick={() => {
-                  if (!trackedSchoolId) return;
-                  void recordEngagementEvent({
-                    eventType: 'school_map_open',
-                    schoolId: trackedSchoolId,
-                    locale,
-                    source: 'school_card_map',
-                  }).catch(() => undefined);
-                }}
-              >
-                Нажмите, чтобы раскрыть карту
-              </Link>
-            </section>
-          ) : null}
-
           <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
             <div className={guest ? 'guest-gated-content school-detail-sections' : 'school-detail-sections'}>
           <div className="school-detail-actions">
@@ -2393,6 +2366,33 @@ export default function ParentSchoolDetailsPage() {
             <p className="school-consult-status school-consult-status-success">
               {consultationMessage}
             </p>
+          ) : null}
+
+          {hasMap ? (
+            <section className="school-mobile-map-card">
+              <iframe
+                title="Карта школы"
+                src={mapSrc}
+                className="school-mobile-map"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <Link
+                href={fullMapHref}
+                className="school-mobile-map-cta"
+                onClick={() => {
+                  if (!trackedSchoolId) return;
+                  void recordEngagementEvent({
+                    eventType: 'school_map_open',
+                    schoolId: trackedSchoolId,
+                    locale,
+                    source: 'school_card_map',
+                  }).catch(() => undefined);
+                }}
+              >
+                Нажмите, чтобы раскрыть карту
+              </Link>
+            </section>
           ) : null}
 
           {SECTION_LABELS.map((section) => {
