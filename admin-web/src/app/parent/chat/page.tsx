@@ -67,6 +67,8 @@ const toList = (value: unknown): string[] => {
     .filter(Boolean);
 };
 
+const uniqueList = (items: string[]) => Array.from(new Set(items.filter(Boolean)));
+
 const normalize = (value: string) => value.toLowerCase().trim();
 
 const TYPE_ALIASES: Record<string, 'State' | 'Private'> = {
@@ -180,7 +182,9 @@ const buildLinesFromRows = (
       const name = schoolName(row, locale);
       const city = toText(row.basic_info?.city);
       const type = schoolTypeLabel(row, locale);
-      const langs = toList(row.education?.languages).map((item) => localizeLanguage(item, locale));
+      const langs = uniqueList(
+        toList(row.education?.languages).map((item) => localizeLanguage(item, locale))
+      );
       const feeSummary = getSchoolFeeSummary(row as Parameters<typeof getSchoolFeeSummary>[0]);
       return { row, name, city, type, langs, feeSummary };
     })
@@ -204,16 +208,25 @@ const buildLinkItemsFromRows = (
       const name = schoolName(row, locale);
       const city = toText(row.basic_info?.city);
       const type = schoolTypeLabel(row, locale);
-      const langs = toList(row.education?.languages).map((item) => localizeLanguage(item, locale));
+      const langs = uniqueList(
+        toList(row.education?.languages).map((item) => localizeLanguage(item, locale))
+      );
       const feeSummary = getSchoolFeeSummary(row as Parameters<typeof getSchoolFeeSummary>[0]);
       return { row, name, city, type, langs, feeSummary };
     })
     .filter((item) => item.name && item.row.school_id)
-    .map((item, index) => ({
-      label: buildSchoolLine(item, index).replace(/^\d+\.\s*/, ''),
+    .map((item) => ({
+      label: item.name,
       href: `/parent/schools/${String(item.row.school_id || '').trim()}`,
     }));
 };
+
+const stripListLines = (value: string) =>
+  value
+    .split('\n')
+    .filter((line) => !/^\s*(\d+\.|•|-)\s+/.test(line))
+    .join('\n')
+    .trim();
 
 const composeAnswer = (
   locale: 'ru' | 'en' | 'kk',
@@ -299,6 +312,7 @@ export default function ParentChatPage() {
   const [left, setLeft] = useState<number>(() => getAiChatLeft(getParentPlan()));
   const previewUnlocked = false;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const storageKey = `edumap_parent_ai_chat_${locale}`;
 
   const ui = useMemo(
     () =>
@@ -390,6 +404,25 @@ export default function ParentChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setMessages(parsed);
+      }
+    } catch {
+      // ignore broken cache
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(storageKey, JSON.stringify(messages.slice(-50)));
+  }, [messages, storageKey]);
+
   const onSend = async () => {
     const body = text.trim();
     if (!body || sending) return;
@@ -450,8 +483,9 @@ export default function ParentChatPage() {
       const listLines = recommendedSchoolIds.length
         ? buildLinesFromRows(locale, rows, recommendedSchoolIds).join('\n')
         : buildLinesFromRows(locale, rows).join('\n');
+      const cleanedReply = replyHasList ? stripListLines(reply) : reply;
       const answer = reply
-        ? [reply, replyHasList ? '' : listLines].filter(Boolean).join('\n')
+        ? cleanedReply
         : fallbackAnswer;
       const linkItems = recommendedSchoolIds.length
         ? buildLinkItemsFromRows(locale, rows, recommendedSchoolIds)
