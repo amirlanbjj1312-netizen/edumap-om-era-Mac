@@ -1546,20 +1546,30 @@ export default function SchoolInfoPage() {
     const legacy = String(getDeep(profile, 'finance.payment_system', '') || '').trim();
     return legacy ? [legacy] : [];
   }, [profile]);
+  const toLocalizedText = (value: unknown, allowFallback: boolean) => {
+    if (!value) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (typeof value === 'object') {
+      const raw = value as Record<string, unknown>;
+      const picked = raw[contentLocale];
+      if (typeof picked === 'string' || typeof picked === 'number') {
+        return String(picked);
+      }
+      if (!allowFallback) return '';
+      const fallback = raw.ru ?? raw.kk ?? raw.en;
+      return typeof fallback === 'string' || typeof fallback === 'number'
+        ? String(fallback)
+        : '';
+    }
+    return '';
+  };
   const getLocalizedFinanceValue = (pathBase: string, preferLocaleOnly = false) => {
     const localeValue = getDeep(profile, `${pathBase}.${contentLocale}`, '');
     const legacyValue = getDeep(profile, pathBase, '');
     if (preferLocaleOnly) {
-      return String(localeValue || legacyValue || '');
+      return toLocalizedText(localeValue, false) || toLocalizedText(legacyValue, false);
     }
-    return String(
-      localeValue ||
-        getDeep(profile, `${pathBase}.ru`, '') ||
-        getDeep(profile, `${pathBase}.kk`, '') ||
-        getDeep(profile, `${pathBase}.en`, '') ||
-        legacyValue ||
-        ''
-    );
+    return toLocalizedText(localeValue, false) || toLocalizedText(legacyValue, true);
   };
   const discountsValue = useMemo(
     () => getLocalizedFinanceValue('finance.discounts_info') || String(getDeep(profile, 'finance.grants_discounts', '') || ''),
