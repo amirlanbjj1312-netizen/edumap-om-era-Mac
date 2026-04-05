@@ -26,6 +26,8 @@ type SchoolRow = {
     short_name?: unknown;
     name?: unknown;
     city?: unknown;
+    district?: unknown;
+    address?: unknown;
     type?: unknown;
     subtype?: unknown;
   };
