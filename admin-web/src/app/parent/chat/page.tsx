@@ -71,6 +71,46 @@ const uniqueList = (items: string[]) => Array.from(new Set(items.filter(Boolean)
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
+const LEFT_BANK_KEYWORDS = ['левый берег', 'левом берег', 'левобереж', 'left bank', 'left'];
+const RIGHT_BANK_KEYWORDS = ['правый берег', 'правом берег', 'правобереж', 'right bank', 'right'];
+const LEFT_BANK_DISTRICTS = ['есиль', 'yesil'];
+const RIGHT_BANK_DISTRICTS = ['сарыарка', 'saryarka', 'байконур', 'baikonur', 'алматы', 'almaty'];
+
+const detectBankSide = (question: string) => {
+  const q = normalize(question);
+  if (LEFT_BANK_KEYWORDS.some((key) => q.includes(key))) return 'left';
+  if (RIGHT_BANK_KEYWORDS.some((key) => q.includes(key))) return 'right';
+  return '';
+};
+
+const matchesBank = (row: SchoolRow, side: 'left' | 'right') => {
+  const district = normalize(toText(row.basic_info?.district || ''));
+  const address = normalize(toText(row.basic_info?.address || ''));
+  if (side === 'left') {
+    return LEFT_BANK_DISTRICTS.some((key) => district.includes(key) || address.includes(key));
+  }
+  return RIGHT_BANK_DISTRICTS.some((key) => district.includes(key) || address.includes(key));
+};
+
+const wantsSingleAnswer = (question: string) => {
+  const q = normalize(question);
+  return [
+    'самая',
+    'самый',
+    'самое',
+    'лучшая',
+    'лучший',
+    'лучшое',
+    'одну',
+    'только одну',
+    'единственную',
+    'same conditions',
+    'same',
+    'те же условия',
+    'те же',
+  ].some((key) => q.includes(key));
+};
+
 const TYPE_ALIASES: Record<string, 'State' | 'Private'> = {
   state: 'State',
   private: 'Private',
@@ -234,7 +274,12 @@ const composeAnswer = (
   rows: SchoolRow[]
 ) => {
   const q = normalize(question);
-  const scored = rows
+  const bankSide = detectBankSide(question);
+  const bankFiltered = bankSide
+    ? rows.filter((row) => matchesBank(row, bankSide as 'left' | 'right'))
+    : rows;
+  const sourceRows = bankFiltered.length ? bankFiltered : rows;
+  const scored = sourceRows
     .map((row) => {
       const name = schoolName(row, locale);
       const city = toText(row.basic_info?.city);
@@ -266,7 +311,10 @@ const composeAnswer = (
   const picks = scored.filter((item) => item.score > 0).slice(0, 3);
   const fallback = scored.slice(0, 3);
   const result = picks.length ? picks : fallback;
-  const finalResult = priced.length ? priced : result;
+  let finalResult = priced.length ? priced : result;
+  if (wantsSingleAnswer(question)) {
+    finalResult = finalResult.slice(0, 1);
+  }
 
   if (!finalResult.length) {
     if (locale === 'en') return 'I could not find matching schools. Try another query.';
@@ -470,6 +518,19 @@ export default function ParentChatPage() {
       const recommendedSchoolIds = Array.isArray(aiResponse?.data?.recommendedSchoolIds)
         ? aiResponse.data.recommendedSchoolIds.map((id) => String(id || '').trim()).filter(Boolean)
         : [];
+      const bankSide = detectBankSide(body);
+      const rowsForSide = bankSide
+        ? rows.filter((row) => matchesBank(row, bankSide as 'left' | 'right'))
+        : rows;
+      const limitedToSingle = wantsSingleAnswer(body);
+      const filteredRecommendedIds = recommendedSchoolIds.length
+        ? recommendedSchoolIds.filter((id) =>
+            rowsForSide.some((row) => String(row.school_id || '').trim() === id)
+          )
+        : [];
+      const finalRecommendedIds = limitedToSingle
+        ? filteredRecommendedIds.slice(0, 1)
+        : filteredRecommendedIds;
       recommendedSchoolIds.forEach((recommendedSchoolId) => {
         void recordEngagementEvent({
           eventType: 'ai_school_mention',
@@ -480,16 +541,16 @@ export default function ParentChatPage() {
       });
       const replyHasList = /(^|\n)\s*(\d+\.|•|-)\s+/.test(reply);
       const fallbackAnswer = composeAnswer(locale, body, rows);
-      const listLines = recommendedSchoolIds.length
-        ? buildLinesFromRows(locale, rows, recommendedSchoolIds).join('\n')
-        : buildLinesFromRows(locale, rows).join('\n');
+      const listLines = finalRecommendedIds.length
+        ? buildLinesFromRows(locale, rowsForSide, finalRecommendedIds).join('\n')
+        : buildLinesFromRows(locale, rowsForSide).join('\n');
       const cleanedReply = replyHasList ? stripListLines(reply) : reply;
       const answer = reply
         ? cleanedReply
         : fallbackAnswer;
-      const linkItems = recommendedSchoolIds.length
-        ? buildLinkItemsFromRows(locale, rows, recommendedSchoolIds)
-        : buildLinkItemsFromRows(locale, rows);
+      const linkItems = finalRecommendedIds.length
+        ? buildLinkItemsFromRows(locale, rowsForSide, finalRecommendedIds)
+        : buildLinkItemsFromRows(locale, rowsForSide);
 
       const userMessage: ChatMessage = {
         id: `${Date.now()}-u`,
