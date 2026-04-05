@@ -362,6 +362,7 @@ export default function ParentChatPage() {
   const [left, setLeft] = useState<number>(() => getAiChatLeft(getParentPlan()));
   const previewUnlocked = false;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const storageKey = `edumap_parent_ai_chat_${locale}`;
 
   const ui = useMemo(
@@ -371,6 +372,7 @@ export default function ParentChatPage() {
             title: 'AI chat',
             subtitle: 'Ask about schools and get recommendations.',
             update: 'Refresh limits',
+            clear: 'Clear chat',
             placeholder: 'Ask a question about schools',
             send: 'Send',
             sending: 'Sending...',
@@ -386,6 +388,7 @@ export default function ParentChatPage() {
               title: 'AI чат',
               subtitle: 'Мектептер туралы сұрақ қойып, ұсыныс алыңыз.',
               update: 'Лимитті жаңарту',
+              clear: 'Чатты тазалау',
               placeholder: 'Мектептер бойынша сұрақ енгізіңіз',
               send: 'Жіберу',
               sending: 'Жіберілуде...',
@@ -400,6 +403,7 @@ export default function ParentChatPage() {
               title: 'AI чат',
               subtitle: 'Задавайте вопросы о школах и получайте подборки.',
               update: 'Обновить лимит',
+              clear: 'Очистить чат',
               placeholder: 'Введите вопрос о школах',
               send: 'Отправить',
               sending: 'Отправка...',
@@ -416,6 +420,20 @@ export default function ParentChatPage() {
   const syncLeft = () => {
     const plan = getParentPlan();
     setLeft(getAiChatLeft(plan));
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(storageKey);
+    }
+  };
+
+  const resizeInput = () => {
+    const node = inputRef.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${Math.min(node.scrollHeight, 240)}px`;
   };
 
   const schoolIds = useMemo(
@@ -453,6 +471,10 @@ export default function ParentChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending]);
+
+  useEffect(() => {
+    resizeInput();
+  }, [text]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -605,6 +627,13 @@ export default function ParentChatPage() {
         >
           {ui.update}
         </button>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={clearChat}
+        >
+          {ui.clear}
+        </button>
       </div>
       <>
       <p className="muted parent-ai-chat-subtitle">{ui.subtitle}</p>
@@ -653,12 +682,14 @@ export default function ParentChatPage() {
         <div ref={messagesEndRef} />
         </div>
       <div className="parent-ai-chat-compose">
-        <input
+        <textarea
+          ref={inputRef}
           className="input parent-ai-chat-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={ui.placeholder}
           disabled={guest && !previewUnlocked}
+          rows={1}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();

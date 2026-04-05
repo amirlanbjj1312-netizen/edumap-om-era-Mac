@@ -922,6 +922,11 @@ a {
 
 .parent-ai-chat-input {
   flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 240px;
+  resize: none;
+  overflow: auto;
+  line-height: 1.4;
 }
 
 .parent-ai-chat-send {
