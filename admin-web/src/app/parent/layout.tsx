@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { isGuestMode, setGuestMode } from '@/lib/guestMode';
-import { useParentLocale } from '@/lib/parentLocale';
+import { localeOptions, useParentLocale } from '@/lib/parentLocale';
 import { loadParentFooterSettings } from '@/lib/api';
 
 const NAV_ITEMS = [
@@ -23,7 +23,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
   const [guest, setGuest] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [footerSettings, setFooterSettings] = useState<any>(null);
-  const { t, locale } = useParentLocale();
+  const { t, locale, setLocale } = useParentLocale();
   const isMapFullscreen = pathname === '/parent/schools/map' || pathname.startsWith('/parent/schools/map/');
   const footerUi =
     locale === 'en'
@@ -191,6 +191,18 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                   {t(item.labelKey)}
                 </Link>
               ))}
+              <div className="topbar-locale" role="group" aria-label={t('language')}>
+                {localeOptions.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setLocale(item.value)}
+                    className={`topbar-locale-btn${locale === item.value ? ' active' : ''}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               {guest ? (
                 <Link href="/login" className="topnav-logout">
                   {t('sign_in')}
@@ -234,6 +246,18 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                     {t(item.labelKey)}
                   </Link>
                 ))}
+                <div className="topbar-locale mobile">
+                  {localeOptions.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setLocale(item.value)}
+                      className={`topbar-locale-btn${locale === item.value ? ' active' : ''}`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
           </header>

@@ -524,6 +524,39 @@ a {
   box-shadow: none;
 }
 
+.topbar-locale {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid rgba(86, 103, 253, 0.2);
+}
+
+.topbar-locale-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4a5a7a;
+  cursor: pointer;
+}
+
+.topbar-locale-btn.active {
+  background: #5667fd;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(86, 103, 253, 0.3);
+}
+
+.topbar-locale.mobile {
+  margin-top: 12px;
+  justify-content: center;
+}
+
 .topnav.guest-nav a.guest-nav-item {
   background: transparent;
   color: #5f6f90;
