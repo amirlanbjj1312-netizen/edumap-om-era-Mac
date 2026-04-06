@@ -252,7 +252,6 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Фото завуча (файл)': { en: 'Deputy photo (file)', kk: 'Директор орынбасарының фотосы (файл)' },
   'Наш преподавательский состав': { en: 'Teaching staff', kk: 'Оқытушылар құрамы' },
   'Добавить преподавателя': { en: 'Add teacher', kk: 'Оқытушы қосу' },
-  Должность: { en: 'Position', kk: 'Лауазымы' },
   'Члены персонала': { en: 'Staff members', kk: 'Персонал мүшелері' },
   Психолог: { en: 'Psychologist', kk: 'Психолог' },
   Логопед: { en: 'Speech therapist', kk: 'Логопед' },
