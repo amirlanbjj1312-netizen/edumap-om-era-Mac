@@ -20,7 +20,7 @@ import {
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { formatKzPhone } from '@/lib/phone';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { requestJson } from '@/lib/api';
 
 type ConsultationRequest = {
@@ -164,22 +164,92 @@ type EngagementSummaryPayload = {
   >;
 };
 
-const ENGAGEMENT_LABELS: Record<string, string> = {
-  school_card_view: 'Открытия карточек школ',
-  compare_add: 'Добавления в сравнение',
-  favorite_add: 'Добавления в избранное',
-  school_map_open: 'Открытия карты',
-  contact_phone_click: 'Клики по телефону',
-  contact_whatsapp_click: 'Клики по WhatsApp',
-  contact_website_click: 'Клики по сайту',
-  price_open: 'Переходы в цену',
-  admission_open: 'Переходы в поступление',
-  ai_school_mention: 'Попадания в AI',
-  ai_match_run: 'Запуски AI подбора',
-  ai_chat_open: 'Открытия AI чата',
-  ai_chat_message: 'Сообщения в AI чате',
-  guest_gate_click: 'Нажатия на закрытые функции',
+const ENGAGEMENT_LABELS: Record<'ru' | 'en' | 'kk', Record<string, string>> = {
+  ru: {
+    school_card_view: 'Открытия карточек школ',
+    compare_add: 'Добавления в сравнение',
+    favorite_add: 'Добавления в избранное',
+    school_map_open: 'Открытия карты',
+    contact_phone_click: 'Клики по телефону',
+    contact_whatsapp_click: 'Клики по WhatsApp',
+    contact_website_click: 'Клики по сайту',
+    price_open: 'Переходы в цену',
+    admission_open: 'Переходы в поступление',
+    ai_school_mention: 'Попадания в AI',
+    ai_match_run: 'Запуски AI подбора',
+    ai_chat_open: 'Открытия AI чата',
+    ai_chat_message: 'Сообщения в AI чате',
+    guest_gate_click: 'Нажатия на закрытые функции',
+    unique_auth_parents: 'Уникальные родители',
+    school_card_view_card: 'Просмотры карточки',
+    contact_click_total: 'Клики в контакты',
+    price: 'Цена',
+    admission: 'Поступление',
+    map: 'Карта',
+    compare: 'Сравнение',
+    favorite: 'Избранное',
+    phone: 'Телефон',
+    website: 'Сайт',
+  },
+  en: {
+    school_card_view: 'School card opens',
+    compare_add: 'Adds to compare',
+    favorite_add: 'Adds to favorites',
+    school_map_open: 'Map opens',
+    contact_phone_click: 'Phone clicks',
+    contact_whatsapp_click: 'WhatsApp clicks',
+    contact_website_click: 'Website clicks',
+    price_open: 'Price opens',
+    admission_open: 'Admission opens',
+    ai_school_mention: 'AI mentions',
+    ai_match_run: 'AI match runs',
+    ai_chat_open: 'AI chat opens',
+    ai_chat_message: 'AI chat messages',
+    guest_gate_click: 'Guest lock clicks',
+    unique_auth_parents: 'Unique parents',
+    school_card_view_card: 'Card views',
+    contact_click_total: 'Contact clicks',
+    price: 'Price',
+    admission: 'Admission',
+    map: 'Map',
+    compare: 'Compare',
+    favorite: 'Favorites',
+    phone: 'Phone',
+    website: 'Website',
+  },
+  kk: {
+    school_card_view: 'Мектеп картасын ашу',
+    compare_add: 'Салыстыруға қосу',
+    favorite_add: 'Таңдаулыларға қосу',
+    school_map_open: 'Картаны ашу',
+    contact_phone_click: 'Телефон басулары',
+    contact_whatsapp_click: 'WhatsApp басулары',
+    contact_website_click: 'Сайт басулары',
+    price_open: 'Баға ашу',
+    admission_open: 'Қабылдауды ашу',
+    ai_school_mention: 'AI еске алулары',
+    ai_match_run: 'AI іріктеу қосылуы',
+    ai_chat_open: 'AI чат ашылуы',
+    ai_chat_message: 'AI чат хабарламалары',
+    guest_gate_click: 'Құлыпталған функция басуы',
+    unique_auth_parents: 'Бірегей ата-ана',
+    school_card_view_card: 'Карта қаралымдары',
+    contact_click_total: 'Байланыс басулары',
+    price: 'Баға',
+    admission: 'Қабылдау',
+    map: 'Карта',
+    compare: 'Салыстыру',
+    favorite: 'Таңдаулы',
+    phone: 'Телефон',
+    website: 'Сайт',
+  },
 };
+
+const getStatLabel = (locale: 'ru' | 'en' | 'kk', key: string, fallback = '') =>
+  ENGAGEMENT_LABELS[locale]?.[key] || fallback || key;
+
+const statText = (locale: 'ru' | 'en' | 'kk', ru: string, en: string, kk: string) =>
+  locale === 'en' ? en : locale === 'kk' ? kk : ru;
 
 const ACTOR_EVENT_TABLE_ORDER = [
   'school_card_view',
@@ -325,7 +395,7 @@ const EXPERIENCE_FRESHNESS_LABELS: Record<string, string> = {
 };
 
 export default function StatisticsPage() {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
   const [token, setToken] = useState('');
   const [actorRole, setActorRole] = useState('user');
   const [actorEmail, setActorEmail] = useState('');
@@ -553,17 +623,17 @@ export default function StatisticsPage() {
 
   const schoolEngagementCards = useMemo(
     () => [
-      { key: 'school_card_view', label: 'Просмотры карточки', value: schoolEngagementTotals.school_card_view },
-      { key: 'unique_auth_parents', label: 'Уникальные родители', value: schoolEngagementTotals.unique_auth_parents },
-      { key: 'compare_add', label: 'Добавления в сравнение', value: schoolEngagementTotals.compare_add },
-      { key: 'favorite_add', label: 'Добавления в избранное', value: schoolEngagementTotals.favorite_add },
-      { key: 'school_map_open', label: 'Открытия карты', value: schoolEngagementTotals.school_map_open },
-      { key: 'contact_click_total', label: 'Клики в контакты', value: schoolEngagementTotals.contact_click_total },
-      { key: 'price_open', label: 'Переходы в цену', value: schoolEngagementTotals.price_open },
-      { key: 'admission_open', label: 'Переходы в поступление', value: schoolEngagementTotals.admission_open },
-      { key: 'ai_school_mention', label: 'Попадания в AI', value: schoolEngagementTotals.ai_school_mention },
+      { key: 'school_card_view', label: getStatLabel(locale, 'school_card_view_card', 'Просмотры карточки'), value: schoolEngagementTotals.school_card_view },
+      { key: 'unique_auth_parents', label: getStatLabel(locale, 'unique_auth_parents', 'Уникальные родители'), value: schoolEngagementTotals.unique_auth_parents },
+      { key: 'compare_add', label: getStatLabel(locale, 'compare_add', 'Добавления в сравнение'), value: schoolEngagementTotals.compare_add },
+      { key: 'favorite_add', label: getStatLabel(locale, 'favorite_add', 'Добавления в избранное'), value: schoolEngagementTotals.favorite_add },
+      { key: 'school_map_open', label: getStatLabel(locale, 'school_map_open', 'Открытия карты'), value: schoolEngagementTotals.school_map_open },
+      { key: 'contact_click_total', label: getStatLabel(locale, 'contact_click_total', 'Клики в контакты'), value: schoolEngagementTotals.contact_click_total },
+      { key: 'price_open', label: getStatLabel(locale, 'price_open', 'Переходы в цену'), value: schoolEngagementTotals.price_open },
+      { key: 'admission_open', label: getStatLabel(locale, 'admission_open', 'Переходы в поступление'), value: schoolEngagementTotals.admission_open },
+      { key: 'ai_school_mention', label: getStatLabel(locale, 'ai_school_mention', 'Попадания в AI'), value: schoolEngagementTotals.ai_school_mention },
     ],
-    [schoolEngagementTotals]
+    [schoolEngagementTotals, locale]
   );
 
   const schoolTimelinePeak = useMemo(
@@ -588,17 +658,17 @@ export default function StatisticsPage() {
 
   const schoolActionRows = useMemo(
     () => [
-      { key: 'price_open', label: 'Цена', value: schoolEngagementTotals.price_open },
-      { key: 'admission_open', label: 'Поступление', value: schoolEngagementTotals.admission_open },
-      { key: 'school_map_open', label: 'Карта', value: schoolEngagementTotals.school_map_open },
-      { key: 'compare_add', label: 'Сравнение', value: schoolEngagementTotals.compare_add },
-      { key: 'favorite_add', label: 'Избранное', value: schoolEngagementTotals.favorite_add },
-      { key: 'contact_phone_click', label: 'Телефон', value: schoolEngagementTotals.contact_phone_click },
+      { key: 'price_open', label: getStatLabel(locale, 'price', 'Цена'), value: schoolEngagementTotals.price_open },
+      { key: 'admission_open', label: getStatLabel(locale, 'admission', 'Поступление'), value: schoolEngagementTotals.admission_open },
+      { key: 'school_map_open', label: getStatLabel(locale, 'map', 'Карта'), value: schoolEngagementTotals.school_map_open },
+      { key: 'compare_add', label: getStatLabel(locale, 'compare', 'Сравнение'), value: schoolEngagementTotals.compare_add },
+      { key: 'favorite_add', label: getStatLabel(locale, 'favorite', 'Избранное'), value: schoolEngagementTotals.favorite_add },
+      { key: 'contact_phone_click', label: getStatLabel(locale, 'phone', 'Телефон'), value: schoolEngagementTotals.contact_phone_click },
       { key: 'contact_whatsapp_click', label: 'WhatsApp', value: schoolEngagementTotals.contact_whatsapp_click },
-      { key: 'contact_website_click', label: 'Сайт', value: schoolEngagementTotals.contact_website_click },
+      { key: 'contact_website_click', label: getStatLabel(locale, 'website', 'Сайт'), value: schoolEngagementTotals.contact_website_click },
       { key: 'ai_school_mention', label: 'AI', value: schoolEngagementTotals.ai_school_mention },
     ].filter((item) => item.value > 0),
-    [schoolEngagementTotals]
+    [schoolEngagementTotals, locale]
   );
 
   const schoolActionPeak = useMemo(
@@ -1044,7 +1114,12 @@ export default function StatisticsPage() {
     if (!token || !schoolId) return;
     if (typeof window !== 'undefined') {
       const confirmed = window.confirm(
-        `Сбросить рейтинг школы "${schoolName || schoolId}" и удалить все ее отзывы? Действие нельзя отменить.`
+        statText(
+          locale,
+          `Сбросить рейтинг школы "${schoolName || schoolId}" и удалить все ее отзывы? Действие нельзя отменить.`,
+          `Reset rating for "${schoolName || schoolId}" and delete all its reviews? This action cannot be undone.`,
+          `\"${schoolName || schoolId}\" мектебінің рейтингін түсіріп, барлық пікірді өшіреміз бе? Бұл әрекетті қайтару мүмкін емес.`
+        )
       );
       if (!confirmed) return;
     }
@@ -1053,9 +1128,24 @@ export default function StatisticsPage() {
     try {
       await resetSchoolRating(token, schoolId);
       await Promise.all([reload(), loadSurveyControlData()]);
-      setMessage('Рейтинг школы сброшен, отзывы очищены.');
+      setMessage(
+        statText(
+          locale,
+          'Рейтинг школы сброшен, отзывы очищены.',
+          'School rating has been reset and reviews were cleared.',
+          'Мектеп рейтингі түсірілді, пікірлер тазартылды.'
+        )
+      );
     } catch (error) {
-      setMessage((error as Error)?.message || 'Не удалось сбросить рейтинг школы');
+      setMessage(
+        (error as Error)?.message ||
+          statText(
+            locale,
+            'Не удалось сбросить рейтинг школы',
+            'Failed to reset school rating.',
+            'Мектеп рейтингін түсіру мүмкін болмады.'
+          )
+      );
     } finally {
       setSurveyLoading(false);
     }
@@ -1086,7 +1176,14 @@ export default function StatisticsPage() {
       </div>
 
       {isSchoolAdmin ? (
-        <p className="muted">Базовая аналитика вашей школы: заявки, рейтинг, контент и профиль.</p>
+        <p className="muted">
+          {statText(
+            locale,
+            'Базовая аналитика вашей школы: заявки, рейтинг, контент и профиль.',
+            'Basic analytics for your school: requests, rating, content, and profile.',
+            'Мектебіңізге арналған базалық аналитика: өтінімдер, рейтинг, контент және профиль.'
+          )}
+        </p>
       ) : (
         <p className="muted">{t('statisticsProgramInfoHint')}</p>
       )}
@@ -1103,12 +1200,18 @@ export default function StatisticsPage() {
                   <div className="card" style={{ marginBottom: 16 }}>
                     <div className="requests-head" style={{ marginBottom: 12 }}>
                       <h3 style={{ margin: 0 }}>
-                        Аналитика интереса к школе
+                        {statText(
+                          locale,
+                          'Аналитика интереса к школе',
+                          'School engagement analytics',
+                          'Мектепке қызығушылық аналитикасы'
+                        )}
                         {engagementSummary?.school_name ? `: ${engagementSummary.school_name}` : ''}
                       </h3>
                       {engagementSummary?.reset_at ? (
                         <span className="muted">
-                          Считаем с {new Date(engagementSummary.reset_at).toLocaleString()}
+                          {statText(locale, 'Считаем с', 'Since', 'Мына күннен бастап')}{' '}
+                          {new Date(engagementSummary.reset_at).toLocaleString()}
                         </span>
                       ) : null}
                     </div>
@@ -1146,9 +1249,16 @@ export default function StatisticsPage() {
                               }}
                             >
                               <div className="requests-head" style={{ marginBottom: 8 }}>
-                                <h3 style={{ margin: 0 }}>Динамика по дням</h3>
+                                <h3 style={{ margin: 0 }}>
+                                  {statText(locale, 'Динамика по дням', 'Daily trend', 'Күндік динамика')}
+                                </h3>
                                 <p className="muted" style={{ margin: 0 }}>
-                                  Просмотры, цена, поступление, сравнение и контакты
+                                  {statText(
+                                    locale,
+                                    'Просмотры, цена, поступление, сравнение и контакты',
+                                    'Views, price, admission, compare, and contacts',
+                                    'Қаралым, баға, қабылдау, салыстыру және байланыстар'
+                                  )}
                                 </p>
                               </div>
                               {(engagementSummary?.timeline || []).length ? (
@@ -1338,9 +1448,21 @@ export default function StatisticsPage() {
                             background: '#fff',
                           }}
                         >
-                          <h3 style={{ marginTop: 0 }}>Расширенная аналитика Pro</h3>
+                          <h3 style={{ marginTop: 0 }}>
+                            {statText(
+                              locale,
+                              'Расширенная аналитика Pro',
+                              'Advanced analytics (Pro)',
+                              'Кеңейтілген аналитика (Pro)'
+                            )}
+                          </h3>
                           <p className="muted" style={{ marginBottom: 0 }}>
-                            На Growth доступна базовая аналитика интереса и сводные метрики выше.
+                            {statText(
+                              locale,
+                              'На Growth доступна базовая аналитика интереса и сводные метрики выше.',
+                              'Growth plan provides basic engagement analytics and summary metrics above.',
+                              'Growth тарифінде базалық қызығушылық аналитикасы және жоғарыдағы негізгі метрикалар бар.'
+                            )}
                             Динамика по дням, воронка интереса, разрез по действиям и AI-инсайты
                             открываются на тарифе Pro.
                           </p>
@@ -1356,7 +1478,14 @@ export default function StatisticsPage() {
                           background: '#fff',
                         }}
                       >
-                        <h3 style={{ marginTop: 0 }}>Аналитика интереса доступна на Growth</h3>
+                        <h3 style={{ marginTop: 0 }}>
+                          {statText(
+                            locale,
+                            'Аналитика интереса доступна на Growth',
+                            'Engagement analytics is available on Growth',
+                            'Қызығушылық аналитикасы Growth тарифінде қолжетімді'
+                          )}
+                        </h3>
                         <p className="muted" style={{ marginBottom: 0 }}>
                           На Starter доступна только базовая сводка по заявкам, рейтингу и
                           наполнению карточки. Чтобы видеть интерес родителей к карточке школы,
@@ -1513,7 +1642,9 @@ export default function StatisticsPage() {
             <>
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="requests-head" style={{ marginBottom: 12 }}>
-                  <h3 style={{ margin: 0 }}>Статистика родителей</h3>
+                  <h3 style={{ margin: 0 }}>
+                    {statText(locale, 'Статистика родителей', 'Parent statistics', 'Ата-ана статистикасы')}
+                  </h3>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <select
                       value={selectedEngagementSchoolId}
@@ -1565,7 +1696,7 @@ export default function StatisticsPage() {
                       }}
                     >
                       <p className="request-title">
-                        {ENGAGEMENT_LABELS[row.event_type] || row.event_type}
+                        {getStatLabel(locale, row.event_type, row.event_type)}
                       </p>
                       <p className="muted" style={{ fontSize: 28, margin: '8px 0 4px' }}>
                         {row.all}
@@ -1590,7 +1721,8 @@ export default function StatisticsPage() {
                   >
                     <div className="requests-head" style={{ marginBottom: 8 }}>
                       <h3 style={{ margin: 0 }}>
-                        Кто использовал: {ENGAGEMENT_LABELS[selectedGlobalEventType] || selectedGlobalEventType}
+                        {statText(locale, 'Кто использовал', 'Used by', 'Қолданған')}:{" "}
+                        {getStatLabel(locale, selectedGlobalEventType, selectedGlobalEventType)}
                       </h3>
                       <p className="muted" style={{ margin: 0 }}>
                         Все авторизованные аккаунты по этому действию за выбранный период.
@@ -1735,7 +1867,7 @@ export default function StatisticsPage() {
                                 marginBottom: 4,
                               }}
                             >
-                              <span>{ENGAGEMENT_LABELS[row.event_type] || row.event_type}</span>
+                              <span>{getStatLabel(locale, row.event_type, row.event_type)}</span>
                               <strong>{row.all}</strong>
                             </div>
                             <div
@@ -1888,7 +2020,8 @@ export default function StatisticsPage() {
                         >
                           <div className="requests-head" style={{ marginBottom: 8 }}>
                             <h3 style={{ margin: 0 }}>
-                              Кто использовал: {ENGAGEMENT_LABELS[eventType] || eventType}
+                              {statText(locale, 'Кто использовал', 'Used by', 'Қолданған')}:{" "}
+                              {getStatLabel(locale, eventType, eventType)}
                             </h3>
                             <p className="muted" style={{ margin: 0 }}>
                               Только авторизованные аккаунты по выбранному действию.
@@ -1970,7 +2103,12 @@ export default function StatisticsPage() {
               >
                 {summary?.reset_at ? (
                   <p className="muted" style={{ margin: 0 }}>
-                    Статистика программ считается с{' '}
+                    {statText(
+                      locale,
+                      'Статистика программ считается с',
+                      'Program stats are counted since',
+                      'Бағдарлама статистикасы мына күннен бастап есептеледі'
+                    )}{' '}
                     {new Date(summary.reset_at).toLocaleString()}
                   </p>
                 ) : (
