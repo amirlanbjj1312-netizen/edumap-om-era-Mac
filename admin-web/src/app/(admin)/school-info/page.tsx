@@ -328,7 +328,6 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Частота встреч с родителями': { en: 'Parent meeting frequency', kk: 'Ата-анамен кездесу жиілігі' },
   'Родительский комитет': { en: 'Parent committee', kk: 'Ата-ана комитеті' },
   'SLA ответа школе (часы)': { en: 'Response SLA (hours)', kk: 'Жауап SLA (сағат)' },
-  'Наш преподавательский состав': { en: 'Our teaching staff', kk: 'Біздің педагогикалық құрам' },
   'Фото преподавателя URL': { en: 'Teacher photo URL', kk: 'Мұғалім фотосы URL' },
   'Фото преподавателя (файл)': { en: 'Teacher photo (file)', kk: 'Мұғалім фотосы (файл)' },
   'Описание / опыт преподавателя': {
@@ -570,6 +569,7 @@ const OPTION_LABELS: Record<
   Lyceum: { ru: 'Лицей', en: 'Lyceum', kk: 'Лицей' },
   'Specialized School': { ru: 'Специализированная школа', en: 'Specialized school', kk: 'Мамандандырылған мектеп' },
   'International School': { ru: 'Международная школа', en: 'International school', kk: 'Халықаралық мектеп' },
+  'Primary School': { ru: 'Начальная школа', en: 'Primary school', kk: 'Бастауыш мектеп' },
   'Private General School': { ru: 'Общеобразовательная', en: 'General', kk: 'Жалпы білім беретін' },
   'Innovative School': { ru: 'Инновационная школа', en: 'Innovative school', kk: 'Инновациялық мектеп' },
   'Advanced Subjects School': { ru: 'Школа с углублённым изучением предметов', en: 'Advanced subjects school', kk: 'Пәндерді тереңдетіп оқытатын мектеп' },
@@ -869,6 +869,7 @@ const toggleListValue = (list: string[], item: string) =>
 
 const SCHOOL_TYPES = ['State', 'Private'];
 const SCHOOL_SUBTYPE_OPTIONS = [
+  'Primary School',
   'General School',
   'Autonomous School',
   'Gymnasium',
