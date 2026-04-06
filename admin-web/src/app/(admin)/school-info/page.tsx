@@ -3644,50 +3644,6 @@ export default function SchoolInfoPage() {
                 </FieldRow>
         <FieldRow>
           <Select
-            label="Размер класса (начальная школа)"
-            value={getDeep(profile, 'education.learning_conditions.class_size_primary')}
-            onChange={(value: string) =>
-              updateField('education.learning_conditions.class_size_primary', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                CLASS_SIZE_OPTIONS,
-                String(getDeep(profile, 'education.learning_conditions.class_size_primary') || '')
-              ).map((item) => ({ value: item, label: item })),
-            ]}
-          />
-          <Select
-            label="Размер класса (средняя школа)"
-            value={getDeep(profile, 'education.learning_conditions.class_size_middle')}
-            onChange={(value: string) =>
-              updateField('education.learning_conditions.class_size_middle', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                CLASS_SIZE_OPTIONS,
-                String(getDeep(profile, 'education.learning_conditions.class_size_middle') || '')
-              ).map((item) => ({ value: item, label: item })),
-            ]}
-          />
-          <Select
-            label="Размер класса (старшая школа)"
-            value={getDeep(profile, 'education.learning_conditions.class_size_high')}
-            onChange={(value: string) =>
-              updateField('education.learning_conditions.class_size_high', value)
-            }
-            options={[
-              { value: '', label: t('Не выбрано') },
-              ...withCurrentOption(
-                CLASS_SIZE_OPTIONS,
-                String(getDeep(profile, 'education.learning_conditions.class_size_high') || '')
-              ).map((item) => ({ value: item, label: item })),
-            ]}
-          />
-        </FieldRow>
-        <FieldRow>
-          <Select
             label="Сменность обучения"
             value={getDeep(profile, 'education.learning_conditions.shift_mode')}
             onChange={(value: string) =>
