@@ -343,7 +343,6 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   },
   'Языки преподавания': { en: 'Teaching languages', kk: 'Оқыту тілдері' },
   'Подготовка к экзаменам': { en: 'Exam preparation', kk: 'Емтиханға дайындық' },
-  'Добавить преподавателя': { en: 'Add teacher', kk: 'Мұғалім қосу' },
   'Удалить преподавателя': { en: 'Remove teacher', kk: 'Мұғалімді жою' },
   'Добавьте хотя бы одного преподавателя.': {
     en: 'Add at least one teacher.',
