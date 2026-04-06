@@ -210,6 +210,24 @@ export default function ParentSchoolAdmissionPage() {
     documents: locale === 'en' ? 'Documents' : locale === 'kk' ? 'Құжаттар' : 'Документы',
     note: locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
     selectionTypes: locale === 'en' ? 'Selection types' : locale === 'kk' ? 'Іріктеу түрлері' : 'Типы отбора',
+    parentNeeds:
+      locale === 'en'
+        ? 'What parents need'
+        : locale === 'kk'
+          ? 'Ата-анаға не керек'
+          : 'Что нужно родителю',
+    documentsNeed:
+      locale === 'en'
+        ? 'Required documents'
+        : locale === 'kk'
+          ? 'Қажет құжаттар'
+          : 'Какие документы нужны',
+    parentComment:
+      locale === 'en'
+        ? 'Parent comment'
+        : locale === 'kk'
+          ? 'Ата-анаға түсініктеме'
+          : 'Комментарий для родителей',
   };
 
   const currentLocale = locale as 'ru' | 'en' | 'kk';
@@ -235,6 +253,14 @@ export default function ParentSchoolAdmissionPage() {
   const schoolName = pickFirstText(school, ['basic_info.display_name', 'basic_info.name'], '');
   const logo = pickImage(school);
   const admissionRules = useMemo(() => normalizeAdmissionRules(school), [school]);
+  const documentsDetail = pickLocalizedText(
+    getIn(school, 'education.admission_details.documents_detail'),
+    currentLocale
+  );
+  const parentComment = pickLocalizedText(
+    getIn(school, 'education.admission_details.parent_comment'),
+    currentLocale
+  );
 
   const chips = [
     { label: ui.exam, value: examRequired ? ui.yes : ui.no },
@@ -294,6 +320,27 @@ export default function ParentSchoolAdmissionPage() {
           <div className="school-admission-stage-box">
             <p className="school-admission-stage-label">{ui.stageHint}</p>
             <div className="school-admission-stage-content">{renderStageContent(stages)}</div>
+          </div>
+        ) : null}
+        {!loading && (documentsDetail || parentComment) ? (
+          <div className="school-admission-stage-box">
+            <p className="school-admission-stage-label">{ui.parentNeeds}</p>
+            {documentsDetail ? (
+              <div className="school-admission-rule-section">
+                <p>{ui.documentsNeed}</p>
+                <div className="school-admission-stage-content">
+                  {renderStageContent(documentsDetail)}
+                </div>
+              </div>
+            ) : null}
+            {parentComment ? (
+              <div className="school-admission-rule-section">
+                <p>{ui.parentComment}</p>
+                <div className="school-admission-stage-content">
+                  {renderStageContent(parentComment)}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {!loading && admissionRules.length ? (
