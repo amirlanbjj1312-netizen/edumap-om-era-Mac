@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  autofillNewsLocales,
   createNewsItem,
   deleteNewsItem,
   loadNewsFeed,
   updateNewsItem,
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth } from '@/lib/supabaseAuth';
+import { supabaseStorage } from '@/lib/supabaseStorage';
 import { useImageCropper } from '@/lib/useImageCropper';
 
 const isModerator = (role: string) => role === 'moderator' || role === 'superadmin';
@@ -360,7 +362,7 @@ export default function AdminNewsPage() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabaseAuth.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       const session = data?.session;
       setToken(session?.access_token || '');
@@ -444,7 +446,7 @@ export default function AdminNewsPage() {
 
         let uploaded = false;
         for (const bucket of buckets) {
-          const { error } = await supabase.storage.from(bucket).upload(path, file, {
+          const { error } = await supabaseStorage.storage.from(bucket).upload(path, file, {
             upsert: true,
             contentType: file.type || undefined,
           });
@@ -455,7 +457,7 @@ export default function AdminNewsPage() {
             }
             throw error;
           }
-          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          const { data } = supabaseStorage.storage.from(bucket).getPublicUrl(path);
           const publicUrl =
             data?.publicUrl ||
             (supabaseUrl
@@ -537,7 +539,7 @@ export default function AdminNewsPage() {
 
         let uploaded = false;
         for (const bucket of buckets) {
-          const { error } = await supabase.storage.from(bucket).upload(path, file, {
+          const { error } = await supabaseStorage.storage.from(bucket).upload(path, file, {
             upsert: true,
             contentType: file.type || undefined,
           });
@@ -548,7 +550,7 @@ export default function AdminNewsPage() {
             }
             throw error;
           }
-          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          const { data } = supabaseStorage.storage.from(bucket).getPublicUrl(path);
           const publicUrl =
             data?.publicUrl ||
             (supabaseUrl
@@ -606,7 +608,7 @@ export default function AdminNewsPage() {
 
     setSaving(true);
     setMessage('');
-    const payload = {
+    let payload: any = {
       title: form.title.trim(),
       titleEn: form.titleEn.trim(),
       titleKk: form.titleKk.trim(),
@@ -629,6 +631,23 @@ export default function AdminNewsPage() {
     };
 
     try {
+      try {
+        const translated = await autofillNewsLocales(payload);
+        if (translated?.data) {
+          payload = { ...payload, ...translated.data };
+          setForm((prev) => ({
+            ...prev,
+            titleEn: String(translated.data.titleEn || prev.titleEn || ''),
+            titleKk: String(translated.data.titleKk || prev.titleKk || ''),
+            summaryEn: String(translated.data.summaryEn || prev.summaryEn || ''),
+            summaryKk: String(translated.data.summaryKk || prev.summaryKk || ''),
+            contentEn: String(translated.data.contentEn || prev.contentEn || ''),
+            contentKk: String(translated.data.contentKk || prev.contentKk || ''),
+          }));
+        }
+      } catch (error) {
+        // Translation is optional. Keep save flow working if translation fails.
+      }
       if (editId) {
         const result = await updateNewsItem(token, editId, payload);
         const updated = result?.data;

@@ -201,4 +201,5 @@ const autofillMissingSchoolLocales = async (config, profile) => {
 
 module.exports = {
   autofillMissingSchoolLocales,
+  translateTexts: translateBatch,
 };

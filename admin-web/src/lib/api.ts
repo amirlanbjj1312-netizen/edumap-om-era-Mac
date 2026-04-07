@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://edumap-backend-nkr6.onrender.com/api';
+import { getAccessToken as getSupabaseAccessToken } from '@/lib/supabaseAuth';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.edu-map.kz/api';
 
 export const buildApiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
@@ -58,6 +58,16 @@ export async function autofillSchoolLocales(profile: any) {
   });
 }
 
+export async function autofillNewsLocales(payload: any) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Authorization token is required');
+  return authRequestJson<{ data: any }>('/news/translate-locales', {
+    token,
+    method: 'POST',
+    body: safeStringify(payload),
+  });
+}
+
 export async function deleteSchool(schoolId: string) {
   const token = await getAccessToken();
   if (!token) throw new Error('Authorization token is required');
@@ -79,11 +89,10 @@ async function authRequestJson<T>(path: string, options: AuthRequestOptions): Pr
     },
   });
 }
-export async function getAccessToken() {
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.access_token || '';
-}
 
+export async function getAccessToken() {
+  return getSupabaseAccessToken();
+}
 export async function getChatRoom(token: string, roomKey: string) {
   return authRequestJson<{ data?: { roomId: string; title?: string } }>(
     `/chat/${encodeURIComponent(roomKey)}`,
@@ -384,6 +393,12 @@ export async function loadAllReviews(token: string) {
       created_at: string;
       status?: string;
       source?: string;
+      positives?: string;
+      concerns?: string;
+      recommendation_for?: string;
+      comment?: string;
+      experience_type?: string;
+      experience_freshness?: string;
     }>;
   }>('/schools/reviews/all', { token });
 }

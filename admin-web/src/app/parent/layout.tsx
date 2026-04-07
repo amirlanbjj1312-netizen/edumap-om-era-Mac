@@ -182,15 +182,6 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
               </Link>
             </div>
             <nav className={`topnav ${guest ? 'guest-nav' : ''}`}>
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'active' : ''} ${guest ? 'guest-nav-item' : ''}`}
-                >
-                  {t(item.labelKey)}
-                </Link>
-              ))}
               <div className="topbar-locale" role="group" aria-label={t('language')}>
                 {localeOptions.map((item) => (
                   <button
@@ -203,6 +194,15 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
                   </button>
                 ))}
               </div>
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'active' : ''} ${guest ? 'guest-nav-item' : ''}`}
+                >
+                  {t(item.labelKey)}
+                </Link>
+              ))}
               {guest ? (
                 <Link href="/login" className="topnav-logout">
                   {t('sign_in')}
