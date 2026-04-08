@@ -195,7 +195,10 @@ const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
 
 const createAdditionalLocationEntry = (overrides: Record<string, unknown> = {}) => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  address: { ru: '', en: '', kk: '' },
+  address:
+    typeof overrides.address === 'string'
+      ? { ru: overrides.address, en: '', kk: '' }
+      : { ru: '', en: '', kk: '' },
   city: '',
   district: '',
   coordinates: {
@@ -1609,6 +1612,19 @@ export default function SchoolInfoPage() {
       )
     );
   }, [profile]);
+  const normalizeLocalizedField = (value: unknown) => {
+    if (typeof value === 'string') {
+      return { ru: value, en: '', kk: '' };
+    }
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const raw = value as Record<string, unknown>;
+      const ru = String(raw.ru || '');
+      const en = String(raw.en || '');
+      const kk = String(raw.kk || '');
+      return { ru, en, kk };
+    }
+    return { ru: '', en: '', kk: '' };
+  };
   const showFinance = useMemo(() => schoolTypeValue === 'Private', [schoolTypeValue]);
   const localePath = (path: string) => `${path}.${contentLocale}`;
   const t = (label: string) => translateLabel(label, contentLocale);
@@ -2743,6 +2759,11 @@ export default function SchoolInfoPage() {
         .join('; ');
       const normalizedClubsUnified = buildUnifiedClubsFromServices(currentProfile.services);
       const normalizedClubsCatalog = buildLegacyClubsCatalogFromUnified(normalizedClubsUnified);
+      const normalizedAddress = normalizeLocalizedField(currentProfile.basic_info?.address);
+      const normalizedAdditionalLocations = additionalLocations.map((location) => ({
+        ...(location as Record<string, unknown>),
+        address: normalizeLocalizedField((location as any)?.address),
+      }));
       const payload = {
         ...currentProfile,
         school_id: ensuredId,
@@ -2751,6 +2772,8 @@ export default function SchoolInfoPage() {
           type: normalizedSchoolType,
           phone: formatKzPhone(currentProfile.basic_info?.phone),
           whatsapp_phone: formatKzPhone(currentProfile.basic_info?.whatsapp_phone),
+          address: normalizedAddress,
+          additional_locations: normalizedAdditionalLocations,
         },
         finance: {
           ...(currentProfile.finance || {}),
