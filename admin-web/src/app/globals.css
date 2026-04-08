@@ -1465,6 +1465,7 @@ a {
   position: absolute;
   top: -8px;
   right: -8px;
+  z-index: 2;
   width: 34px;
   height: 34px;
   border-radius: 999px;
@@ -3746,6 +3747,59 @@ a {
   color: #49566f;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.school-price-note {
+  background: #f7f9ff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.school-price-note-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #2f4d91;
+}
+
+.school-price-note-content {
+  font-size: 14px;
+  color: #49566f;
+  line-height: 1.5;
+}
+
+.school-price-note-content p {
+  margin: 0 0 6px;
+}
+
+.school-price-note-content ol,
+.school-price-note-content ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.school-price-note-content li {
+  margin-bottom: 4px;
+}
+
+.school-price-note-content.is-collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.school-price-note-toggle {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #4154f5;
+  font-weight: 700;
+  cursor: pointer;
+  justify-self: start;
 }
 
 .school-mobile-fact-row span {

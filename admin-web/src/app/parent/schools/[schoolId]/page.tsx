@@ -272,6 +272,106 @@ function ExpandableFactRow({
   );
 }
 
+function splitNumberedInline(text: string) {
+  const parts = text.split(/\s(?=\d+\.\s+)/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  if (!parts.every((part) => /^\d+\.\s+/.test(part))) return null;
+  return parts.map((part) => part.replace(/^\d+\.\s+/, '').trim()).filter(Boolean);
+}
+
+function renderTextContent(raw: string) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  const normalized = text.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
+
+  if (lines.length) {
+    const allNumbered = lines.every((line) => /^\d+\.\s+/.test(line));
+    if (allNumbered) {
+      return (
+        <ol>
+          {lines.map((line, index) => (
+            <li key={`${line}-${index}`}>{line.replace(/^\d+\.\s+/, '')}</li>
+          ))}
+        </ol>
+      );
+    }
+    const allBulleted = lines.every((line) => /^[-•]\s+/.test(line));
+    if (allBulleted) {
+      return (
+        <ul>
+          {lines.map((line, index) => (
+            <li key={`${line}-${index}`}>{line.replace(/^[-•]\s+/, '')}</li>
+          ))}
+        </ul>
+      );
+    }
+  }
+
+  if (lines.length === 1) {
+    const numberedInline = splitNumberedInline(lines[0]);
+    if (numberedInline && numberedInline.length) {
+      return (
+        <ol>
+          {numberedInline.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ol>
+      );
+    }
+    if (lines[0].includes('•')) {
+      const parts = lines[0].split('•').map((part) => part.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        return (
+          <ul>
+            {parts.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        );
+      }
+    }
+  }
+
+  return (
+    <div>
+      {lines.map((line, index) => (
+        <p key={`${line}-${index}`}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
+function ExpandableNote({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const normalized = String(text || '').trim();
+  if (!normalized) return null;
+  const shouldToggle = normalized.length > 160 || normalized.includes('\n');
+  return (
+    <div className="school-price-note">
+      <p className="school-price-note-title">{title}</p>
+      <div className={`school-price-note-content${expanded ? ' is-open' : ' is-collapsed'}`}>
+        {renderTextContent(normalized)}
+      </div>
+      {shouldToggle ? (
+        <button
+          type="button"
+          className="school-price-note-toggle"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? 'Свернуть' : 'Показать полностью'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 const isLocalizedObject = (value: unknown) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const keys = Object.keys(value as Record<string, unknown>);
@@ -2166,24 +2266,19 @@ export default function ParentSchoolDetailsPage() {
                       </div>
                     ))}
                     {financeDiscounts ? (
-                      <p className="school-price-comment">
-                        <strong>{ui.discounts}:</strong> {financeDiscounts}
-                      </p>
+                      <ExpandableNote title={ui.discounts} text={financeDiscounts} />
                     ) : null}
                     {financeGrants ? (
-                      <p className="school-price-comment">
-                        <strong>{ui.grants}:</strong> {financeGrants}
-                      </p>
+                      <ExpandableNote title={ui.grants} text={financeGrants} />
                     ) : null}
                     {!financeDiscounts && !financeGrants && legacyDiscountsGrants ? (
-                      <p className="school-price-comment">
-                        <strong>{locale === 'en' ? 'Discounts / Grants' : locale === 'kk' ? 'Жеңілдіктер / Гранттар' : 'Скидки / гранты'}:</strong> {legacyDiscountsGrants}
-                      </p>
+                      <ExpandableNote
+                        title={locale === 'en' ? 'Discounts / Grants' : locale === 'kk' ? 'Жеңілдіктер / Гранттар' : 'Скидки / гранты'}
+                        text={legacyDiscountsGrants}
+                      />
                     ) : null}
                     {financeComment ? (
-                      <p className="school-price-comment">
-                        <strong>{ui.priceComment}:</strong> {financeComment}
-                      </p>
+                      <ExpandableNote title={ui.priceComment} text={financeComment} />
                     ) : null}
                     </div>
                   ) : (
