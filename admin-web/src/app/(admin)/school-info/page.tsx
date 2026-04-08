@@ -3493,19 +3493,21 @@ export default function SchoolInfoPage() {
                     rows={3}
                   />
                   <FieldRow>
-                    <Input
+                    <TextArea
                       label="Скидки"
                       value={discountsValue}
                       onChange={(value: string) =>
                         updateLocalizedField('finance.discounts_info', value)
                       }
+                      rows={4}
                     />
-                    <Input
+                    <TextArea
                       label="Гранты"
                       value={grantsValue}
                       onChange={(value: string) =>
                         updateLocalizedField('finance.grants_info', value)
                       }
+                      rows={4}
                     />
                   </FieldRow>
                 </Section>
