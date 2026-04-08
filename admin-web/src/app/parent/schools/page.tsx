@@ -1650,13 +1650,13 @@ export default function ParentSchoolsPage() {
               const formattedFee = formatSchoolFee(row, locale, onRequest);
               const schoolId = String(row.school_id || '');
               const isFavorite = schoolId ? favoriteIds.includes(schoolId) : false;
-              const mainAddress = toText(row.basic_info?.address).trim();
+              const mainAddress = toLocaleText(row.basic_info?.address, locale).trim();
               const branchAddresses = Array.isArray((row.basic_info as any)?.additional_locations)
                 ? ((row.basic_info as any).additional_locations as Array<Record<string, unknown>>)
                     .map((item) => {
-                      const city = localizeOption(toText(item?.city).trim());
-                      const district = localizeOption(toText(item?.district).trim());
-                      const address = toText(item?.address).trim();
+                      const city = localizeOption(toLocaleText(item?.city, locale).trim());
+                      const district = localizeOption(toLocaleText(item?.district, locale).trim());
+                      const address = toLocaleText(item?.address, locale).trim();
                       return [city, district, address].filter(Boolean).join(', ');
                     })
                     .filter(Boolean)
