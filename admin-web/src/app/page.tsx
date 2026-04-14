@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 
 export default function HomePage() {
@@ -14,7 +14,7 @@ export default function HomePage() {
       if (!mounted) return;
       const session = data?.session;
       if (!session) {
-        router.replace('/login');
+        router.replace('/parent/schools');
         return;
       }
       const role = resolvePortalRole(
@@ -30,7 +30,7 @@ export default function HomePage() {
   return (
     <div className="page">
       <div className="container">
-        <div className="card">Проверяем сессию...</div>
+        <div className="card">Перенаправляем...</div>
       </div>
     </div>
   );
