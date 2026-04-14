@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
+import { setGuestMode } from '@/lib/guestMode';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 
 export default function HomePage() {
@@ -14,6 +15,7 @@ export default function HomePage() {
       if (!mounted) return;
       const session = data?.session;
       if (!session) {
+        setGuestMode(true);
         router.replace('/parent/schools');
         return;
       }
