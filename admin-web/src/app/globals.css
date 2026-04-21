@@ -5501,7 +5501,7 @@ a {
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    overflow: hidden;
+    overflow: visible;
     padding: 8px 10px;
   }
 
@@ -5544,6 +5544,10 @@ a {
 
   .topbar-menu-toggle {
     display: inline-block;
+  }
+
+  .topbar-mobile-menu {
+    flex-basis: 100%;
   }
 
   .parent-news-tabs {

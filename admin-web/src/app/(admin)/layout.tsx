@@ -6,9 +6,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { loadParentFooterSettings } from '@/lib/api';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { AdminLocaleProvider, useAdminLocale } from '@/lib/adminLocale';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
+
+const LOCALE_ITEMS = [
+  { value: 'ru', label: 'RU' },
+  { value: 'en', label: 'EN' },
+  { value: 'kk', label: 'KZ' },
+] as const;
 
 const NAV_ITEMS: Array<{
   href: string;
@@ -33,13 +39,32 @@ const ROLE_PRIORITY: Record<string, number> = {
   superadmin: 3,
 };
 
+type FooterSettings = {
+  socials?: {
+    instagram_url?: string;
+    telegram_url?: string;
+    whatsapp_url?: string;
+  };
+  contacts?: {
+    phone_primary?: string;
+    phone_secondary?: string;
+    email?: string;
+  };
+  legal?: {
+    privacy_url?: string;
+    terms_url?: string;
+    faq_url?: string;
+  };
+} | null;
+
 function AdminLayoutBody({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { t, locale } = useAdminLocale();
+  const { t, locale, setLocale } = useAdminLocale();
   const [ready, setReady] = useState(false);
   const [role, setRole] = useState('user');
-  const [footerSettings, setFooterSettings] = useState<any>(null);
+  const [footerSettings, setFooterSettings] = useState<FooterSettings>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadParentFooterSettings()
@@ -97,6 +122,7 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
   }, [router]);
 
   const handleSignOut = async () => {
+    setMobileMenuOpen(false);
     await supabase.auth.signOut();
     router.replace('/login');
   };
@@ -183,6 +209,56 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
           </div>
           <div className="topbar-actions">
             <nav className="topnav">
+              <div className="topbar-locale" role="group" aria-label="Language">
+                {LOCALE_ITEMS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setLocale(item.value)}
+                    className={`topbar-locale-btn${locale === item.value ? ' active' : ''}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {visibleNavItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={pathname === item.href ? 'active' : ''}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (item.href === '/school-info') {
+                      localStorage.removeItem('EDUMAP_ADMIN_SELECTED_SCHOOL_ID');
+                    }
+                  }}
+                >
+                  {t(item.labelKey)}
+                </Link>
+              ))}
+            </nav>
+            <button type="button" className="topnav-logout" onClick={handleSignOut}>
+              {t('logout')}
+            </button>
+          </div>
+          <div className="topbar-mobile-actions">
+            <button type="button" className="topnav-logout" onClick={handleSignOut}>
+              {t('logout')}
+            </button>
+            <button
+              type="button"
+              className={`topbar-menu-toggle${mobileMenuOpen ? ' active' : ''}`}
+              aria-label="Открыть меню"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          </div>
+          {mobileMenuOpen ? (
+            <div className="topbar-mobile-menu">
               {visibleNavItems.map((item) => (
                 <Link
                   key={item.href}
@@ -197,11 +273,23 @@ function AdminLayoutBody({ children }: { children: ReactNode }) {
                   {t(item.labelKey)}
                 </Link>
               ))}
-            </nav>
-            <button type="button" className="topnav-logout" onClick={handleSignOut}>
-              {t('logout')}
-            </button>
-          </div>
+              <div className="topbar-locale mobile">
+                {LOCALE_ITEMS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => {
+                      setLocale(item.value);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`topbar-locale-btn${locale === item.value ? ' active' : ''}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </header>
         <main>{children}</main>
         <footer className="app-footer admin-app-footer">
