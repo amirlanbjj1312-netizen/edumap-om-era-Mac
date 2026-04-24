@@ -48,13 +48,16 @@ export async function upsertSchool(profile: any) {
   });
 }
 
-export async function autofillSchoolLocales(profile: any) {
+export async function autofillSchoolLocales(profile: any, scope?: string[]) {
   const token = await getAccessToken();
   if (!token) throw new Error('Authorization token is required');
   return authRequestJson<{ data: any }>('/schools/translate-locales', {
     token,
     method: 'POST',
-    body: safeStringify(profile),
+    body: safeStringify({
+      profile,
+      ...(scope?.length ? { scope } : {}),
+    }),
   });
 }
 

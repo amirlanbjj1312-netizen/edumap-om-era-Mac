@@ -44,13 +44,30 @@ const isLocalizedObject = (value) => {
   return keys.every((key) => LOCALE_KEYS.includes(key)) && keys.includes('ru');
 };
 
-const collectMissingTranslations = (value, path = [], acc = []) => {
+const pathStartsWith = (path, scopePath) => {
+  if (!scopePath.length) return true;
+  if (scopePath.length > path.length) return false;
+  return scopePath.every((part, index) => path[index] === part);
+};
+
+const shouldInspectPath = (path, scopePaths) => {
+  if (!scopePaths?.length) return true;
+  return scopePaths.some((scopePath) => {
+    if (pathStartsWith(path, scopePath)) return true;
+    return pathStartsWith(scopePath, path);
+  });
+};
+
+const collectMissingTranslations = (value, path = [], acc = [], scopePaths = null) => {
   if (Array.isArray(value)) {
-    value.forEach((item, index) => collectMissingTranslations(item, [...path, index], acc));
+    value.forEach((item, index) =>
+      collectMissingTranslations(item, [...path, index], acc, scopePaths)
+    );
     return acc;
   }
 
   if (!isPlainObject(value)) return acc;
+  if (!shouldInspectPath(path, scopePaths)) return acc;
 
   if (isLocalizedObject(value)) {
     const ru = toText(value.ru);
@@ -64,7 +81,7 @@ const collectMissingTranslations = (value, path = [], acc = []) => {
   }
 
   Object.entries(value).forEach(([key, nested]) => {
-    collectMissingTranslations(nested, [...path, key], acc);
+    collectMissingTranslations(nested, [...path, key], acc, scopePaths);
   });
   return acc;
 };
@@ -175,8 +192,24 @@ const translateBatch = async (config, texts) => {
   throw lastError || new Error('LLM translation request failed');
 };
 
-const autofillMissingSchoolLocales = async (config, profile) => {
-  const targets = collectMissingTranslations(profile);
+const normalizeScopePaths = (scope) => {
+  if (!Array.isArray(scope)) return null;
+  const normalized = scope
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean)
+    .map((item) =>
+      item
+        .split('.')
+        .map((part) => part.trim())
+        .filter(Boolean)
+    )
+    .filter((parts) => parts.length);
+  return normalized.length ? normalized : null;
+};
+
+const autofillMissingSchoolLocales = async (config, profile, options = {}) => {
+  const scopePaths = normalizeScopePaths(options.scope);
+  const targets = collectMissingTranslations(profile, [], [], scopePaths);
   if (!targets.length) return profile;
 
   const uniqueTexts = Array.from(new Set(targets.map((item) => item.ru)));

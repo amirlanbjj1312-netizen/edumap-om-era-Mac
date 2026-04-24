@@ -769,7 +769,8 @@ const buildSchoolsRouter = () => {
       if (!actorPayload) return;
       const actor = actorPayload.user;
       const actorRole = actorPayload.role;
-      const profile = validateSchoolPayload(req.body || {});
+      const profile = validateSchoolPayload(req.body?.profile || req.body || {});
+      const translationScope = Array.isArray(req.body?.scope) ? req.body.scope : undefined;
       const assignedSchoolId = getActorAssignedSchoolId(actor);
       const normalizedProfile =
         actorRole === 'admin' && assignedSchoolId
@@ -788,7 +789,9 @@ const buildSchoolsRouter = () => {
         }
       }
 
-      const translated = await autofillMissingSchoolLocales(config, normalizedProfile);
+      const translated = await autofillMissingSchoolLocales(config, normalizedProfile, {
+        scope: translationScope,
+      });
       res.json({ data: translated });
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -917,6 +920,12 @@ const buildSchoolsRouter = () => {
             created_at: review?.created_at || '',
             status: 'published',
             source: review?.source || 'legacy',
+            positives: review?.positives || '',
+            concerns: review?.concerns || '',
+            recommendation_for: review?.recommendation_for || '',
+            comment: review?.comment || '',
+            experience_type: review?.experience_type || '',
+            experience_freshness: review?.experience_freshness || '',
           });
         }
         const pendingReviews = Array.isArray(school?.reviews?.pending_items)
@@ -933,6 +942,12 @@ const buildSchoolsRouter = () => {
             created_at: review?.created_at || '',
             status: review?.status || 'pending',
             source: review?.source || 'direct_card',
+            positives: review?.positives || '',
+            concerns: review?.concerns || '',
+            recommendation_for: review?.recommendation_for || '',
+            comment: review?.comment || '',
+            experience_type: review?.experience_type || '',
+            experience_freshness: review?.experience_freshness || '',
           });
         }
       }

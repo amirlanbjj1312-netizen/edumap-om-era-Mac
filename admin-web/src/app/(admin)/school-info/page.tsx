@@ -37,6 +37,20 @@ type SchoolProfile = ReturnType<typeof createEmptySchoolProfile>;
 
 type LoadingState = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
+const TRANSLATION_SCOPE_BY_TAB: Record<
+  'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media',
+  string[]
+> = {
+  basic: ['basic_info'],
+  contacts: ['basic_info'],
+  education: ['education'],
+  admission: ['education.admission_details', 'education.admission_rules'],
+  services: ['services'],
+  clubs: ['services.clubs_unified', 'services.clubs_catalog', 'services.clubs_other'],
+  finance: ['finance'],
+  media: ['media'],
+};
+
 const formatArrayValue = (value: unknown) =>
   Array.isArray(value) ? value.join(', ') : value ? String(value) : '';
 
@@ -2838,7 +2852,10 @@ export default function SchoolInfoPage() {
       };
       let finalPayload = payload;
       try {
-        const translated = await autofillSchoolLocales(payload);
+        const translated = await autofillSchoolLocales(
+          payload,
+          TRANSLATION_SCOPE_BY_TAB[activeTab]
+        );
         finalPayload = translated?.data || payload;
       } catch {
         // Keep save flow working even if auto-translation is unavailable.
