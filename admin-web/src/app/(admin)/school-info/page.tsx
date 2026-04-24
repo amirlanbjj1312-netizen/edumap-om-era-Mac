@@ -2851,6 +2851,7 @@ export default function SchoolInfoPage() {
         },
       };
       let finalPayload = payload;
+      let translationSkipped = false;
       try {
         const translated = await autofillSchoolLocales(
           payload,
@@ -2858,7 +2859,7 @@ export default function SchoolInfoPage() {
         );
         finalPayload = translated?.data || payload;
       } catch {
-        // Keep save flow working even if auto-translation is unavailable.
+        translationSkipped = true;
       }
       await upsertSchool(finalPayload);
       savedSnapshotRef.current = JSON.stringify(finalPayload);
@@ -2868,7 +2869,11 @@ export default function SchoolInfoPage() {
         localStorage.removeItem(draftKey);
       }
       setState('saved');
-      setMessage(t('Сохранено.'));
+      setMessage(
+        translationSkipped
+          ? `${t('Сохранено.')} Автоперевод сейчас недоступен.`
+          : t('Сохранено.')
+      );
       setTimeout(() => setState('idle'), 1500);
     } catch (error) {
       setState('error');
