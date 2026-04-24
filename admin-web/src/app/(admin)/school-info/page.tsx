@@ -1574,15 +1574,30 @@ export default function SchoolInfoPage() {
     return '';
   };
   const getLocalizedFinanceValue = (pathBase: string, preferLocaleOnly = false) => {
-    const localeValue = getDeep(profile, `${pathBase}.${contentLocale}`, '');
     const legacyValue = getDeep(profile, pathBase, '');
+    if (legacyValue && typeof legacyValue === 'object' && !Array.isArray(legacyValue)) {
+      const raw = legacyValue as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(raw, contentLocale)) {
+        return toLocalizedText(raw[contentLocale], false);
+      }
+      if (preferLocaleOnly) return '';
+      return toLocalizedText(raw, true);
+    }
+    const localeValue = getDeep(profile, `${pathBase}.${contentLocale}`, '');
     if (preferLocaleOnly) {
       return toLocalizedText(localeValue, false) || toLocalizedText(legacyValue, false);
     }
     return toLocalizedText(localeValue, false) || toLocalizedText(legacyValue, true);
   };
   const discountsValue = useMemo(
-    () => getLocalizedFinanceValue('finance.discounts_info') || String(getDeep(profile, 'finance.grants_discounts', '') || ''),
+    () => {
+      const rawDiscounts = getDeep(profile, 'finance.discounts_info', undefined);
+      const localizedDiscounts = getLocalizedFinanceValue('finance.discounts_info');
+      if (rawDiscounts && typeof rawDiscounts === 'object' && !Array.isArray(rawDiscounts)) {
+        return localizedDiscounts;
+      }
+      return localizedDiscounts || String(getDeep(profile, 'finance.grants_discounts', '') || '');
+    },
     [profile, contentLocale]
   );
   const grantsValue = useMemo(
@@ -4094,7 +4109,18 @@ export default function SchoolInfoPage() {
                     <button
                       type="button"
                       className="button secondary"
-                      onClick={() => setAdmissionRules([...admissionRules, createAdmissionRuleEntry()])}
+                      onClick={() =>
+                        setAdmissionRules([
+                          ...admissionRules,
+                          createAdmissionRuleEntry({
+                            title: {
+                              ru: `Новый блок поступления ${admissionRules.length + 1}`,
+                              en: `New admission block ${admissionRules.length + 1}`,
+                              kk: `Жаңа қабылдау блогы ${admissionRules.length + 1}`,
+                            },
+                          }),
+                        ])
+                      }
                     >
                       {t('Добавить блок поступления')}
                     </button>
