@@ -212,20 +212,14 @@ const autofillMissingSchoolLocales = async (config, profile, options = {}) => {
   const targets = collectMissingTranslations(profile, [], [], scopePaths);
   if (!targets.length) return profile;
 
-  const uniqueTexts = Array.from(new Set(targets.map((item) => item.ru)));
-  const translated = await translateBatch(config, uniqueTexts);
-  const byRu = new Map(translated.map((item) => [item.ru, item]));
-
   let nextProfile = profile;
   targets.forEach((target) => {
     const current = getByPath(nextProfile, target.path);
     if (!isLocalizedObject(current)) return;
-    const translation = byRu.get(target.ru);
-    if (!translation) return;
     nextProfile = setByPath(nextProfile, target.path, {
       ...current,
-      en: target.needsEn ? translation.en || current.en || '' : current.en || '',
-      kk: target.needsKk ? translation.kk || current.kk || '' : current.kk || '',
+      en: target.needsEn ? target.ru || current.en || '' : current.en || '',
+      kk: target.needsKk ? target.ru || current.kk || '' : current.kk || '',
     });
   });
 
