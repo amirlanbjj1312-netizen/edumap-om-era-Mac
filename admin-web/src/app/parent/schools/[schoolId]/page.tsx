@@ -1649,7 +1649,11 @@ export default function ParentSchoolDetailsPage() {
       const digits = value.replaceAll(/[^\d]/g, '');
       return {
         label:
-          toLocalizedText(item?.label, locale) ||
+          pickFirstText(
+            item,
+            [`label.${locale}`, 'label.ru', 'label.kk', 'label.en', 'label'],
+            ''
+          ) ||
           (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
         value,
         href: isMobileViewport && digits ? `tel:${digits}` : undefined,
@@ -2010,9 +2014,13 @@ export default function ParentSchoolDetailsPage() {
   const hasMediaAssets =
     mediaPhotos.length > 0 || mediaVideos.length > 0 || mediaCertificates.length > 0;
   const teachers: TeacherCard[] = Array.isArray(getIn(school, 'services.teaching_staff.members'))
-    ? (getIn(school, 'services.teaching_staff.members') as Array<Record<string, unknown>>).map((item) => ({
+      ? (getIn(school, 'services.teaching_staff.members') as Array<Record<string, unknown>>).map((item) => ({
         full_name: toText(item.full_name) || 'Преподаватель',
-        position: toLocalizedText(item.position, locale),
+        position: pickFirstText(
+          item,
+          [`position.${locale}`, 'position.ru', 'position.kk', 'position.en', 'position'],
+          ''
+        ),
         category: toText(item.category),
         subjects: toText(item.subjects),
         teaching_languages: toText(item.teaching_languages),
