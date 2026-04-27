@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { supabaseStorage } from '@/lib/supabaseStorage';
 import {
-  autofillSchoolLocales,
   loadSchools,
   upsertSchool,
 } from '@/lib/api';
@@ -36,19 +35,40 @@ import {
 type SchoolProfile = ReturnType<typeof createEmptySchoolProfile>;
 
 type LoadingState = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+const LOCALE_KEYS = ['ru', 'en', 'kk'] as const;
 
-const TRANSLATION_SCOPE_BY_TAB: Record<
-  'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media',
-  string[]
-> = {
-  basic: ['basic_info'],
-  contacts: ['basic_info'],
-  education: ['education'],
-  admission: ['education.admission_details', 'education.admission_rules'],
-  services: ['services'],
-  clubs: ['services.clubs_unified', 'services.clubs_catalog', 'services.clubs_other'],
-  finance: ['finance'],
-  media: ['media'],
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const isLocalizedObject = (
+  value: unknown
+): value is Partial<Record<(typeof LOCALE_KEYS)[number], string>> => {
+  if (!isPlainObject(value)) return false;
+  const keys = Object.keys(value);
+  if (!keys.length || !keys.includes('ru')) return false;
+  return keys.every((key) => LOCALE_KEYS.includes(key as (typeof LOCALE_KEYS)[number]));
+};
+
+const fillMissingLocalesFromRussian = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item) => fillMissingLocalesFromRussian(item));
+  }
+
+  if (!isPlainObject(value)) return value;
+
+  if (isLocalizedObject(value)) {
+    const ru = typeof value.ru === 'string' ? value.ru.trim() : '';
+    if (!ru) return value;
+    return {
+      ...value,
+      en: typeof value.en === 'string' && value.en.trim() ? value.en : ru,
+      kk: typeof value.kk === 'string' && value.kk.trim() ? value.kk : ru,
+    };
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [key, fillMissingLocalesFromRussian(nested)])
+  );
 };
 
 const formatArrayValue = (value: unknown) =>
@@ -2850,17 +2870,7 @@ export default function SchoolInfoPage() {
           clubs_catalog: normalizedClubsCatalog,
         },
       };
-      let finalPayload = payload;
-      let translationSkipped = false;
-      try {
-        const translated = await autofillSchoolLocales(
-          payload,
-          TRANSLATION_SCOPE_BY_TAB[activeTab]
-        );
-        finalPayload = translated?.data || payload;
-      } catch {
-        translationSkipped = true;
-      }
+      const finalPayload = fillMissingLocalesFromRussian(payload) as SchoolProfile;
       await upsertSchool(finalPayload);
       savedSnapshotRef.current = JSON.stringify(finalPayload);
       setProfile(finalPayload);
@@ -2869,11 +2879,7 @@ export default function SchoolInfoPage() {
         localStorage.removeItem(draftKey);
       }
       setState('saved');
-      setMessage(
-        translationSkipped
-          ? `${t('Сохранено.')} Автоперевод сейчас недоступен.`
-          : t('Сохранено.')
-      );
+      setMessage(t('Сохранено.'));
       setTimeout(() => setState('idle'), 1500);
     } catch (error) {
       setState('error');
