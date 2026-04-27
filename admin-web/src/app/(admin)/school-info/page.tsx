@@ -1827,14 +1827,14 @@ export default function SchoolInfoPage() {
   });
   const createStudentSuccessStoryEntry = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    student_name: '',
-    admitted_to: '',
+    student_name: { ru: '', en: '', kk: '' },
+    admitted_to: { ru: '', en: '', kk: '' },
     ent_score: '',
     ielts_score: '',
     sat_score: '',
     school_average_score: '',
     achievements: { ru: '', en: '', kk: '' },
-    admission_subjects: '',
+    admission_subjects: { ru: '', en: '', kk: '' },
     application_deadline: '',
     student_photo: '',
   });
@@ -2313,8 +2313,8 @@ export default function SchoolInfoPage() {
     if (!Array.isArray(raw)) return [];
     return raw.map((item: any, index: number) => ({
       id: String(item?.id || `success-story-${index}`),
-      student_name: String(item?.student_name || ''),
-      admitted_to: String(item?.admitted_to || ''),
+      student_name: normalizeLocalizedTextValue(item?.student_name),
+      admitted_to: normalizeLocalizedTextValue(item?.admitted_to),
       ent_score: String(item?.ent_score || ''),
       ielts_score: String(item?.ielts_score || ''),
       sat_score: String(item?.sat_score || ''),
@@ -2323,7 +2323,7 @@ export default function SchoolInfoPage() {
         item?.achievements && typeof item.achievements === 'object'
           ? item.achievements
           : { ru: '', en: '', kk: '' },
-      admission_subjects: String(item?.admission_subjects || ''),
+      admission_subjects: normalizeLocalizedTextValue(item?.admission_subjects),
       application_deadline: String(item?.application_deadline || ''),
       student_photo: String(item?.student_photo || ''),
     }));
@@ -3839,8 +3839,8 @@ export default function SchoolInfoPage() {
             {studentSuccessStories.map((story: any, index: number) => {
               const isExpanded = expandedSuccessStoryIndex === index;
               const summaryParts = [
-                String(story?.student_name || '').trim(),
-                String(story?.admitted_to || '').trim(),
+                String(story?.student_name?.[contentLocale] || '').trim(),
+                String(story?.admitted_to?.[contentLocale] || '').trim(),
                 String(story?.school_average_score || '').trim()
                   ? `${t('Средний балл в школе')}: ${String(story?.school_average_score || '').trim()}`
                   : '',
@@ -3890,13 +3890,27 @@ export default function SchoolInfoPage() {
                   <FieldRow>
                     <Input
                       label="Имя ученика"
-                      value={String(story?.student_name || '')}
-                      onChange={(value: string) => updateStudentSuccessStory(index, { student_name: value })}
+                      value={String(story?.student_name?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateStudentSuccessStory(index, {
+                          student_name: {
+                            ...(story?.student_name || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
                     />
                     <Input
                       label="Куда поступил"
-                      value={String(story?.admitted_to || '')}
-                      onChange={(value: string) => updateStudentSuccessStory(index, { admitted_to: value })}
+                      value={String(story?.admitted_to?.[contentLocale] || '')}
+                      onChange={(value: string) =>
+                        updateStudentSuccessStory(index, {
+                          admitted_to: {
+                            ...(story?.admitted_to || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
+                      }
                     />
                   </FieldRow>
                   <FieldRow>

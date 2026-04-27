@@ -1872,14 +1872,35 @@ export default function ParentSchoolDetailsPage() {
   )
     ? (getIn(school, 'education.results.student_success_stories') as Array<Record<string, unknown>>)
         .map((item) => ({
-          student_name: toText(item.student_name),
-          admitted_to: toText(item.admitted_to),
+          student_name: pickFirstText(
+            item,
+            [`student_name.${locale}`, 'student_name.ru', 'student_name.kk', 'student_name.en', 'student_name'],
+            ''
+          ),
+          admitted_to: pickFirstText(
+            item,
+            [`admitted_to.${locale}`, 'admitted_to.ru', 'admitted_to.kk', 'admitted_to.en', 'admitted_to'],
+            ''
+          ),
           ent_score: toText(item.ent_score),
           ielts_score: toText(item.ielts_score),
           sat_score: toText(item.sat_score),
           school_average_score: toText(item.school_average_score),
           achievements: toText(item.achievements),
-          admission_subjects: localizeCsv(toText(item.admission_subjects), locale),
+          admission_subjects: localizeCsv(
+            pickFirstText(
+              item,
+              [
+                `admission_subjects.${locale}`,
+                'admission_subjects.ru',
+                'admission_subjects.kk',
+                'admission_subjects.en',
+                'admission_subjects',
+              ],
+              ''
+            ),
+            locale
+          ),
           application_deadline: toText(item.application_deadline),
           student_photo: toText(item.student_photo),
         }))

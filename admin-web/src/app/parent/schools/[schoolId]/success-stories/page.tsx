@@ -36,6 +36,18 @@ const toText = (value: unknown): string => {
   return '';
 };
 
+const toLocalizedText = (value: unknown, locale: 'ru' | 'en' | 'kk'): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (value && typeof value === 'object') {
+    const localized = value as Record<string, unknown>;
+    const picked = localized[locale] ?? localized.ru ?? localized.kk ?? localized.en;
+    if (typeof picked === 'string') return picked;
+    if (typeof picked === 'number') return String(picked);
+  }
+  return '';
+};
+
 const getIn = (source: unknown, path: string): unknown => {
   if (!source || typeof source !== 'object') return undefined;
   const parts = path.split('.');
@@ -79,18 +91,18 @@ export default function ParentSchoolSuccessStoriesPage() {
     if (!Array.isArray(raw)) return [];
     return raw
       .map((item) => ({
-        student_name: toText((item as Record<string, unknown>)?.student_name),
-        admitted_to: toText((item as Record<string, unknown>)?.admitted_to),
+        student_name: toLocalizedText((item as Record<string, unknown>)?.student_name, locale),
+        admitted_to: toLocalizedText((item as Record<string, unknown>)?.admitted_to, locale),
         ent_score: toText((item as Record<string, unknown>)?.ent_score),
         ielts_score: toText((item as Record<string, unknown>)?.ielts_score),
         sat_score: toText((item as Record<string, unknown>)?.sat_score),
         school_average_score: toText((item as Record<string, unknown>)?.school_average_score),
-        achievements: toText((item as Record<string, unknown>)?.achievements),
+        achievements: toLocalizedText((item as Record<string, unknown>)?.achievements, locale),
         application_deadline: toText((item as Record<string, unknown>)?.application_deadline),
         student_photo: toText((item as Record<string, unknown>)?.student_photo),
       }))
       .filter((item) => item.student_name || item.admitted_to || item.achievements);
-  }, [school]);
+  }, [school, locale]);
 
   const activeStory = stories[activeIndex] || null;
 
