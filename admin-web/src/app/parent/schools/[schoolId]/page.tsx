@@ -1648,7 +1648,9 @@ export default function ParentSchoolDetailsPage() {
       const value = formatKzPhone(toText(item?.number));
       const digits = value.replaceAll(/[^\d]/g, '');
       return {
-        label: toText(item?.label) || (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
+        label:
+          toLocalizedText(item?.label, locale) ||
+          (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
         value,
         href: isMobileViewport && digits ? `tel:${digits}` : undefined,
       };
@@ -2010,7 +2012,7 @@ export default function ParentSchoolDetailsPage() {
   const teachers: TeacherCard[] = Array.isArray(getIn(school, 'services.teaching_staff.members'))
     ? (getIn(school, 'services.teaching_staff.members') as Array<Record<string, unknown>>).map((item) => ({
         full_name: toText(item.full_name) || 'Преподаватель',
-        position: toText(item.position),
+        position: toLocalizedText(item.position, locale),
         category: toText(item.category),
         subjects: toText(item.subjects),
         teaching_languages: toText(item.teaching_languages),

@@ -56,7 +56,7 @@ export const buildSchoolTeachers = (school: unknown, locale: Locale) => {
     .map((item: Record<string, unknown>, index: number) => ({
       id: toTeacherId(item.id || item.full_name, `teacher-${index + 1}`),
       full_name: toText(item.full_name) || (locale === 'en' ? 'Teacher' : 'Преподаватель'),
-      position: toText(item.position),
+      position: toLocalizedText(item.position, locale),
       category: toText(item.category),
       subjects: toText(item.subjects),
       teaching_languages: toText(item.teaching_languages),
@@ -77,7 +77,7 @@ export const buildSchoolClubs = (school: unknown, locale: Locale) => {
       const name = toLocalizedText(item.name, locale);
       const description = toLocalizedText(item.description, locale);
       const schedule = toLocalizedText(item.schedule, locale);
-      const teacherName = toText(item.teacher_name);
+      const teacherName = toLocalizedText(item.teacher_name, locale);
       const priceAmount = toText(item.price_amount || item.price_monthly);
       const symbol = toCurrencySymbol(item.price_currency);
       const hasContent =
@@ -98,7 +98,7 @@ export const buildSchoolClubs = (school: unknown, locale: Locale) => {
         schedule,
         teacher_id: toTeacherId(item.teacher_id || teacherName, ''),
         teacher_name: teacherName,
-        trainer_info: toText(item.trainer_info),
+        trainer_info: toLocalizedText(item.trainer_info, locale),
         trainer_photo: toText(item.trainer_photo),
         section_photos: toList(item.section_photos),
         class_range: toText(item.class_range),

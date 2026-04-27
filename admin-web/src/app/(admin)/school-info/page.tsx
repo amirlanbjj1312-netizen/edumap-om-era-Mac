@@ -49,6 +49,18 @@ const isLocalizedObject = (
   return keys.every((key) => LOCALE_KEYS.includes(key as (typeof LOCALE_KEYS)[number]));
 };
 
+const normalizeLocalizedTextValue = (value: unknown, fallback = '') => {
+  if (isLocalizedObject(value)) {
+    return {
+      ru: typeof value.ru === 'string' ? value.ru : '',
+      en: typeof value.en === 'string' ? value.en : '',
+      kk: typeof value.kk === 'string' ? value.kk : '',
+    };
+  }
+  const text = typeof value === 'string' ? value : fallback;
+  return { ru: text, en: '', kk: '' };
+};
+
 const fillMissingLocalesFromRussian = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => fillMissingLocalesFromRussian(item));
@@ -1772,7 +1784,7 @@ export default function SchoolInfoPage() {
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
-    position: '',
+    position: { ru: '', en: '', kk: '' },
     education_degree: '',
     subjects: '',
     experience_years: '',
@@ -1784,19 +1796,19 @@ export default function SchoolInfoPage() {
   });
   const createLeadershipMember = (role: 'principal' | 'deputy_principal') => ({
     full_name: '',
-    position: role === 'principal' ? 'Директор' : 'Зам. директора',
+    position: normalizeLocalizedTextValue(role === 'principal' ? 'Директор' : 'Зам. директора'),
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
   const createPhoneEntry = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    label: '',
+    label: { ru: '', en: '', kk: '' },
     number: '',
   });
   const createDeputyDirectorEntry = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     full_name: '',
-    position: 'Зам. директора',
+    position: normalizeLocalizedTextValue('Зам. директора'),
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
@@ -1805,8 +1817,8 @@ export default function SchoolInfoPage() {
     name: { ru: '', en: '', kk: '' },
     description: { ru: '', en: '', kk: '' },
     schedule: { ru: '', en: '', kk: '' },
-    teacher_name: '',
-    trainer_info: '',
+    teacher_name: { ru: '', en: '', kk: '' },
+    trainer_info: { ru: '', en: '', kk: '' },
     trainer_photo: '',
     section_photos: '',
     grades: '',
@@ -1864,7 +1876,7 @@ export default function SchoolInfoPage() {
         {
           id: 'legacy-staff',
           full_name: '',
-          position: '',
+          position: { ru: '', en: '', kk: '' },
           subjects: '',
           experience_years: '',
           category: '',
@@ -1945,7 +1957,7 @@ export default function SchoolInfoPage() {
       full_name: String(
         getDeep(profile, `basic_info.team.leadership.${role}.full_name`, '') || fallbackName || ''
       ),
-      position: String(
+      position: normalizeLocalizedTextValue(
         getDeep(profile, `basic_info.team.leadership.${role}.position`, '') ||
           (role === 'principal' ? 'Директор' : 'Зам. директора')
       ),
@@ -1991,7 +2003,7 @@ export default function SchoolInfoPage() {
     if (Array.isArray(items) && items.length) {
       return items.map((item: any, index: number) => ({
         id: String(item?.id || `phone-${index}`),
-        label: String(item?.label || ''),
+        label: normalizeLocalizedTextValue(item?.label),
         number: String(item?.number || ''),
       }));
     }
@@ -2001,7 +2013,7 @@ export default function SchoolInfoPage() {
         {
           ...createPhoneEntry(),
           id: 'legacy-phone',
-          label: '',
+          label: normalizeLocalizedTextValue(''),
           number: legacyPhone,
         },
       ];
@@ -2050,7 +2062,7 @@ export default function SchoolInfoPage() {
         ...(item && typeof item === 'object' ? item : {}),
         id: String(item?.id || `deputy-${index}`),
         full_name: String(item?.full_name || ''),
-        position: String(item?.position || 'Зам. директора'),
+        position: normalizeLocalizedTextValue(item?.position || 'Зам. директора'),
         photo_url: String(item?.photo_url || ''),
         bio: {
           ru: String(item?.bio?.ru || ''),
@@ -2126,8 +2138,8 @@ export default function SchoolInfoPage() {
           item?.schedule && typeof item.schedule === 'object'
             ? item.schedule
             : { ru: '', en: '', kk: '' },
-        teacher_name: String(item?.teacher_name || ''),
-        trainer_info: String(item?.trainer_info || ''),
+        teacher_name: normalizeLocalizedTextValue(item?.teacher_name),
+        trainer_info: normalizeLocalizedTextValue(item?.trainer_info),
         trainer_photo: String(item?.trainer_photo || ''),
         section_photos: String(item?.section_photos || ''),
         grades: String(item?.grades || ''),
@@ -2150,8 +2162,8 @@ export default function SchoolInfoPage() {
         item?.schedule && typeof item.schedule === 'object'
           ? item.schedule
           : { ru: '', en: '', kk: '' },
-      teacher_name: String(item?.teacher_name || ''),
-      trainer_info: String(item?.trainer_info || ''),
+      teacher_name: normalizeLocalizedTextValue(item?.teacher_name),
+      trainer_info: normalizeLocalizedTextValue(item?.trainer_info),
       trainer_photo: String(item?.trainer_photo || ''),
       section_photos: String(item?.section_photos || ''),
       grades: String(item?.grades || ''),
@@ -3595,7 +3607,7 @@ export default function SchoolInfoPage() {
               {phoneEntries.length ? (
                 <div className="teacher-list">
                   {phoneEntries.map((phone: any, index: number) => (
-                    <div key={phone?.id || `phone-${index}`} className="teacher-card">
+                <div key={phone?.id || `phone-${index}`} className="teacher-card">
                       <div className="teacher-card-head">
                         <h3>{t('Дополнительный телефон')} #{index + 1}</h3>
                         <button
@@ -3609,8 +3621,15 @@ export default function SchoolInfoPage() {
                       <FieldRow>
                         <Input
                           label="Подпись"
-                          value={phone?.label || ''}
-                          onChange={(value: string) => updatePhoneEntry(index, { label: value })}
+                          value={String(phone?.label?.[contentLocale] || '')}
+                          onChange={(value: string) =>
+                            updatePhoneEntry(index, {
+                              label: {
+                                ...(phone?.label || { ru: '', en: '', kk: '' }),
+                                [contentLocale]: value,
+                              },
+                            })
+                          }
                         />
                         <Input
                           label="Телефон"
@@ -4456,7 +4475,7 @@ export default function SchoolInfoPage() {
               const isExpanded = expandedLeadershipKey === key;
               const summaryParts = [
                 String(member?.full_name || '').trim(),
-                translateOption(String(member?.position || ''), contentLocale).trim(),
+                toLocalizedText(member?.position, true).trim(),
                 String(member?.bio?.[contentLocale] || '').trim(),
               ].filter(Boolean);
               return (
@@ -4492,9 +4511,14 @@ export default function SchoolInfoPage() {
                         />
                         <Input
                           label="Должность"
-                          value={member?.position || ''}
+                          value={toLocalizedText(member?.position, true)}
                           onChange={(value: string) =>
-                            updateLeadershipMember(key, { position: value })
+                            updateLeadershipMember(key, {
+                              position: {
+                                ...(member?.position || { ru: '', en: '', kk: '' }),
+                                [contentLocale]: value,
+                              },
+                            })
                           }
                         />
                       </FieldRow>
@@ -4583,7 +4607,7 @@ export default function SchoolInfoPage() {
                 const isExpanded = expandedDeputyDirectorIndex === index;
                 const summaryParts = [
                   String(member?.full_name || '').trim(),
-                  translateOption(String(member?.position || ''), contentLocale).trim(),
+                  toLocalizedText(member?.position, true).trim(),
                   String(member?.bio?.[contentLocale] || '').trim(),
                 ].filter(Boolean);
                 return (
@@ -4630,9 +4654,14 @@ export default function SchoolInfoPage() {
                           />
                           <Input
                             label="Должность"
-                            value={member?.position || ''}
+                            value={toLocalizedText(member?.position, true)}
                             onChange={(value: string) =>
-                              updateDeputyDirectorMember(index, { position: value })
+                              updateDeputyDirectorMember(index, {
+                                position: {
+                                  ...(member?.position || { ru: '', en: '', kk: '' }),
+                                  [contentLocale]: value,
+                                },
+                              })
                             }
                           />
                         </FieldRow>
@@ -4728,7 +4757,7 @@ export default function SchoolInfoPage() {
                     const isExpanded = expandedTeacherIndex === index;
                     const summaryParts = [
                       String(member?.full_name || '').trim(),
-                      translateOption(String(member?.position || ''), contentLocale).trim(),
+                      toLocalizedText(member?.position, true).trim(),
                       String(member?.education_degree || '').trim(),
                       String(member?.subjects || '').trim(),
                       Number(member?.experience_years || 0) > 0
@@ -4791,9 +4820,14 @@ export default function SchoolInfoPage() {
                     />
                     <Input
                       label="Должность"
-                      value={member?.position || ''}
+                      value={toLocalizedText(member?.position, true)}
                       onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { position: value })
+                        updateTeachingStaffMember(index, {
+                          position: {
+                            ...(member?.position || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
                       }
                     />
                   </FieldRow>
@@ -4985,7 +5019,7 @@ export default function SchoolInfoPage() {
                 const isExpanded = expandedClubIndex === index;
                 const summaryParts = [
                   String(club?.name?.[contentLocale] || '').trim(),
-                  String(club?.teacher_name || '').trim(),
+                  toLocalizedText(club?.teacher_name, true).trim(),
                   String(club?.schedule?.[contentLocale] || '').trim(),
                   String(club?.grades || '').trim(),
                   String(club?.price_monthly || '').trim()
@@ -5050,10 +5084,15 @@ export default function SchoolInfoPage() {
                       />
                       <Input
                         label="Кто ведет (ФИО)"
-                        value={club?.teacher_name || ''}
+                        value={toLocalizedText(club?.teacher_name, true)}
                         placeholder="Например: Ким Валерий"
                         onChange={(value: string) =>
-                          updateClubEntry(index, { teacher_name: value })
+                          updateClubEntry(index, {
+                            teacher_name: {
+                              ...(club?.teacher_name || { ru: '', en: '', kk: '' }),
+                              [contentLocale]: value,
+                            },
+                          })
                         }
                       />
                     </FieldRow>
@@ -5061,10 +5100,15 @@ export default function SchoolInfoPage() {
                       <RichTextArea
                         label="Инфо про тренера"
                         rows={3}
-                        value={club?.trainer_info || ''}
+                        value={toLocalizedText(club?.trainer_info, true)}
                         placeholder="Например: КМС • 8 лет стажа - международный сертификат"
                         onChange={(value: string) =>
-                          updateClubEntry(index, { trainer_info: value })
+                          updateClubEntry(index, {
+                            trainer_info: {
+                              ...(club?.trainer_info || { ru: '', en: '', kk: '' }),
+                              [contentLocale]: value,
+                            },
+                          })
                         }
                       />
                     </FieldRow>

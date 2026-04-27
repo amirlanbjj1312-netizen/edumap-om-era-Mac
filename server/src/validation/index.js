@@ -242,8 +242,8 @@ const ensureUnifiedClubs = (value, fieldName) => {
     );
     ensureMaxLen(club.location, 240, `${fieldName}.${index}.location`);
     ensureMaxLen(club.teacher_id, 120, `${fieldName}.${index}.teacher_id`);
-    ensureMaxLen(club.teacher_name, 160, `${fieldName}.${index}.teacher_name`);
-    ensureMaxLen(club.trainer_info, 1200, `${fieldName}.${index}.trainer_info`);
+    ensureLocalizedText(club.teacher_name, `${fieldName}.${index}.teacher_name`, 160);
+    ensureLocalizedText(club.trainer_info, `${fieldName}.${index}.trainer_info`, 1200);
     if (trim(club.trainer_photo)) {
       ensure(isUrl(club.trainer_photo), `${fieldName}.${index}.trainer_photo must be URL`);
     }
@@ -519,6 +519,44 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
     180,
     'basic_info.coordinates.longitude'
   );
+  const additionalLocations = Array.isArray(basicInfo.additional_locations)
+    ? basicInfo.additional_locations
+    : [];
+  ensure(
+    additionalLocations.length <= 3,
+    'basic_info.additional_locations has too many items'
+  );
+  additionalLocations.forEach((item, index) => {
+    ensure(isObject(item), `basic_info.additional_locations.${index} must be object`);
+    ensureLocalizedText(
+      item.address,
+      `basic_info.additional_locations.${index}.address`,
+      280
+    );
+    ensureMaxLen(
+      item.city,
+      80,
+      `basic_info.additional_locations.${index}.city`
+    );
+    ensureMaxLen(
+      item.district,
+      120,
+      `basic_info.additional_locations.${index}.district`
+    );
+    const extraCoords = isObject(item.coordinates) ? item.coordinates : {};
+    ensureNumericStringInRange(
+      extraCoords.latitude,
+      -90,
+      90,
+      `basic_info.additional_locations.${index}.coordinates.latitude`
+    );
+    ensureNumericStringInRange(
+      extraCoords.longitude,
+      -180,
+      180,
+      `basic_info.additional_locations.${index}.coordinates.longitude`
+    );
+  });
 
   const finance = isObject(payload.finance) ? payload.finance : {};
   ensureNumericStringInRange(finance.monthly_fee, 0, 100000000, 'finance.monthly_fee');

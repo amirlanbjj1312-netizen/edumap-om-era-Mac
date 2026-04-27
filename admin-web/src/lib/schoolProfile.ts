@@ -46,13 +46,13 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
         leadership: {
           principal: {
             full_name: '',
-            position: 'Директор',
+            position: { ru: 'Директор', en: '', kk: '' },
             photo_url: '',
             bio: { ru: '', en: '', kk: '' },
           },
           deputy_principal: {
             full_name: '',
-            position: 'Зам. директора',
+            position: { ru: 'Зам. директора', en: '', kk: '' },
             photo_url: '',
             bio: { ru: '', en: '', kk: '' },
           },
