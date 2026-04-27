@@ -4475,7 +4475,7 @@ export default function SchoolInfoPage() {
               const isExpanded = expandedLeadershipKey === key;
               const summaryParts = [
                 String(member?.full_name || '').trim(),
-                toLocalizedText(member?.position, true).trim(),
+                String(member?.position?.[contentLocale] || '').trim(),
                 String(member?.bio?.[contentLocale] || '').trim(),
               ].filter(Boolean);
               return (
@@ -4511,7 +4511,7 @@ export default function SchoolInfoPage() {
                         />
                         <Input
                           label="Должность"
-                          value={toLocalizedText(member?.position, true)}
+                          value={String(member?.position?.[contentLocale] || '')}
                           onChange={(value: string) =>
                             updateLeadershipMember(key, {
                               position: {
@@ -4607,7 +4607,7 @@ export default function SchoolInfoPage() {
                 const isExpanded = expandedDeputyDirectorIndex === index;
                 const summaryParts = [
                   String(member?.full_name || '').trim(),
-                  toLocalizedText(member?.position, true).trim(),
+                  String(member?.position?.[contentLocale] || '').trim(),
                   String(member?.bio?.[contentLocale] || '').trim(),
                 ].filter(Boolean);
                 return (
@@ -4654,7 +4654,7 @@ export default function SchoolInfoPage() {
                           />
                           <Input
                             label="Должность"
-                            value={toLocalizedText(member?.position, true)}
+                            value={String(member?.position?.[contentLocale] || '')}
                             onChange={(value: string) =>
                               updateDeputyDirectorMember(index, {
                                 position: {
@@ -4757,7 +4757,7 @@ export default function SchoolInfoPage() {
                     const isExpanded = expandedTeacherIndex === index;
                     const summaryParts = [
                       String(member?.full_name || '').trim(),
-                      toLocalizedText(member?.position, true).trim(),
+                      String(member?.position?.[contentLocale] || '').trim(),
                       String(member?.education_degree || '').trim(),
                       String(member?.subjects || '').trim(),
                       Number(member?.experience_years || 0) > 0
@@ -4820,7 +4820,7 @@ export default function SchoolInfoPage() {
                     />
                     <Input
                       label="Должность"
-                      value={toLocalizedText(member?.position, true)}
+                      value={String(member?.position?.[contentLocale] || '')}
                       onChange={(value: string) =>
                         updateTeachingStaffMember(index, {
                           position: {
@@ -5019,7 +5019,7 @@ export default function SchoolInfoPage() {
                 const isExpanded = expandedClubIndex === index;
                 const summaryParts = [
                   String(club?.name?.[contentLocale] || '').trim(),
-                  toLocalizedText(club?.teacher_name, true).trim(),
+                  String(club?.teacher_name?.[contentLocale] || '').trim(),
                   String(club?.schedule?.[contentLocale] || '').trim(),
                   String(club?.grades || '').trim(),
                   String(club?.price_monthly || '').trim()
@@ -5084,7 +5084,7 @@ export default function SchoolInfoPage() {
                       />
                       <Input
                         label="Кто ведет (ФИО)"
-                        value={toLocalizedText(club?.teacher_name, true)}
+                        value={String(club?.teacher_name?.[contentLocale] || '')}
                         placeholder="Например: Ким Валерий"
                         onChange={(value: string) =>
                           updateClubEntry(index, {
@@ -5100,7 +5100,7 @@ export default function SchoolInfoPage() {
                       <RichTextArea
                         label="Инфо про тренера"
                         rows={3}
-                        value={toLocalizedText(club?.trainer_info, true)}
+                        value={String(club?.trainer_info?.[contentLocale] || '')}
                         placeholder="Например: КМС • 8 лет стажа - международный сертификат"
                         onChange={(value: string) =>
                           updateClubEntry(index, {
