@@ -167,6 +167,14 @@ const composeTime = (hour: string, minute: string) => {
   return `${h}:${m}`;
 };
 
+const addHourToTime = (value: string) => {
+  const { hour, minute } = splitTime(value);
+  if (!hour || !minute) return '';
+  const nextHour = Number(hour) + 1;
+  if (!Number.isFinite(nextHour) || nextHour > 23) return '';
+  return composeTime(String(nextHour).padStart(2, '0'), minute);
+};
+
 const parseSchedulePreset = (value: string) => {
   const raw = String(value || '').trim();
   const days = WEEKDAY_OPTIONS.filter((item) =>
@@ -2315,8 +2323,14 @@ export default function SchoolInfoPage() {
     const current = clubs[index];
     if (!current) return;
     const slots = parseScheduleSlots(String(current?.schedule?.[contentLocale] || ''));
+    const lastSlot = slots[slots.length - 1] || { days: [], start: '', end: '' };
+    const nextSlot = {
+      days: Array.isArray(lastSlot.days) ? [...lastSlot.days] : [],
+      start: lastSlot.end || '',
+      end: addHourToTime(lastSlot.end || '') || '',
+    };
     const nextText = buildScheduleSlotsPreset(
-      [...slots, { days: [], start: '', end: '' }],
+      [...slots, nextSlot],
       contentLocale
     );
     updateClubEntry(index, {
