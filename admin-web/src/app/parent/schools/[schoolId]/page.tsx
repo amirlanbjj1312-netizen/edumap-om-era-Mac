@@ -2036,18 +2036,27 @@ export default function ParentSchoolDetailsPage() {
     mediaPhotos.length > 0 || mediaVideos.length > 0 || mediaCertificates.length > 0;
   const teachers: TeacherCard[] = Array.isArray(getIn(school, 'services.teaching_staff.members'))
       ? (getIn(school, 'services.teaching_staff.members') as Array<Record<string, unknown>>).map((item) => ({
-        full_name: toText(item.full_name) || 'Преподаватель',
+        full_name:
+          pickFirstText(
+            item,
+            [`full_name.${locale}`, 'full_name.ru', 'full_name.kk', 'full_name.en', 'full_name'],
+            ''
+          ) || 'Преподаватель',
         position: pickFirstText(
           item,
           [`position.${locale}`, 'position.ru', 'position.kk', 'position.en', 'position'],
           ''
         ),
-        category: toText(item.category),
+        category: pickFirstText(
+          item,
+          [`category.${locale}`, 'category.ru', 'category.kk', 'category.en', 'category'],
+          ''
+        ),
         subjects: toText(item.subjects),
         teaching_languages: toText(item.teaching_languages),
         exam_prep: toText(item.exam_prep),
         experience_years: toText(item.experience_years),
-        bio: toText(item.bio) || toText((item.bio as Record<string, unknown>)?.ru),
+        bio: pickFirstText(item, [`bio.${locale}`, 'bio.ru', 'bio.kk', 'bio.en', 'bio'], ''),
         photo_url: toText(item.photo_url),
       }))
     : [];

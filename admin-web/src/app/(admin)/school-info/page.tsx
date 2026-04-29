@@ -1783,19 +1783,19 @@ export default function SchoolInfoPage() {
   };
   const createTeacherMember = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    full_name: '',
+    full_name: { ru: '', en: '', kk: '' },
     position: { ru: '', en: '', kk: '' },
-    education_degree: '',
+    education_degree: { ru: '', en: '', kk: '' },
     subjects: '',
     experience_years: '',
-    category: '',
+    category: { ru: '', en: '', kk: '' },
     teaching_languages: '',
     exam_prep: '',
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
   const createLeadershipMember = (role: 'principal' | 'deputy_principal') => ({
-    full_name: '',
+    full_name: { ru: '', en: '', kk: '' },
     position: normalizeLocalizedTextValue(role === 'principal' ? 'Директор' : 'Зам. директора'),
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
@@ -1807,7 +1807,7 @@ export default function SchoolInfoPage() {
   });
   const createDeputyDirectorEntry = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    full_name: '',
+    full_name: { ru: '', en: '', kk: '' },
     position: normalizeLocalizedTextValue('Зам. директора'),
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
@@ -1864,7 +1864,20 @@ export default function SchoolInfoPage() {
   const getTeachingStaffMembers = () => {
     const members = getDeep(profile, 'services.teaching_staff.members', []);
     if (Array.isArray(members) && members.length) {
-      return members;
+      return members.map((item: any, index: number) => ({
+        ...createTeacherMember(),
+        ...(item && typeof item === 'object' ? item : {}),
+        id: String(item?.id || `teacher-${index}`),
+        full_name: normalizeLocalizedTextValue(item?.full_name),
+        position: normalizeLocalizedTextValue(item?.position),
+        education_degree: normalizeLocalizedTextValue(item?.education_degree),
+        category: normalizeLocalizedTextValue(item?.category),
+        bio: {
+          ru: String(item?.bio?.ru || ''),
+          en: String(item?.bio?.en || ''),
+          kk: String(item?.bio?.kk || ''),
+        },
+      }));
     }
     const legacyPhoto = String(getDeep(profile, 'services.teaching_staff.photo', '') || '');
     const legacyDescription = getDeep(profile, 'services.teaching_staff.description', {});
@@ -1875,11 +1888,12 @@ export default function SchoolInfoPage() {
       return [
         {
           id: 'legacy-staff',
-          full_name: '',
+          full_name: { ru: '', en: '', kk: '' },
           position: { ru: '', en: '', kk: '' },
           subjects: '',
           experience_years: '',
-          category: '',
+          category: { ru: '', en: '', kk: '' },
+          education_degree: { ru: '', en: '', kk: '' },
           teaching_languages: '',
           exam_prep: '',
           photo_url: legacyPhoto,
@@ -1954,7 +1968,7 @@ export default function SchoolInfoPage() {
     return {
       ...createLeadershipMember(role),
       ...(current && typeof current === 'object' ? current : {}),
-      full_name: String(
+      full_name: normalizeLocalizedTextValue(
         getDeep(profile, `basic_info.team.leadership.${role}.full_name`, '') || fallbackName || ''
       ),
       position: normalizeLocalizedTextValue(
@@ -1986,7 +2000,10 @@ export default function SchoolInfoPage() {
       nextProfile = setDeep(
         nextProfile,
         role === 'principal' ? 'basic_info.team.principal' : 'basic_info.team.deputy_principal',
-        String(patch.full_name || '')
+        String(
+          (patch.full_name && typeof patch.full_name === 'object' ? patch.full_name.ru : patch.full_name) ||
+            ''
+        )
       );
     }
     setProfile(nextProfile);
@@ -2061,7 +2078,7 @@ export default function SchoolInfoPage() {
         ...createDeputyDirectorEntry(),
         ...(item && typeof item === 'object' ? item : {}),
         id: String(item?.id || `deputy-${index}`),
-        full_name: String(item?.full_name || ''),
+        full_name: normalizeLocalizedTextValue(item?.full_name),
         position: normalizeLocalizedTextValue(item?.position || 'Зам. директора'),
         photo_url: String(item?.photo_url || ''),
         bio: {
@@ -4488,7 +4505,7 @@ export default function SchoolInfoPage() {
             {leadershipMembers.map(({ key, title, member }) => {
               const isExpanded = expandedLeadershipKey === key;
               const summaryParts = [
-                String(member?.full_name || '').trim(),
+                String(member?.full_name?.[contentLocale] || '').trim(),
                 String(member?.position?.[contentLocale] || '').trim(),
                 String(member?.bio?.[contentLocale] || '').trim(),
               ].filter(Boolean);
@@ -4518,9 +4535,14 @@ export default function SchoolInfoPage() {
                       <FieldRow>
                         <Input
                           label="ФИО"
-                          value={member?.full_name || ''}
+                          value={String(member?.full_name?.[contentLocale] || '')}
                           onChange={(value: string) =>
-                            updateLeadershipMember(key, { full_name: value })
+                            updateLeadershipMember(key, {
+                              full_name: {
+                                ...(member?.full_name || { ru: '', en: '', kk: '' }),
+                                [contentLocale]: value,
+                              },
+                            })
                           }
                         />
                         <Input
@@ -4569,7 +4591,10 @@ export default function SchoolInfoPage() {
                           />
                           {member?.photo_url ? (
                             <div className="teacher-photo-preview">
-                              <img src={member.photo_url} alt={member.full_name || title} />
+                              <img
+                                src={member.photo_url}
+                                alt={String(member?.full_name?.[contentLocale] || '').trim() || title}
+                              />
                               <button
                                 type="button"
                                 className="button secondary"
@@ -4620,7 +4645,7 @@ export default function SchoolInfoPage() {
               {deputyDirectorMembers.map((member: any, index: number) => {
                 const isExpanded = expandedDeputyDirectorIndex === index;
                 const summaryParts = [
-                  String(member?.full_name || '').trim(),
+                  String(member?.full_name?.[contentLocale] || '').trim(),
                   String(member?.position?.[contentLocale] || '').trim(),
                   String(member?.bio?.[contentLocale] || '').trim(),
                 ].filter(Boolean);
@@ -4661,9 +4686,14 @@ export default function SchoolInfoPage() {
                         <FieldRow>
                           <Input
                             label="ФИО"
-                            value={member?.full_name || ''}
+                            value={String(member?.full_name?.[contentLocale] || '')}
                             onChange={(value: string) =>
-                              updateDeputyDirectorMember(index, { full_name: value })
+                              updateDeputyDirectorMember(index, {
+                                full_name: {
+                                  ...(member?.full_name || { ru: '', en: '', kk: '' }),
+                                  [contentLocale]: value,
+                                },
+                              })
                             }
                           />
                           <Input
@@ -4712,7 +4742,13 @@ export default function SchoolInfoPage() {
                             />
                             {member?.photo_url ? (
                               <div className="teacher-photo-preview">
-                                <img src={member.photo_url} alt={member.full_name || `Завуч ${index + 1}`} />
+                                <img
+                                  src={member.photo_url}
+                                  alt={
+                                    String(member?.full_name?.[contentLocale] || '').trim() ||
+                                    `Завуч ${index + 1}`
+                                  }
+                                />
                                 <button
                                   type="button"
                                   className="button secondary"
@@ -4770,9 +4806,9 @@ export default function SchoolInfoPage() {
                   {(() => {
                     const isExpanded = expandedTeacherIndex === index;
                     const summaryParts = [
-                      String(member?.full_name || '').trim(),
+                      String(member?.full_name?.[contentLocale] || '').trim(),
                       String(member?.position?.[contentLocale] || '').trim(),
-                      String(member?.education_degree || '').trim(),
+                      String(member?.education_degree?.[contentLocale] || '').trim(),
                       String(member?.subjects || '').trim(),
                       Number(member?.experience_years || 0) > 0
                         ? `${t('Стаж (лет)')}: ${
@@ -4827,9 +4863,14 @@ export default function SchoolInfoPage() {
                   <FieldRow>
                     <Input
                       label="ФИО преподавателя"
-                      value={member?.full_name || ''}
+                      value={String(member?.full_name?.[contentLocale] || '')}
                       onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { full_name: value })
+                        updateTeachingStaffMember(index, {
+                          full_name: {
+                            ...(member?.full_name || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
                       }
                     />
                     <Input
@@ -4848,9 +4889,14 @@ export default function SchoolInfoPage() {
                   <FieldRow>
                     <Input
                       label="Образование / академическая степень"
-                      value={member?.education_degree || ''}
+                      value={String(member?.education_degree?.[contentLocale] || '')}
                       onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { education_degree: value })
+                        updateTeachingStaffMember(index, {
+                          education_degree: {
+                            ...(member?.education_degree || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
                       }
                     />
                   </FieldRow>
@@ -4892,13 +4938,18 @@ export default function SchoolInfoPage() {
                   <FieldRow>
                     <CategoryPicker
                       label="Категория преподавателя"
-                      value={member?.category || ''}
+                      value={String(member?.category?.[contentLocale] || '')}
                       onChange={(value: string) =>
-                        updateTeachingStaffMember(index, { category: value })
+                        updateTeachingStaffMember(index, {
+                          category: {
+                            ...(member?.category || { ru: '', en: '', kk: '' }),
+                            [contentLocale]: value,
+                          },
+                        })
                       }
                       options={withCurrentOption(
                         TEACHER_CATEGORY_OPTIONS,
-                        member?.category || ''
+                        String(member?.category?.[contentLocale] || '')
                       )}
                     />
                     <CheckboxGroup
