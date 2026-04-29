@@ -1694,13 +1694,6 @@ export default function SchoolInfoPage() {
     () => getLocalizedFinanceValue('finance.extra_fees', true),
     [profile, contentLocale]
   );
-  const registrationFeeMode = useMemo(() => {
-    const explicitMode = String(getDeep(profile, 'finance.registration_fee_mode', '') || '').trim();
-    if (explicitMode === 'global' || explicitMode === 'per_rule') return explicitMode;
-    return feeRules.some((rule) => String((rule as any).entrance_fee || '').trim())
-      ? 'per_rule'
-      : 'global';
-  }, [profile, feeRules]);
   const additionalLocations = useMemo(() => {
     const raw = getDeep(profile, 'basic_info.additional_locations', []);
     if (!Array.isArray(raw)) return [];
@@ -1899,6 +1892,13 @@ export default function SchoolInfoPage() {
     setFinanceFeeRules(nextRules, shouldSave);
   };
   const feeRules = getFinanceFeeRules();
+  const registrationFeeMode = useMemo(() => {
+    const explicitMode = String(getDeep(profile, 'finance.registration_fee_mode', '') || '').trim();
+    if (explicitMode === 'global' || explicitMode === 'per_rule') return explicitMode;
+    return feeRules.some((rule) => String((rule as any).entrance_fee || '').trim())
+      ? 'per_rule'
+      : 'global';
+  }, [profile, feeRules]);
 
   const getTeachingStaffMembers = () => {
     const members = getDeep(profile, 'services.teaching_staff.members', []);
