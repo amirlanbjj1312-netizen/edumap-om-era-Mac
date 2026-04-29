@@ -261,6 +261,8 @@ const createFeeRuleEntry = (overrides: Record<string, unknown> = {}) => ({
   amount: '',
   currency: 'KZT',
   period: 'monthly',
+  entrance_fee: '',
+  entrance_fee_currency: 'KZT',
   comment: '',
   ...overrides,
 });
@@ -384,8 +386,8 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   'Иностранные преподаватели': { en: 'Foreign teachers', kk: 'Шетелдік мұғалімдер' },
   'Что включено в стоимость': { en: 'Included in tuition', kk: 'Құнына не кіреді' },
   'Что оплачивается отдельно': { en: 'Paid separately', kk: 'Не бөлек төленеді' },
-  'Регистрационный взнос': { en: 'Registration fee', kk: 'Тіркеу жарнасы' },
-  'Валюта регистрационного взноса': { en: 'Registration fee currency', kk: 'Тіркеу жарнасының валютасы' },
+  'Вступительный взнос': { en: 'Entrance fee', kk: 'Кіру жарнасы' },
+  'Валюта вступительного взноса': { en: 'Entrance fee currency', kk: 'Кіру жарнасының валютасы' },
   'Маршруты автобуса': { en: 'Bus routes', kk: 'Автобус маршруттары' },
   'Стоимость транспорта по районам': { en: 'Transport cost by district', kk: 'Аудандар бойынша көлік құны' },
   'Время подачи автобуса': { en: 'Bus pickup time', kk: 'Автобустың келу уақыты' },
@@ -920,6 +922,8 @@ const normalizeFinanceFeeRules = (profile: SchoolProfile | null) => {
         amount: String(item.amount || ''),
         currency: String(item.currency || 'KZT'),
         period: String(item.period || 'monthly'),
+        entrance_fee: String(item.entrance_fee || ''),
+        entrance_fee_currency: String(item.entrance_fee_currency || item.currency || 'KZT'),
         comment: String(item.comment || ''),
       });
     });
@@ -932,6 +936,8 @@ const normalizeFinanceFeeRules = (profile: SchoolProfile | null) => {
       amount: String(rule.amount),
       currency: rule.currency,
       period: rule.period,
+      entrance_fee: String(rule.entrance_fee || ''),
+      entrance_fee_currency: String(rule.entrance_fee_currency || rule.currency),
       comment: rule.comment,
     })
   );
@@ -3501,14 +3507,14 @@ export default function SchoolInfoPage() {
                   </FieldRow>
                   <FieldRow>
                     <Input
-                      label="Регистрационный взнос"
+                      label="Вступительный взнос"
                       value={getDeep(profile, 'finance.registration_fee')}
                       onChange={(value: string) =>
                         updateField('finance.registration_fee', value)
                       }
                     />
                     <Select
-                      label="Валюта регистрационного взноса"
+                      label="Валюта вступительного взноса"
                       value={String(getDeep(profile, 'finance.registration_fee_currency') || 'KZT')}
                       onChange={(value: string) =>
                         updateField('finance.registration_fee_currency', value || 'KZT')
@@ -3630,6 +3636,28 @@ export default function SchoolInfoPage() {
                               value={String(rule.currency || 'KZT')}
                               onChange={(value: string) =>
                                 updateFinanceFeeRule(index, { currency: value || 'KZT' })
+                              }
+                              options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                                value: currency,
+                                label: currency,
+                              }))}
+                            />
+                          </FieldRow>
+                          <FieldRow>
+                            <Input
+                              label="Вступительный взнос"
+                              value={String((rule as any).entrance_fee || '')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, { entrance_fee: value })
+                              }
+                            />
+                            <Select
+                              label="Валюта вступительного взноса"
+                              value={String((rule as any).entrance_fee_currency || rule.currency || 'KZT')}
+                              onChange={(value: string) =>
+                                updateFinanceFeeRule(index, {
+                                  entrance_fee_currency: value || String(rule.currency || 'KZT'),
+                                })
                               }
                               options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
                                 value: currency,

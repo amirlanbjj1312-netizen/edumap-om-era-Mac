@@ -576,6 +576,12 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
     ensureNumericStringInRange(rule.amount, 0, 100000000, `finance.fee_rules.${index}.amount`);
     ensureEnum(rule.currency, FEE_RULE_CURRENCIES, `finance.fee_rules.${index}.currency`);
     ensureEnum(rule.period || 'monthly', FEE_RULE_PERIODS, `finance.fee_rules.${index}.period`);
+    ensureNumericStringInRange(rule.entrance_fee, 0, 100000000, `finance.fee_rules.${index}.entrance_fee`);
+    ensureEnum(
+      rule.entrance_fee_currency || rule.currency,
+      FEE_RULE_CURRENCIES,
+      `finance.fee_rules.${index}.entrance_fee_currency`
+    );
     ensureMaxLen(rule.comment, 500, `finance.fee_rules.${index}.comment`);
 
     const fromGrade = Number(rule.from_grade);

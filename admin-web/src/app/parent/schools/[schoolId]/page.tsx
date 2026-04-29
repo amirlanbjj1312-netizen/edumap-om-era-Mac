@@ -1064,10 +1064,10 @@ export default function ParentSchoolDetailsPage() {
     grants: locale === 'en' ? 'Grants' : locale === 'kk' ? 'Гранттар' : 'Гранты',
     registrationFee:
       locale === 'en'
-        ? 'Registration fee'
+        ? 'Entrance fee'
         : locale === 'kk'
-          ? 'Тіркеу жарнасы'
-          : 'Регистрационный взнос',
+          ? 'Кіру жарнасы'
+          : 'Вступительный взнос',
     paymentOptions:
       locale === 'en'
         ? 'Payment options'
@@ -2303,6 +2303,19 @@ export default function ParentSchoolDetailsPage() {
                       <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
                         <span>{ui.priceFromTo}: {rule.from_grade}-{rule.to_grade}</span>
                         <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€'}`}</strong>
+                        {rule.entrance_fee > 0 ? (
+                          <small>
+                            {`${ui.registrationFee}: ${rule.entrance_fee.toLocaleString('ru-RU')} ${
+                              rule.entrance_fee_currency === 'KZT'
+                                ? '₸'
+                                : rule.entrance_fee_currency === 'USD'
+                                  ? '$'
+                                  : rule.entrance_fee_currency === 'GBP'
+                                    ? '£'
+                                    : '€'
+                            }`}
+                          </small>
+                        ) : null}
                       </div>
                     ))}
                     {financeDiscounts ? (

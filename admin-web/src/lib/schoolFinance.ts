@@ -8,6 +8,8 @@ export type SchoolFeeRule = {
   amount: number;
   currency: FeeCurrency;
   period: SchoolFeePeriod;
+  entrance_fee: number;
+  entrance_fee_currency: FeeCurrency;
   comment: string;
 };
 
@@ -88,6 +90,8 @@ const normalizeRule = (value: unknown): SchoolFeeRule | null => {
     amount,
     currency: toCurrency(rule.currency),
     period: toPeriod(rule.period),
+    entrance_fee: toPriceNumber(rule.entrance_fee),
+    entrance_fee_currency: toCurrency(rule.entrance_fee_currency || rule.currency),
     comment: toText(rule.comment).trim(),
   };
 };
@@ -148,6 +152,8 @@ export const buildFeeRulesFromGradeMap = (value: unknown): SchoolFeeRule[] => {
         amount: item.amount,
         currency: DEFAULT_CURRENCY,
         period: 'monthly',
+        entrance_fee: 0,
+        entrance_fee_currency: DEFAULT_CURRENCY,
         comment: '',
       };
   }
@@ -181,6 +187,8 @@ export const buildFeeRulesFromFinance = (finance: {
       amount: fallbackAmount,
       currency: DEFAULT_CURRENCY,
       period: 'monthly',
+      entrance_fee: 0,
+      entrance_fee_currency: DEFAULT_CURRENCY,
       comment: '',
     },
   ];
