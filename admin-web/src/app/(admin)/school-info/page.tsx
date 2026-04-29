@@ -194,6 +194,23 @@ const parseSchedulePreset = (value: string) => {
   return { days, start, end };
 };
 
+type ScheduleSlotPreset = {
+  days: WeekdayKey[];
+  start: string;
+  end: string;
+};
+
+const parseScheduleSlots = (value: string): ScheduleSlotPreset[] => {
+  const raw = String(value || '').trim();
+  if (!raw) return [{ days: [], start: '', end: '' }];
+  const parts = raw
+    .split(/\s*;\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const slots = parts.map((item) => parseSchedulePreset(item));
+  return slots.length ? slots : [{ days: [], start: '', end: '' }];
+};
+
 const buildSchedulePreset = (
   days: WeekdayKey[],
   start: string,
@@ -207,6 +224,15 @@ const buildSchedulePreset = (
   if (time) return time;
   return '';
 };
+
+const buildScheduleSlotsPreset = (
+  slots: ScheduleSlotPreset[],
+  locale: 'ru' | 'en' | 'kk'
+) =>
+  slots
+    .map((slot) => buildSchedulePreset(slot.days, slot.start, slot.end, locale))
+    .filter(Boolean)
+    .join('; ');
 
 const parseGradeRange = (value: string) => {
   const raw = String(value || '');
@@ -2235,6 +2261,67 @@ export default function SchoolInfoPage() {
     const nextStart = patch.start ?? parsed.start;
     const nextEnd = patch.end ?? parsed.end;
     const nextText = buildSchedulePreset(nextDays, nextStart, nextEnd, contentLocale);
+    updateClubEntry(index, {
+      schedule: {
+        ...(current?.schedule || {}),
+        [contentLocale]: nextText,
+      },
+    });
+  };
+
+  const updateClubScheduleSlotPreset = (
+    index: number,
+    slotIndex: number,
+    patch: Partial<{ days: WeekdayKey[]; start: string; end: string }>
+  ) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const slots = parseScheduleSlots(String(current?.schedule?.[contentLocale] || ''));
+    const currentSlot = slots[slotIndex] || { days: [], start: '', end: '' };
+    const nextSlots = slots.map((slot, itemIndex) =>
+      itemIndex === slotIndex
+        ? {
+            days: patch.days ?? currentSlot.days,
+            start: patch.start ?? currentSlot.start,
+            end: patch.end ?? currentSlot.end,
+          }
+        : slot
+    );
+    const nextText = buildScheduleSlotsPreset(nextSlots, contentLocale);
+    updateClubEntry(index, {
+      schedule: {
+        ...(current?.schedule || {}),
+        [contentLocale]: nextText,
+      },
+    });
+  };
+
+  const addClubScheduleSlotPreset = (index: number) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const slots = parseScheduleSlots(String(current?.schedule?.[contentLocale] || ''));
+    const nextText = buildScheduleSlotsPreset(
+      [...slots, { days: [], start: '', end: '' }],
+      contentLocale
+    );
+    updateClubEntry(index, {
+      schedule: {
+        ...(current?.schedule || {}),
+        [contentLocale]: nextText,
+      },
+    });
+  };
+
+  const removeClubScheduleSlotPreset = (index: number, slotIndex: number) => {
+    const clubs = getClubsCatalog();
+    const current = clubs[index];
+    if (!current) return;
+    const slots = parseScheduleSlots(String(current?.schedule?.[contentLocale] || ''));
+    const nextSlots = slots.filter((_slot, itemIndex) => itemIndex !== slotIndex);
+    const safeSlots = nextSlots.length ? nextSlots : [{ days: [], start: '', end: '' }];
+    const nextText = buildScheduleSlotsPreset(safeSlots, contentLocale);
     updateClubEntry(index, {
       schedule: {
         ...(current?.schedule || {}),
@@ -5074,11 +5161,9 @@ export default function SchoolInfoPage() {
           {clubsCatalog.length ? (
             <div className="teacher-list">
               {clubsCatalog.map((club: any, index: number) => {
-                const parsedSchedule = parseSchedulePreset(
+                const scheduleSlots = parseScheduleSlots(
                   String(club?.schedule?.[contentLocale] || '')
                 );
-                const startTime = splitTime(parsedSchedule.start);
-                const endTime = splitTime(parsedSchedule.end);
                 const parsedGrades = parseGradeRange(String(club?.grades || ''));
                 const sectionPhotos = normalizeListValue(club?.section_photos || '');
                 const isExpanded = expandedClubIndex === index;
@@ -5312,74 +5397,105 @@ export default function SchoolInfoPage() {
                         </div>
                       </>
                     ) : null}
-                    <FieldRow>
-                      <CheckboxGroup
-                        label="Дни недели"
-                        options={WEEKDAY_OPTIONS as unknown as string[]}
-                        values={parsedSchedule.days}
-                        onChange={(next: string[]) =>
-                          updateClubSchedulePreset(index, {
-                            days: next as WeekdayKey[],
-                          })
-                        }
-                      />
-                    </FieldRow>
-                    <FieldRow>
-                      <Select
-                        label="Время начала"
-                        value={startTime.hour}
-                        onChange={(value: string) =>
-                          updateClubSchedulePreset(index, {
-                            start: composeTime(value, startTime.minute || '00'),
-                          })
-                        }
-                        options={[
-                          { value: '', label: t('Не выбрано') },
-                          ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
-                        ]}
-                      />
-                      <Select
-                        label="Минуты (начало)"
-                        value={startTime.minute}
-                        onChange={(value: string) =>
-                          updateClubSchedulePreset(index, {
-                            start: composeTime(startTime.hour || '00', value),
-                          })
-                        }
-                        options={[
-                          { value: '', label: t('Не выбрано') },
-                          ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
-                        ]}
-                      />
-                    </FieldRow>
-                    <FieldRow>
-                      <Select
-                        label="Время окончания"
-                        value={endTime.hour}
-                        onChange={(value: string) =>
-                          updateClubSchedulePreset(index, {
-                            end: composeTime(value, endTime.minute || '00'),
-                          })
-                        }
-                        options={[
-                          { value: '', label: t('Не выбрано') },
-                          ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
-                        ]}
-                      />
-                      <Select
-                        label="Минуты (окончание)"
-                        value={endTime.minute}
-                        onChange={(value: string) =>
-                          updateClubSchedulePreset(index, {
-                            end: composeTime(endTime.hour || '00', value),
-                          })
-                        }
-                        options={[
-                          { value: '', label: t('Не выбрано') },
-                          ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
-                        ]}
-                      />
-                    </FieldRow>
+                    {scheduleSlots.map((slot, slotIndex) => {
+                      const startTime = splitTime(slot.start);
+                      const endTime = splitTime(slot.end);
+                      return (
+                        <div key={`club-${index}-slot-${slotIndex}`} className="teacher-card" style={{ marginTop: 12 }}>
+                          <div className="teacher-card-head">
+                            <h3>{`${t('Расписание')} #${slotIndex + 1}`}</h3>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              {scheduleSlots.length > 1 ? (
+                                <button
+                                  type="button"
+                                  className="button secondary"
+                                  onClick={() => removeClubScheduleSlotPreset(index, slotIndex)}
+                                >
+                                  {t('Удалить')}
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                          <FieldRow>
+                            <CheckboxGroup
+                              label="Дни недели"
+                              options={WEEKDAY_OPTIONS as unknown as string[]}
+                              values={slot.days}
+                              onChange={(next: string[]) =>
+                                updateClubScheduleSlotPreset(index, slotIndex, {
+                                  days: next as WeekdayKey[],
+                                })
+                              }
+                            />
+                          </FieldRow>
+                          <FieldRow>
+                            <Select
+                              label="Время начала"
+                              value={startTime.hour}
+                              onChange={(value: string) =>
+                                updateClubScheduleSlotPreset(index, slotIndex, {
+                                  start: composeTime(value, startTime.minute || '00'),
+                                })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
+                              ]}
+                            />
+                            <Select
+                              label="Минуты (начало)"
+                              value={startTime.minute}
+                              onChange={(value: string) =>
+                                updateClubScheduleSlotPreset(index, slotIndex, {
+                                  start: composeTime(startTime.hour || '00', value),
+                                })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
+                              ]}
+                            />
+                          </FieldRow>
+                          <FieldRow>
+                            <Select
+                              label="Время окончания"
+                              value={endTime.hour}
+                              onChange={(value: string) =>
+                                updateClubScheduleSlotPreset(index, slotIndex, {
+                                  end: composeTime(value, endTime.minute || '00'),
+                                })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
+                              ]}
+                            />
+                            <Select
+                              label="Минуты (окончание)"
+                              value={endTime.minute}
+                              onChange={(value: string) =>
+                                updateClubScheduleSlotPreset(index, slotIndex, {
+                                  end: composeTime(endTime.hour || '00', value),
+                                })
+                              }
+                              options={[
+                                { value: '', label: t('Не выбрано') },
+                                ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
+                              ]}
+                            />
+                          </FieldRow>
+                        </div>
+                      );
+                    })}
+                    <div className="teacher-actions">
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => addClubScheduleSlotPreset(index)}
+                      >
+                        {t('Добавить время')}
+                      </button>
+                    </div>
                     <FieldRow>
                       <Select
                         label="С класса"
