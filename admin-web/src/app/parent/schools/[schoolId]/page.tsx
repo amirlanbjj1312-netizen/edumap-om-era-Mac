@@ -1651,8 +1651,6 @@ export default function ParentSchoolDetailsPage() {
     { label: locale === 'en' ? 'Reviews count' : locale === 'kk' ? 'Пікір саны' : 'Количество отзывов', value: reviews },
   ];
   const phoneDigits = phone.replaceAll(/[^\d]/g, '');
-  const whatsappValue = formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone']));
-  const whatsappDigits = whatsappValue.replaceAll(/[^\d]/g, '');
   const extraPhonesSource = getIn(school, 'basic_info.phones');
   const extraPhoneItems = (Array.isArray(extraPhonesSource) ? (extraPhonesSource as any[]) : [])
     .map((item: any) => {
@@ -1671,24 +1669,34 @@ export default function ParentSchoolDetailsPage() {
       };
     })
     .filter((item: { value: string }) => item.value);
+  const receptionPhoneItem =
+    (
+      phone
+        ? {
+            value: phone,
+            href: isMobileViewport && phoneDigits ? `tel:${phoneDigits}` : undefined,
+          }
+        : extraPhoneItems[0]
+    ) || null;
   const contactItems: ContactItem[] = [
-    {
-      label: locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон',
-      value: phone,
-      href: isMobileViewport && phoneDigits ? `tel:${phoneDigits}` : undefined,
-    },
-    {
-      label: 'WhatsApp',
-      value: whatsappValue,
-      href: whatsappDigits ? `https://wa.me/${whatsappDigits}` : undefined,
-    },
+    receptionPhoneItem
+      ? {
+          label:
+            locale === 'en'
+              ? 'Phone (reception)'
+              : locale === 'kk'
+                ? 'Телефон (қабылдау)'
+                : 'Телефон (приемная)',
+          value: receptionPhoneItem.value,
+          href: receptionPhoneItem.href,
+        }
+      : null,
     { label: 'Email', value: pickFirstText(school, ['basic_info.email']) },
     {
       label: locale === 'en' ? 'Website' : locale === 'kk' ? 'Сайт' : 'Сайт',
       value: pickFirstText(school, ['basic_info.website']),
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
-    ...extraPhoneItems,
   ].filter((item) => item.value);
   const visibleAdditionalAddresses = additionalAddresses.slice(0, 1);
   const totalAddressCount = (addressLabel ? 1 : 0) + visibleAdditionalAddresses.length;
@@ -1830,6 +1838,21 @@ export default function ParentSchoolDetailsPage() {
     ['education.learning_conditions.class_size_high'],
     ''
   );
+  const advancedSubjectsBase = localizeCsv(
+    pickFirstText(school, ['education.advanced_subjects'], ''),
+    locale
+  );
+  const advancedSubjectsOther = pickFirstText(
+    school,
+    [
+      `education.advanced_subjects_other.${locale}`,
+      'education.advanced_subjects_other.ru',
+      'education.advanced_subjects_other',
+    ],
+    ''
+  );
+  const advancedSubjectsValue =
+    [advancedSubjectsBase, advancedSubjectsOther].filter(Boolean).join(', ') || ui.notSpecified;
   const educationItems = [
     { label: locale === 'en' ? 'Languages' : locale === 'kk' ? 'Тілдер' : 'Языки', value: educationLanguages.join(', ') || pickFirstText(school, ['education.languages'], ui.notSpecified) },
     {
@@ -1838,10 +1861,7 @@ export default function ParentSchoolDetailsPage() {
     },
     {
       label: locale === 'en' ? 'Advanced subjects' : locale === 'kk' ? 'Тереңдетілген пәндер' : 'Углубленные предметы',
-      value: localizeCsv(
-        pickFirstText(school, ['education.advanced_subjects', 'education.advanced_subjects_other.ru'], ui.notSpecified),
-        locale
-      ),
+      value: advancedSubjectsValue,
     },
     { label: locale === 'en' ? 'Average class size' : locale === 'kk' ? 'Сыныптың орташа көлемі' : 'Средний размер класса', value: pickFirstText(school, ['education.average_class_size'], '—') },
     {
@@ -1995,12 +2015,6 @@ export default function ParentSchoolDetailsPage() {
       label: 'Instagram',
       value: pickFirstText(school, ['media.social_links.instagram']),
       href: toExternalUrl(pickFirstText(school, ['media.social_links.instagram'])),
-    },
-    {
-      key: 'whatsapp',
-      label: 'WhatsApp',
-      value: formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone'])),
-      href: `https://wa.me/${formatKzPhone(pickFirstText(school, ['basic_info.whatsapp_phone'])).replaceAll(/[^\d]/g, '')}`,
     },
     {
       key: 'telegram',
