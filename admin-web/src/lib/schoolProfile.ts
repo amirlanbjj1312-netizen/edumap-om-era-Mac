@@ -2,6 +2,7 @@ export const createFinanceDefaults = () => ({
   monthly_fee: '',
   monthly_fee_by_grade: {},
   fee_rules: [],
+  registration_fee_mode: 'global',
   comment: '',
   included_in_tuition: '',
   extra_fees: '',

@@ -73,6 +73,7 @@ const PAYMENT_SYSTEMS = new Set([
 ]);
 const FEE_RULE_CURRENCIES = new Set(['KZT', 'USD', 'EUR']);
 const FEE_RULE_PERIODS = new Set(['monthly', 'yearly']);
+const REGISTRATION_FEE_MODES = new Set(['global', 'per_rule']);
 const SUBSCRIPTION_STATUSES = new Set([
   '',
   'inactive',
@@ -596,6 +597,7 @@ const validateSchoolPayload = (payload, { expectedSchoolId = '' } = {}) => {
       ensure(currency === activeCurrency, 'finance.fee_rules must use the same currency');
     }
   });
+  ensureEnum(finance.registration_fee_mode || 'global', REGISTRATION_FEE_MODES, 'finance.registration_fee_mode');
   ensureEnum(finance.payment_system, PAYMENT_SYSTEMS, 'finance.payment_system');
   ensureEnumList(finance.payment_options, PAYMENT_SYSTEMS, 'finance.payment_options');
   ensureMaxLen(finance.comment, 1000, 'finance.comment');

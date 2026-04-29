@@ -1584,6 +1584,15 @@ export default function ParentSchoolDetailsPage() {
     tuition_monthly: getIn(school, 'finance.tuition_monthly'),
     price_monthly: getIn(school, 'finance.price_monthly'),
   });
+  const registrationFeeModeRaw = toText(getIn(school, 'finance.registration_fee_mode')).trim();
+  const registrationFeeMode =
+    registrationFeeModeRaw === 'per_rule'
+      ? 'per_rule'
+      : registrationFeeModeRaw === 'global'
+        ? 'global'
+        : feeRules.some((rule) => rule.entrance_fee > 0)
+          ? 'per_rule'
+          : 'global';
   const financeComment = pickLocalizedText(school, 'finance.comment', locale, '');
   const financeDiscounts = pickLocalizedText(school, 'finance.discounts_info', locale, '');
   const financeGrants = pickLocalizedText(school, 'finance.grants_info', locale, '');
@@ -1617,7 +1626,9 @@ export default function ParentSchoolDetailsPage() {
   ].filter(Boolean);
   const hasFreePlaces = getIn(school, 'finance.free_places') === true;
   const financeMetaCards = [
-    registrationFee ? { label: ui.registrationFee, value: registrationFee } : null,
+    registrationFeeMode === 'global' && registrationFee
+      ? { label: ui.registrationFee, value: registrationFee }
+      : null,
     paymentOptions.length ? { label: ui.paymentOptions, value: paymentOptions.join(' • ') } : null,
     includedInTuition ? { label: ui.includedInTuition, value: includedInTuition } : null,
     extraFees ? { label: ui.extraFees, value: extraFees } : null,
@@ -2303,7 +2314,7 @@ export default function ParentSchoolDetailsPage() {
                       <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
                         <span>{ui.priceFromTo}: {rule.from_grade}-{rule.to_grade}</span>
                         <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€'}`}</strong>
-                        {rule.entrance_fee > 0 ? (
+                        {registrationFeeMode === 'per_rule' && rule.entrance_fee > 0 ? (
                           <small>
                             {`${ui.registrationFee}: ${rule.entrance_fee.toLocaleString('ru-RU')} ${
                               rule.entrance_fee_currency === 'KZT'

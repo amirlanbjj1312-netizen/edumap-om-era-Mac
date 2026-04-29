@@ -1694,6 +1694,13 @@ export default function SchoolInfoPage() {
     () => getLocalizedFinanceValue('finance.extra_fees', true),
     [profile, contentLocale]
   );
+  const registrationFeeMode = useMemo(() => {
+    const explicitMode = String(getDeep(profile, 'finance.registration_fee_mode', '') || '').trim();
+    if (explicitMode === 'global' || explicitMode === 'per_rule') return explicitMode;
+    return feeRules.some((rule) => String((rule as any).entrance_fee || '').trim())
+      ? 'per_rule'
+      : 'global';
+  }, [profile, feeRules]);
   const additionalLocations = useMemo(() => {
     const raw = getDeep(profile, 'basic_info.additional_locations', []);
     if (!Array.isArray(raw)) return [];
@@ -3506,25 +3513,43 @@ export default function SchoolInfoPage() {
                     />
                   </FieldRow>
                   <FieldRow>
-                    <Input
-                      label="Вступительный взнос"
-                      value={getDeep(profile, 'finance.registration_fee')}
-                      onChange={(value: string) =>
-                        updateField('finance.registration_fee', value)
-                      }
-                    />
                     <Select
-                      label="Валюта вступительного взноса"
-                      value={String(getDeep(profile, 'finance.registration_fee_currency') || 'KZT')}
+                      label="Режим вступительного взноса"
+                      value={registrationFeeMode}
                       onChange={(value: string) =>
-                        updateField('finance.registration_fee_currency', value || 'KZT')
+                        updateField(
+                          'finance.registration_fee_mode',
+                          value === 'per_rule' ? 'per_rule' : 'global'
+                        )
                       }
-                      options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
-                        value: currency,
-                        label: currency,
-                      }))}
+                      options={[
+                        { value: 'global', label: t('Общий вступительный взнос') },
+                        { value: 'per_rule', label: t('Индивидуально по классам') },
+                      ]}
                     />
                   </FieldRow>
+                  {registrationFeeMode === 'global' ? (
+                    <FieldRow>
+                      <Input
+                        label="Вступительный взнос"
+                        value={getDeep(profile, 'finance.registration_fee')}
+                        onChange={(value: string) =>
+                          updateField('finance.registration_fee', value)
+                        }
+                      />
+                      <Select
+                        label="Валюта вступительного взноса"
+                        value={String(getDeep(profile, 'finance.registration_fee_currency') || 'KZT')}
+                        onChange={(value: string) =>
+                          updateField('finance.registration_fee_currency', value || 'KZT')
+                        }
+                        options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                          value: currency,
+                          label: currency,
+                        }))}
+                      />
+                    </FieldRow>
+                  ) : null}
                   <FieldRow>
                     <TextArea
                       label="Что включено в стоимость"
@@ -3643,28 +3668,30 @@ export default function SchoolInfoPage() {
                               }))}
                             />
                           </FieldRow>
-                          <FieldRow>
-                            <Input
-                              label="Вступительный взнос"
-                              value={String((rule as any).entrance_fee || '')}
-                              onChange={(value: string) =>
-                                updateFinanceFeeRule(index, { entrance_fee: value })
-                              }
-                            />
-                            <Select
-                              label="Валюта вступительного взноса"
-                              value={String((rule as any).entrance_fee_currency || rule.currency || 'KZT')}
-                              onChange={(value: string) =>
-                                updateFinanceFeeRule(index, {
-                                  entrance_fee_currency: value || String(rule.currency || 'KZT'),
-                                })
-                              }
-                              options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
-                                value: currency,
-                                label: currency,
-                              }))}
-                            />
-                          </FieldRow>
+                          {registrationFeeMode === 'per_rule' ? (
+                            <FieldRow>
+                              <Input
+                                label="Вступительный взнос"
+                                value={String((rule as any).entrance_fee || '')}
+                                onChange={(value: string) =>
+                                  updateFinanceFeeRule(index, { entrance_fee: value })
+                                }
+                              />
+                              <Select
+                                label="Валюта вступительного взноса"
+                                value={String((rule as any).entrance_fee_currency || rule.currency || 'KZT')}
+                                onChange={(value: string) =>
+                                  updateFinanceFeeRule(index, {
+                                    entrance_fee_currency: value || String(rule.currency || 'KZT'),
+                                  })
+                                }
+                                options={SCHOOL_FEE_CURRENCIES.map((currency) => ({
+                                  value: currency,
+                                  label: currency,
+                                }))}
+                              />
+                            </FieldRow>
+                          ) : null}
                         </div>
                       ))}
                     </div>
