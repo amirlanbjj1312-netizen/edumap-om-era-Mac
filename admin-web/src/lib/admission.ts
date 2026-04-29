@@ -14,6 +14,7 @@ export type AdmissionRule = {
   assessment_types: string[];
   assessment_other: LocalizedText;
   required_documents: string[];
+  photo_count: string;
   documents_other: LocalizedText;
   format: string;
   format_other: LocalizedText;
@@ -74,6 +75,10 @@ export const ADMISSION_DOCUMENT_OPTIONS = [
   'recommendations',
   'medical_certificate',
   'birth_certificate',
+  'health_passport',
+  'form_063',
+  'photo_3x4',
+  'student_file',
   'parent_id',
   'other',
 ];
@@ -124,6 +129,7 @@ export const createAdmissionRuleEntry = (
   assessment_types: [],
   assessment_other: createLocalizedText(''),
   required_documents: [],
+  photo_count: '',
   documents_other: createLocalizedText(''),
   format: '',
   format_other: createLocalizedText(''),
@@ -150,6 +156,7 @@ export const normalizeAdmissionRule = (value: unknown): AdmissionRule => {
     required_documents: Array.isArray(raw.required_documents)
       ? raw.required_documents.map((item) => text(item)).filter(Boolean)
       : [],
+    photo_count: text(raw.photo_count),
     documents_other: normalizeLocalizedText(raw.documents_other),
     format: text(raw.format),
     format_other: normalizeLocalizedText(raw.format_other),
@@ -170,6 +177,7 @@ export const admissionRuleHasContent = (rule: AdmissionRule) =>
       rule.assessment_types.length ||
       pickLocalizedText(rule.assessment_other, 'ru').trim() ||
       rule.required_documents.length ||
+      rule.photo_count ||
       pickLocalizedText(rule.documents_other, 'ru').trim() ||
       rule.format ||
       pickLocalizedText(rule.format_other, 'ru').trim() ||

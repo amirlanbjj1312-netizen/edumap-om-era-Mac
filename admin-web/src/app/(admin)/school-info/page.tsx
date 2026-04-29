@@ -880,6 +880,10 @@ const OPTION_LABELS: Record<
   recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
   medical_certificate: { ru: 'Медсправка', en: 'Medical certificate', kk: 'Меданықтама' },
   birth_certificate: { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
+  health_passport: { ru: 'Паспорт здоровья', en: 'Health passport', kk: 'Денсаулық паспорты' },
+  form_063: { ru: 'Форма 063', en: 'Form 063', kk: '063 нысаны' },
+  photo_3x4: { ru: 'Фото 3x4', en: '3x4 photos', kk: '3x4 фото' },
+  student_file: { ru: 'Личное дело / файл', en: 'Student file', kk: 'Жеке іс / файл' },
   parent_id: { ru: 'Документ родителя', en: 'Parent ID', kk: 'Ата-ана құжаты' },
 };
 
@@ -4452,6 +4456,17 @@ export default function SchoolInfoPage() {
                           updateAdmissionRuleListField(index, 'required_documents', next)
                         }
                       />
+                      {(Array.isArray(rule.required_documents) ? rule.required_documents : []).includes('photo_3x4') ? (
+                        <FieldRow>
+                          <Input
+                            label="Количество фото 3x4"
+                            value={String(rule?.photo_count || '')}
+                            onChange={(value: string) =>
+                              updateAdmissionRule(index, { photo_count: value.replace(/[^\d]/g, '') })
+                            }
+                          />
+                        </FieldRow>
+                      ) : null}
                       {(Array.isArray(rule.required_documents) ? rule.required_documents : []).includes('other') ? (
                         <FieldRow>
                           <Input

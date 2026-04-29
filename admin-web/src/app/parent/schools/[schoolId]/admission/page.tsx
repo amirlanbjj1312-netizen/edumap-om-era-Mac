@@ -69,6 +69,10 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   Recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
   'Medical certificate': { ru: 'Медсправка', en: 'Medical certificate', kk: 'Меданықтама' },
   'Birth certificate': { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
+  'Health passport': { ru: 'Паспорт здоровья', en: 'Health passport', kk: 'Денсаулық паспорты' },
+  'Form 063': { ru: 'Форма 063', en: 'Form 063', kk: '063 нысаны' },
+  '3x4 photos': { ru: 'Фото 3x4', en: '3x4 photos', kk: '3x4 фото' },
+  'Student file': { ru: 'Личное дело / файл', en: 'Student file', kk: 'Жеке іс / файл' },
   'Parent ID': { ru: 'Документ родителя', en: 'Parent ID', kk: 'Ата-ана құжаты' },
   'No competition': { ru: 'Без конкурса', en: 'No competition', kk: 'Конкурссіз' },
   'April-June': { ru: 'Апрель-июнь', en: 'April-June', kk: 'Сәуір-маусым' },
@@ -92,6 +96,10 @@ const OPTION_ALIASES: Record<string, string> = {
   recommendations: 'Recommendations',
   medical_certificate: 'Medical certificate',
   birth_certificate: 'Birth certificate',
+  health_passport: 'Health passport',
+  form_063: 'Form 063',
+  photo_3x4: '3x4 photos',
+  student_file: 'Student file',
   parent_id: 'Parent ID',
   'no competition': 'No competition',
   'april-june': 'April-June',
@@ -367,7 +375,20 @@ export default function ParentSchoolAdmissionPage() {
                   ...(Array.isArray(rule.required_documents) ? rule.required_documents : []),
                   ...(documentOther ? [documentOther] : []),
                 ]
-                  .map((item) => localizeOption(String(item), locale))
+                  .map((item) => {
+                    const raw = String(item);
+                    const localized = localizeOption(raw, locale);
+                    if (raw === 'photo_3x4' && String(rule.photo_count || '').trim()) {
+                      const suffix =
+                        locale === 'en'
+                          ? `${rule.photo_count} pcs.`
+                          : locale === 'kk'
+                            ? `${rule.photo_count} дана`
+                            : `${rule.photo_count} шт.`;
+                      return `${localized} (${suffix})`;
+                    }
+                    return localized;
+                  })
                   .filter(Boolean);
                 return (
                   <article key={String(rule.id || `rule-${index}`)} className="school-admission-rule-card">
