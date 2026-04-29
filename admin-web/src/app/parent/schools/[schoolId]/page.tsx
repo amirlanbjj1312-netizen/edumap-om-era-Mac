@@ -1697,7 +1697,7 @@ export default function ParentSchoolDetailsPage() {
       value: pickFirstText(school, ['basic_info.website']),
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
-  ].filter((item) => item.value);
+  ].filter((item): item is ContactItem => Boolean(item?.value));
   const visibleAdditionalAddresses = additionalAddresses.slice(0, 1);
   const totalAddressCount = (addressLabel ? 1 : 0) + visibleAdditionalAddresses.length;
   const factAddressRows = [
