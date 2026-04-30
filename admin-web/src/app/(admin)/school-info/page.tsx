@@ -879,11 +879,26 @@ const OPTION_LABELS: Record<
   transcript: { ru: 'Табель / выписка', en: 'Transcript', kk: 'Табель / көшірме' },
   recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
   medical_certificate: { ru: 'Медсправка', en: 'Medical certificate', kk: 'Меданықтама' },
+  health_status_certificate: {
+    ru: 'Медицинская справка о состоянии здоровья (форма № 065/у и форма № 026/у-3)',
+    en: 'Health status certificate (forms No. 065/u and No. 026/u-3)',
+    kk: 'Денсаулық жағдайы туралы медициналық анықтама (№ 065/у және № 026/у-3 нысандары)',
+  },
   birth_certificate: { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
   health_passport: { ru: 'Паспорт здоровья', en: 'Health passport', kk: 'Денсаулық паспорты' },
   form_063: { ru: 'Форма 063', en: 'Form 063', kk: '063 нысаны' },
   photo_3x4: { ru: 'Фото 3x4', en: '3x4 photos', kk: '3x4 фото' },
   student_file: { ru: 'Личное дело / файл', en: 'Student file', kk: 'Жеке іс / файл' },
+  withdrawal_slip: {
+    ru: 'Открепительный талон о выбытии обучаемого из предыдущей школы',
+    en: 'Withdrawal slip from the previous school',
+    kk: 'Оқушының алдыңғы мектептен шыққаны туралы шығару талоны',
+  },
+  original_identity_document: {
+    ru: 'Оригинал документа, удостоверяющего личность',
+    en: 'Original identity document',
+    kk: 'Жеке басын куәландыратын құжаттың түпнұсқасы',
+  },
   parent_id: { ru: 'Документ родителя', en: 'Parent ID', kk: 'Ата-ана құжаты' },
 };
 
