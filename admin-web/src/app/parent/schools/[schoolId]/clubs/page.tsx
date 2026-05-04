@@ -135,10 +135,14 @@ export default function ParentSchoolClubsPage() {
 
   const schoolName = useMemo(() => getName(school, locale), [school, locale]);
   const clubs = useMemo(() => buildSchoolClubs(school, locale), [school, locale]);
+  const clubsWithSchedule = useMemo(
+    () => clubs.filter((club) => detectWeekdays(club.schedule || '').length > 0),
+    [clubs]
+  );
   const groupedByWeekday = useMemo(() => {
-    const map = new Map<WeekdayKey, typeof clubs>();
+    const map = new Map<WeekdayKey, typeof clubsWithSchedule>();
     for (const key of WEEK_ORDER) map.set(key, []);
-    for (const club of clubs) {
+    for (const club of clubsWithSchedule) {
       const weekdays = detectWeekdays(club.schedule || '');
       for (const weekday of weekdays) {
         const current = map.get(weekday) || [];
@@ -155,7 +159,7 @@ export default function ParentSchoolClubsPage() {
         return at.localeCompare(bt);
       }),
     })).filter((block) => block.items.length > 0);
-  }, [clubs, locale]);
+  }, [clubsWithSchedule, locale]);
 
   const ui = {
     back: locale === 'en' ? 'Back to school' : locale === 'kk' ? 'Мектепке оралу' : 'Назад к школе',
@@ -205,8 +209,8 @@ export default function ParentSchoolClubsPage() {
             {schoolName}
           </p>
           {loading ? <p className="muted">...</p> : null}
-          {!loading && !clubs.length ? <p className="muted">{ui.empty}</p> : null}
-          {!loading && clubs.length ? (
+          {!loading && !clubsWithSchedule.length ? <p className="muted">{ui.empty}</p> : null}
+          {!loading && clubsWithSchedule.length ? (
             <div className="club-schedule-table">
               <p className="club-week-table-title">{ui.dayTable}</p>
               <div className="club-schedule-scroll">

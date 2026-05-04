@@ -9,6 +9,7 @@ import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
 import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
+import { buildSchoolClubs } from '@/lib/clubViews';
 import {
   formatAdmissionGradeLabel,
   normalizeAdmissionRules,
@@ -2261,6 +2262,10 @@ export default function ParentSchoolDetailsPage() {
         : `${ui.document} ${activeMedia.index + 1}`
     : '';
   const canNavigateMedia = activeMediaItems.length > 1;
+  const hasVisibleClubsSection = useMemo(
+    () => buildSchoolClubs(school, locale).some((club) => club.schedule.trim()),
+    [school, locale]
+  );
 
   const navigateMedia = (direction: -1 | 1) => {
     if (!activeMedia || !activeMediaItems.length) return;
@@ -2406,12 +2411,14 @@ export default function ParentSchoolDetailsPage() {
                 {consultationOpen ? ui.consultationClose : ui.consultationCta}
               </button>
             ) : null}
-            <Link
-              href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`}
-              className="school-consult-btn"
-            >
-              {ui.clubs}
-            </Link>
+            {hasVisibleClubsSection ? (
+              <Link
+                href={`/parent/schools/${encodeURIComponent(String(school.school_id || ''))}/clubs`}
+                className="school-consult-btn"
+              >
+                {ui.clubs}
+              </Link>
+            ) : null}
           </div>
 
           {canRequestConsultation && consultationOpen ? (
