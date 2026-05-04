@@ -1674,6 +1674,7 @@ a {
   top: 18px;
   display: grid;
   gap: 10px;
+  align-self: start;
 }
 
 .schools-filter-card {
@@ -1681,6 +1682,9 @@ a {
   border-radius: 16px;
   background: #fff;
   padding: 14px;
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .schools-filter-title {
