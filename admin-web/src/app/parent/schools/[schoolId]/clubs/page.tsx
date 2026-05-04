@@ -139,6 +139,10 @@ export default function ParentSchoolClubsPage() {
     () => clubs.filter((club) => detectWeekdays(club.schedule || '').length > 0),
     [clubs]
   );
+  const clubsWithoutSchedule = useMemo(
+    () => clubs.filter((club) => detectWeekdays(club.schedule || '').length === 0),
+    [clubs]
+  );
   const groupedByWeekday = useMemo(() => {
     const map = new Map<WeekdayKey, typeof clubsWithSchedule>();
     for (const key of WEEK_ORDER) map.set(key, []);
@@ -174,6 +178,12 @@ export default function ParentSchoolClubsPage() {
     teacher: locale === 'en' ? 'Teacher' : locale === 'kk' ? 'Мұғалім' : 'Преподаватель',
     classes: locale === 'en' ? 'Classes' : locale === 'kk' ? 'Сыныптар' : 'Классы',
     dayTable: locale === 'en' ? 'Weekly schedule' : locale === 'kk' ? 'Апталық кесте' : 'Расписание по неделе',
+    unscheduled:
+      locale === 'en'
+        ? 'Sections without schedule'
+        : locale === 'kk'
+          ? 'Кестесіз секциялар'
+          : 'Секции без расписания',
     emptyDay:
       locale === 'en'
         ? 'No sections'
@@ -209,7 +219,7 @@ export default function ParentSchoolClubsPage() {
             {schoolName}
           </p>
           {loading ? <p className="muted">...</p> : null}
-          {!loading && !clubsWithSchedule.length ? <p className="muted">{ui.empty}</p> : null}
+          {!loading && !clubs.length ? <p className="muted">{ui.empty}</p> : null}
           {!loading && clubsWithSchedule.length ? (
             <div className="club-schedule-table">
               <p className="club-week-table-title">{ui.dayTable}</p>
@@ -242,6 +252,32 @@ export default function ParentSchoolClubsPage() {
                     </section>
                   ))}
                 </div>
+              </div>
+            </div>
+          ) : null}
+          {!loading && clubsWithoutSchedule.length ? (
+            <div className="club-schedule-table" style={{ marginTop: clubsWithSchedule.length ? 24 : 0 }}>
+              <p className="club-week-table-title">{ui.unscheduled}</p>
+              <div className="club-schedule-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <section className="club-schedule-col">
+                  <div className="club-schedule-col-body">
+                    {clubsWithoutSchedule.map((club) => (
+                      <Link
+                        key={`unscheduled-${club.id}`}
+                        href={`/parent/schools/${encodeURIComponent(schoolId)}/clubs/${encodeURIComponent(club.id)}`}
+                        className="club-schedule-item"
+                      >
+                        <p className="club-schedule-item-name">{club.name}</p>
+                        <p className="club-schedule-item-meta">
+                          {ui.classes}: {club.class_range || '—'}
+                        </p>
+                        <p className="club-schedule-item-meta">
+                          {ui.teacher}: {club.teacher_name || '—'}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
               </div>
             </div>
           ) : null}

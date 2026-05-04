@@ -2263,7 +2263,7 @@ export default function ParentSchoolDetailsPage() {
     : '';
   const canNavigateMedia = activeMediaItems.length > 1;
   const hasVisibleClubsSection = useMemo(
-    () => buildSchoolClubs(school, locale).some((club) => club.schedule.trim()),
+    () => buildSchoolClubs(school, locale).length > 0,
     [school, locale]
   );
 
