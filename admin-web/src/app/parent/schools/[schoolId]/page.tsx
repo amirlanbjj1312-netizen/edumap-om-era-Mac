@@ -2126,21 +2126,6 @@ export default function ParentSchoolDetailsPage() {
       value: getIn(school, 'services.medical_office') ? ui.available : ui.unavailable,
       tone: getIn(school, 'services.medical_office') ? ('positive' as const) : ('neutral' as const),
     },
-    {
-      label: locale === 'en' ? 'Security' : locale === 'kk' ? 'Күзет' : 'Охрана',
-      value: getIn(school, 'services.safety.security') ? ui.yes : ui.no,
-      tone: getIn(school, 'services.safety.security') ? ('positive' as const) : ('neutral' as const),
-    },
-    {
-      label: locale === 'en' ? 'Cameras' : locale === 'kk' ? 'Камералар' : 'Камеры',
-      value: getIn(school, 'services.safety.cameras') ? ui.yes : ui.no,
-      tone: getIn(school, 'services.safety.cameras') ? ('positive' as const) : ('neutral' as const),
-    },
-    {
-      label: locale === 'en' ? 'Access control' : locale === 'kk' ? 'Кіруді бақылау' : 'Контроль доступа',
-      value: getIn(school, 'services.safety.access_control') ? ui.yes : ui.no,
-      tone: getIn(school, 'services.safety.access_control') ? ('positive' as const) : ('neutral' as const),
-    },
   ].filter((item) => item.value && item.value !== ui.notSpecified);
 
   const programInfoCatalog: Record<string, { ru: ProgramDetails; en: ProgramDetails; kk: ProgramDetails }> = {
