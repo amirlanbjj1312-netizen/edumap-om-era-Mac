@@ -4225,11 +4225,34 @@ a {
   letter-spacing: 0.04em;
 }
 
+.school-admission-section-title {
+  color: #23365d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .school-admission-rule-section div {
   color: #1d2943;
   font-size: 17px;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.school-admission-plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #1d2943;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.school-admission-plain-list li {
+  margin: 0;
+}
+
+.school-admission-plain-list li::before {
+  content: "- ";
 }
 
 .school-admission-tag-row {

@@ -384,13 +384,18 @@ export default function ParentSchoolAdmissionPage() {
                   locale
                 );
                 const assessmentTypes = [
-                  ...(Array.isArray(rule.assessment_types) ? rule.assessment_types : []),
+                  ...(Array.isArray(rule.assessment_types)
+                    ? rule.assessment_types.filter((item) => String(item) !== 'other')
+                    : []),
                   ...(assessmentOther ? [assessmentOther] : []),
                 ]
                   .map((item) => localizeOption(String(item), locale))
+                  .filter((item) => item && item !== localizeOption('other', locale))
                   .filter(Boolean);
                 const documentTypes = [
-                  ...(Array.isArray(rule.required_documents) ? rule.required_documents : []),
+                  ...(Array.isArray(rule.required_documents)
+                    ? rule.required_documents.filter((item) => String(item) !== 'other')
+                    : []),
                   ...(documentOther ? [documentOther] : []),
                 ]
                   .map((item) => {
@@ -407,6 +412,7 @@ export default function ParentSchoolAdmissionPage() {
                     }
                     return localized;
                   })
+                  .filter((item) => item && item !== localizeOption('other', locale))
                   .filter(Boolean);
                 return (
                   <article key={String(rule.id || `rule-${index}`)} className="school-admission-rule-card">
@@ -419,7 +425,7 @@ export default function ParentSchoolAdmissionPage() {
                     </div>
                     {assessmentTypes.length ? (
                       <div className="school-admission-rule-section">
-                        <p>{ui.selectionTypes}</p>
+                        <p className="school-admission-section-title">{ui.selectionTypes}</p>
                         <div className="school-admission-tag-row">
                           {assessmentTypes.map((item) => (
                             <span key={item} className="school-admission-inline-tag">
@@ -431,31 +437,29 @@ export default function ParentSchoolAdmissionPage() {
                     ) : null}
                     {steps ? (
                       <div className="school-admission-rule-section">
-                        <p>{ui.steps}</p>
+                        <p className="school-admission-section-title">{ui.steps}</p>
                         <div>{steps}</div>
                       </div>
                     ) : null}
                     {requirements ? (
                       <div className="school-admission-rule-section">
-                        <p>{ui.requirements}</p>
+                        <p className="school-admission-section-title">{ui.requirements}</p>
                         <div>{requirements}</div>
                       </div>
                     ) : null}
                     {documentTypes.length ? (
                       <div className="school-admission-rule-section">
-                        <p>{ui.documents}</p>
-                        <div className="school-admission-tag-row">
+                        <p className="school-admission-section-title">{ui.documents}</p>
+                        <ul className="school-admission-plain-list">
                           {documentTypes.map((item) => (
-                            <span key={item} className="school-admission-inline-tag">
-                              {item}
-                            </span>
+                            <li key={item}>{item}</li>
                           ))}
-                        </div>
+                        </ul>
                       </div>
                     ) : null}
                     {note ? (
                       <div className="school-admission-rule-section">
-                        <p>{ui.note}</p>
+                        <p className="school-admission-section-title">{ui.note}</p>
                         <div>{note}</div>
                       </div>
                     ) : null}
