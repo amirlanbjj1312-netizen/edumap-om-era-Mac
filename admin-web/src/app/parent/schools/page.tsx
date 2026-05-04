@@ -921,6 +921,15 @@ export default function ParentSchoolsPage() {
     return Math.min(privatePriceLimit, privatePriceBounds.max);
   }, [privatePriceBounds.max, privatePriceLimit]);
 
+  const clubsBounds = useMemo(() => {
+    const counts = rows
+      .filter((row) => hasRequiredParentFields(row, locale))
+      .map((row) => Math.max(countClubsInServices(row.services), toNumber(row.services?.clubs_count)))
+      .filter((count) => Number.isFinite(count) && count >= 0);
+    const max = counts.length ? Math.max(...counts) : 20;
+    return { min: 0, max: Math.max(5, max) };
+  }, [rows, locale]);
+
   const filtered = useMemo(() => {
     const q = query.trim();
     return rows.filter((row) => {
@@ -1235,10 +1244,19 @@ export default function ParentSchoolsPage() {
     cityFilter,
     districtFilter,
     typeFilter,
+    minRating > 0 ? 'rating' : '',
     privatePriceLimit != null ? 'price' : '',
     pricePeriodFilter !== 'monthly' ? 'price_period' : '',
     selectedLanguages.length ? 'languages' : '',
+    selectedAccreditation.length ? 'accreditation' : '',
+    selectedPrograms.length ? 'programs' : '',
+    selectedServices.length ? 'services' : '',
+    selectedMeals.length ? 'meals' : '',
+    selectedSpecialists.length ? 'specialists' : '',
+    entranceExam !== 'all' ? 'entrance_exam' : '',
+    selectedAdvanced.length ? 'advanced' : '',
     gradeRangeFilter ? 'grades' : '',
+    minClubs > 0 ? 'clubs' : '',
   ].filter(Boolean).length;
 
   const filtersContent = (
@@ -1280,6 +1298,19 @@ export default function ParentSchoolsPage() {
             </option>
           ))}
         </select>
+      </label>
+      <label className="field">
+        <span>
+          {ft('ratingFrom')}: {minRating.toFixed(1)}
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={5}
+          step={0.1}
+          value={minRating}
+          onChange={(e) => setMinRating(Number(e.target.value))}
+        />
       </label>
       {isPrivateType(typeFilter) ? (
         <>
@@ -1334,6 +1365,117 @@ export default function ParentSchoolsPage() {
           <option value="10-12">10-12</option>
           <option value="1-12">1-12</option>
         </select>
+      </label>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('accreditation')}</p>
+        <div className="schools-filter-chip-list">
+          {accreditationOptions.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`schools-filter-chip${selectedAccreditation.includes(item.key) ? ' active' : ''}`}
+              onClick={() => setSelectedAccreditation((prev) => toggleValue(prev, item.key))}
+            >
+              {localizeOption(item.label)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('programs')}</p>
+        <div className="schools-filter-chip-list">
+          {programOptions.map((program) => (
+            <button
+              key={program}
+              type="button"
+              className={`schools-filter-chip${selectedPrograms.includes(program) ? ' active' : ''}`}
+              onClick={() => setSelectedPrograms((prev) => toggleValue(prev, program))}
+            >
+              {localizeOption(program)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('services')}</p>
+        <div className="schools-filter-chip-list">
+          {serviceOptions.map((service) => (
+            <button
+              key={service.key}
+              type="button"
+              className={`schools-filter-chip${selectedServices.includes(service.key) ? ' active' : ''}`}
+              onClick={() => setSelectedServices((prev) => toggleValue(prev, service.key))}
+            >
+              {localizeOption(service.label)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('meals')}</p>
+        <div className="schools-filter-chip-list">
+          {mealsOptions.map((meal) => (
+            <button
+              key={meal}
+              type="button"
+              className={`schools-filter-chip${selectedMeals.includes(meal) ? ' active' : ''}`}
+              onClick={() => setSelectedMeals((prev) => toggleValue(prev, meal))}
+            >
+              {localizeOption(meal)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('specialists')}</p>
+        <div className="schools-filter-chip-list">
+          {specialistOptions.map((specialist) => (
+            <button
+              key={specialist}
+              type="button"
+              className={`schools-filter-chip${selectedSpecialists.includes(specialist) ? ' active' : ''}`}
+              onClick={() => setSelectedSpecialists((prev) => toggleValue(prev, specialist))}
+            >
+              {localizeOption(specialist)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <label className="field">
+        <span>{ft('entranceExam')}</span>
+        <select className="input" value={entranceExam} onChange={(e) => setEntranceExam(e.target.value as typeof entranceExam)}>
+          <option value="all">{ft('any')}</option>
+          <option value="yes">{ft('yes')}</option>
+          <option value="no">{ft('no')}</option>
+        </select>
+      </label>
+      <div className="schools-filter-section">
+        <p className="schools-filter-label">{ft('advancedSubjects')}</p>
+        <div className="schools-filter-chip-list">
+          {advancedOptions.map((subject) => (
+            <button
+              key={subject}
+              type="button"
+              className={`schools-filter-chip${selectedAdvanced.includes(subject) ? ' active' : ''}`}
+              onClick={() => setSelectedAdvanced((prev) => toggleValue(prev, subject))}
+            >
+              {localizeOption(subject)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <label className="field">
+        <span>
+          {ft('minClubs')}: {minClubs}
+        </span>
+        <input
+          type="range"
+          min={clubsBounds.min}
+          max={clubsBounds.max}
+          step={1}
+          value={minClubs}
+          onChange={(e) => setMinClubs(Number(e.target.value))}
+        />
       </label>
       {!mobileFiltersOpen ? (
         <button type="button" className="button secondary schools-filter-reset" onClick={resetFilters}>
