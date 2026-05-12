@@ -76,7 +76,6 @@ export const ADMISSION_DOCUMENT_OPTIONS = [
   'medical_certificate',
   'health_status_certificate',
   'birth_certificate',
-  'health_passport',
   'form_063',
   'photo_3x4',
   'student_file',
