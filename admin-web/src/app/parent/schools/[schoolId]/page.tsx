@@ -867,6 +867,21 @@ const formatAfterSchoolValue = (
       : `${availableLabel} до ${until}`;
 };
 
+const formatFeeRuleGrades = (
+  fromGrade: number,
+  toGrade: number,
+  locale: 'ru' | 'en' | 'kk'
+) => {
+  if (fromGrade === toGrade) {
+    return locale === 'en'
+      ? `Grade ${fromGrade}`
+      : locale === 'kk'
+        ? `${fromGrade} сынып`
+        : `${fromGrade} класс`;
+  }
+  return `${fromGrade}-${toGrade}`;
+};
+
 export default function ParentSchoolDetailsPage() {
   const { locale } = useParentLocale();
   const [guest] = useState(() => isGuestMode());
@@ -2332,7 +2347,7 @@ export default function ParentSchoolDetailsPage() {
                     <div className="school-price-rules">
                     {feeRules.map((rule, index) => (
                       <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
-                        <span>{ui.priceFromTo}: {rule.from_grade}-{rule.to_grade}</span>
+                        <span>{ui.priceFromTo}: {formatFeeRuleGrades(rule.from_grade, rule.to_grade, locale)}</span>
                         <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€'}`}</strong>
                         {registrationFeeMode === 'per_rule' && rule.entrance_fee > 0 ? (
                           <small>

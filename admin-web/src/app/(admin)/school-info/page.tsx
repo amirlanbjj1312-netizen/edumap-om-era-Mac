@@ -3650,7 +3650,7 @@ export default function SchoolInfoPage() {
                           </div>
                           <FieldRow>
                             <Select
-                              label="С класса"
+                              label="От класса"
                               value={String(rule.from_grade || '')}
                               onChange={(value: string) =>
                                 updateFinanceFeeRule(index, { from_grade: value })
@@ -3664,7 +3664,7 @@ export default function SchoolInfoPage() {
                               ]}
                             />
                             <Select
-                              label="По класс"
+                              label="До класса"
                               value={String(rule.to_grade || '')}
                               onChange={(value: string) =>
                                 updateFinanceFeeRule(index, { to_grade: value })
@@ -3678,6 +3678,11 @@ export default function SchoolInfoPage() {
                               ]}
                             />
                           </FieldRow>
+                          <p className="muted" style={{ marginTop: -6, marginBottom: 12 }}>
+                            {t(
+                              'Можно указать один класс или диапазон. Например: 9-9 для отдельной цены в 9 классе или 10-11 для общей цены в 10-11 классах.'
+                            )}
+                          </p>
                           <FieldRow>
                             <Input
                               label="Цена"
