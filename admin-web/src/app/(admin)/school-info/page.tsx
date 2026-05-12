@@ -779,6 +779,8 @@ const OPTION_LABELS: Record<
   'Cambridge IGCSE': { ru: 'Cambridge IGCSE', en: 'Cambridge IGCSE', kk: 'Cambridge IGCSE' },
   'Cambridge A-Level': { ru: 'Cambridge A-Level', en: 'Cambridge A-Level', kk: 'Cambridge A-Level' },
   'IB PYP': { ru: 'IB PYP', en: 'IB PYP', kk: 'IB PYP' },
+  'IB MYP': { ru: 'IB MYP', en: 'IB MYP', kk: 'IB MYP' },
+  'IB CP': { ru: 'IB CP', en: 'IB CP', kk: 'IB CP' },
   STEAM: { ru: 'STEAM', en: 'STEAM', kk: 'STEAM' },
   STEM: { ru: 'STEM', en: 'STEM', kk: 'STEM' },
   Montessori: { ru: 'Монтессори', en: 'Montessori', kk: 'Монтессори' },
@@ -1042,6 +1044,8 @@ const CURRICULA_GROUPS = {
   ],
   international: [
     'IB PYP',
+    'IB MYP',
+    'IB CP',
     'STEAM',
     'STEM',
     'Montessori',
