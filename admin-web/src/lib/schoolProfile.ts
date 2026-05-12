@@ -58,6 +58,7 @@ export const createEmptySchoolProfile = (overrides: any = {}) => {
             bio: { ru: '', en: '', kk: '' },
           },
         },
+        principals: [],
         deputy_directors: [],
         class_curators: '',
         class_curators_enabled: false,

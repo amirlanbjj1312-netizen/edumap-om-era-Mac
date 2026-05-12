@@ -333,6 +333,7 @@ const LABELS: Record<string, { en: string; kk: string }> = {
   Кружки: { en: 'Clubs', kk: 'Үйірмелер' },
   Аналитика: { en: 'Analytics', kk: 'Аналитика' },
   Завуч: { en: 'Deputy principal', kk: 'Директор орынбасары' },
+  'Добавить директора': { en: 'Add principal', kk: 'Директор қосу' },
   'Добавить завуча': { en: 'Add deputy principal', kk: 'Директор орынбасарын қосу' },
   'Фото завуча (файл)': { en: 'Deputy photo (file)', kk: 'Директор орынбасарының фотосы (файл)' },
   'Наш преподавательский состав': { en: 'Teaching staff', kk: 'Оқытушылар құрамы' },
@@ -1635,7 +1636,7 @@ export default function SchoolInfoPage() {
     'basic' | 'contacts' | 'education' | 'admission' | 'services' | 'clubs' | 'finance' | 'media'
   >('basic');
   const [expandedTeacherIndex, setExpandedTeacherIndex] = useState<number | null>(null);
-  const [expandedLeadershipKey, setExpandedLeadershipKey] = useState<'principal' | null>(null);
+  const [expandedPrincipalIndex, setExpandedPrincipalIndex] = useState<number | null>(null);
   const [expandedDeputyDirectorIndex, setExpandedDeputyDirectorIndex] = useState<number | null>(null);
   const [expandedClubIndex, setExpandedClubIndex] = useState<number | null>(0);
   const [expandedSuccessStoryIndex, setExpandedSuccessStoryIndex] = useState<number | null>(0);
@@ -1879,6 +1880,13 @@ export default function SchoolInfoPage() {
     photo_url: '',
     bio: { ru: '', en: '', kk: '' },
   });
+  const createPrincipalEntry = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    full_name: { ru: '', en: '', kk: '' },
+    position: normalizeLocalizedTextValue('Директор'),
+    photo_url: '',
+    bio: { ru: '', en: '', kk: '' },
+  });
   const createClubEntry = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: { ru: '', en: '', kk: '' },
@@ -2084,10 +2092,85 @@ export default function SchoolInfoPage() {
     if (shouldSave) save(nextProfile);
   };
 
-  const leadershipMembers = useMemo(
-    () => [{ key: 'principal' as const, title: 'Директор', member: getLeadershipMember('principal') }],
-    [profile]
-  );
+  const getPrincipalMembers = () => {
+    const items = getDeep(profile, 'basic_info.team.principals', []);
+    if (Array.isArray(items) && items.length) {
+      return items.map((item: any, index: number) => ({
+        ...createPrincipalEntry(),
+        ...(item && typeof item === 'object' ? item : {}),
+        id: String(item?.id || `principal-${index}`),
+        full_name: normalizeLocalizedTextValue(item?.full_name),
+        position: normalizeLocalizedTextValue(item?.position || 'Директор'),
+        photo_url: String(item?.photo_url || ''),
+        bio: {
+          ru: String(item?.bio?.ru || ''),
+          en: String(item?.bio?.en || ''),
+          kk: String(item?.bio?.kk || ''),
+        },
+      }));
+    }
+
+    const legacyMember = getLeadershipMember('principal');
+    if (
+      String(legacyMember?.full_name || '').trim() ||
+      String(legacyMember?.photo_url || '').trim() ||
+      String(legacyMember?.bio?.ru || '').trim() ||
+      String(legacyMember?.bio?.en || '').trim() ||
+      String(legacyMember?.bio?.kk || '').trim()
+    ) {
+      return [{ ...createPrincipalEntry(), id: 'legacy-principal', ...legacyMember }];
+    }
+
+    return [];
+  };
+
+  const setPrincipalMembers = (items: Array<any>, shouldSave = false) => {
+    if (!profile) return;
+    let nextProfile = setDeep(profile, 'basic_info.team.principals', items);
+    nextProfile = setDeep(nextProfile, 'basic_info.team.principal', String(items[0]?.full_name?.ru || ''));
+    nextProfile = setDeep(
+      nextProfile,
+      'basic_info.team.leadership.principal',
+      items[0]
+        ? {
+            full_name: items[0].full_name || { ru: '', en: '', kk: '' },
+            position: items[0].position || normalizeLocalizedTextValue('Директор'),
+            photo_url: items[0].photo_url || '',
+            bio: items[0].bio || { ru: '', en: '', kk: '' },
+          }
+        : createLeadershipMember('principal')
+    );
+    setProfile(nextProfile);
+    if (shouldSave) save(nextProfile);
+  };
+
+  const updatePrincipalMember = (
+    index: number,
+    patch: Record<string, unknown>,
+    shouldSave = false
+  ) => {
+    const items = getPrincipalMembers();
+    if (!items[index]) return;
+    setPrincipalMembers(
+      items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+      shouldSave
+    );
+  };
+
+  const removePrincipalMember = (index: number) => {
+    const items = getPrincipalMembers();
+    setPrincipalMembers(items.filter((_item, itemIndex) => itemIndex !== index), true);
+  };
+
+  const principalMembers = useMemo(() => getPrincipalMembers(), [profile]);
+  useEffect(() => {
+    setExpandedPrincipalIndex((prev) => {
+      if (!principalMembers.length) return null;
+      if (prev == null) return null;
+      if (prev >= principalMembers.length) return principalMembers.length - 1;
+      return prev;
+    });
+  }, [principalMembers.length]);
 
   const getPhoneEntries = () => {
     const items = getDeep(profile, 'basic_info.phones', []);
@@ -4701,26 +4784,33 @@ export default function SchoolInfoPage() {
             </Section>
         <Section title="Руководство школы">
           <div className="teacher-list">
-            {leadershipMembers.map(({ key, title, member }) => {
-              const isExpanded = expandedLeadershipKey === key;
+            {principalMembers.map((member: any, index: number) => {
+              const isExpanded = expandedPrincipalIndex === index;
               const summaryParts = [
                 String(member?.full_name?.[contentLocale] || '').trim(),
                 String(member?.position?.[contentLocale] || '').trim(),
                 String(member?.bio?.[contentLocale] || '').trim(),
               ].filter(Boolean);
               return (
-                <div key={key} className="teacher-card">
+                <div key={member?.id || `principal-${index}`} className="teacher-card">
                   <div className="teacher-card-head">
-                    <h3>{t(title)}</h3>
+                    <h3>{`${t('Директор')} #${index + 1}`}</h3>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         type="button"
                         className="button secondary"
                         onClick={() =>
-                          setExpandedLeadershipKey((prev) => (prev === key ? null : key))
+                          setExpandedPrincipalIndex((prev) => (prev === index ? null : index))
                         }
                       >
                         {isExpanded ? t('Свернуть') : t('Развернуть')}
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => removePrincipalMember(index)}
+                      >
+                        {t('Удалить')}
                       </button>
                     </div>
                   </div>
@@ -4736,7 +4826,7 @@ export default function SchoolInfoPage() {
                           label="ФИО"
                           value={String(member?.full_name?.[contentLocale] || '')}
                           onChange={(value: string) =>
-                            updateLeadershipMember(key, {
+                            updatePrincipalMember(index, {
                               full_name: {
                                 ...(member?.full_name || { ru: '', en: '', kk: '' }),
                                 [contentLocale]: value,
@@ -4748,7 +4838,7 @@ export default function SchoolInfoPage() {
                           label="Должность"
                           value={String(member?.position?.[contentLocale] || '')}
                           onChange={(value: string) =>
-                            updateLeadershipMember(key, {
+                            updatePrincipalMember(index, {
                               position: {
                                 ...(member?.position || { ru: '', en: '', kk: '' }),
                                 [contentLocale]: value,
@@ -4776,7 +4866,7 @@ export default function SchoolInfoPage() {
                                 if (!preparedFiles?.length) return;
                                 const urls = await uploadMediaFiles(preparedFiles, 'leadership');
                                 if (urls[0]) {
-                                  updateLeadershipMember(key, { photo_url: urls[0] }, true);
+                                  updatePrincipalMember(index, { photo_url: urls[0] }, true);
                                 }
                               } catch (error: any) {
                                 setMediaMessage(
@@ -4792,12 +4882,12 @@ export default function SchoolInfoPage() {
                             <div className="teacher-photo-preview">
                               <img
                                 src={member.photo_url}
-                                alt={String(member?.full_name?.[contentLocale] || '').trim() || title}
+                                alt={String(member?.full_name?.[contentLocale] || '').trim() || `Директор ${index + 1}`}
                               />
                               <button
                                 type="button"
                                 className="button secondary"
-                                onClick={() => updateLeadershipMember(key, { photo_url: '' }, true)}
+                                onClick={() => updatePrincipalMember(index, { photo_url: '' }, true)}
                               >
                                 {t('Удалить фото')}
                               </button>
@@ -4811,7 +4901,7 @@ export default function SchoolInfoPage() {
                           rows={3}
                           value={member?.bio?.[contentLocale] || ''}
                           onChange={(value: string) =>
-                            updateLeadershipMember(key, {
+                            updatePrincipalMember(index, {
                               bio: {
                                 ...(member?.bio || { ru: '', en: '', kk: '' }),
                                 [contentLocale]: value,
@@ -4827,6 +4917,17 @@ export default function SchoolInfoPage() {
             })}
           </div>
           <div className="teacher-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                const nextItems = [...principalMembers, createPrincipalEntry()];
+                setPrincipalMembers(nextItems);
+                setExpandedPrincipalIndex(nextItems.length - 1);
+              }}
+            >
+              {t('Добавить директора')}
+            </button>
             <button
               type="button"
               className="button secondary"
