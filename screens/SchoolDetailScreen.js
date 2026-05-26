@@ -118,10 +118,36 @@ const getYoutubeThumbnail = (url) => {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
 };
 
-const normalizeDisplayValue = (value) => {
+const unwrapLocalizedValue = (value, locale = 'ru') => {
   if (!value) return '';
-  if (typeof value === 'string') return value;
-  return value?.ru || value?.en || '';
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value).trim();
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => unwrapLocalizedValue(item, locale))
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof value === 'object') {
+    const localized =
+      value?.[locale] ??
+      value?.ru ??
+      value?.kk ??
+      value?.en;
+    if (localized && localized !== value) {
+      return unwrapLocalizedValue(localized, locale);
+    }
+    return Object.values(value)
+      .map((item) => unwrapLocalizedValue(item, locale))
+      .filter(Boolean)
+      .join(', ');
+  }
+  return '';
+};
+
+const normalizeDisplayValue = (value) => {
+  return unwrapLocalizedValue(value, 'ru');
 };
 
 const clampRatingValue = (value) => {
@@ -142,31 +168,14 @@ const formatReviewDate = (value) => {
 };
 
 const DetailRow = ({ label, value, rowStyle, labelStyle, valueStyle }) => {
-  const normalizedValue = (() => {
-    if (!value) return '';
-    if (Array.isArray(value)) {
-      return value
-        .map((item) => {
-          if (!item) return '';
-          if (typeof item === 'object') {
-            return item.ru || item.kk || item.en || '';
-          }
-          return String(item).trim();
-        })
-        .filter(Boolean)
-        .join(', ');
-    }
-    if (typeof value === 'object') {
-      return value.ru || value.kk || value.en || '';
-    }
-    return String(value).trim();
-  })();
+  const normalizedLabel = unwrapLocalizedValue(label, 'ru');
+  const normalizedValue = unwrapLocalizedValue(value, 'ru');
   if (!normalizedValue) return null;
 
   return (
     <View style={[styles.detailRow, rowStyle]}>
       <Text style={[styles.detailLabel, labelStyle]}>
-        {label}
+        {normalizedLabel}
       </Text>
       <Text style={[styles.detailValue, valueStyle]}>{normalizedValue}</Text>
     </View>
@@ -175,9 +184,11 @@ const DetailRow = ({ label, value, rowStyle, labelStyle, valueStyle }) => {
 
 const ProgramChipsRow = ({ label, items, hint, onPress }) => {
   if (!items.length) return null;
+  const normalizedLabel = unwrapLocalizedValue(label, 'ru');
+  const normalizedHint = unwrapLocalizedValue(hint, 'ru');
   return (
     <View style={styles.programsRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailLabel}>{normalizedLabel}</Text>
       <View style={styles.programsChipWrap}>
         {items.map((item) => (
           <Pressable
@@ -195,38 +206,41 @@ const ProgramChipsRow = ({ label, items, hint, onPress }) => {
                 item.hasInfo ? styles.programChipTextActive : styles.programChipTextPassive,
               ]}
             >
-              {item.label}
+              {unwrapLocalizedValue(item.label, 'ru')}
             </Text>
             {item.hasInfo ? <Text style={styles.programChipHelp}>?</Text> : null}
           </Pressable>
         ))}
       </View>
-      <Text style={styles.programHint}>{hint}</Text>
+      <Text style={styles.programHint}>{normalizedHint}</Text>
     </View>
   );
 };
 
-const ExpandableSection = ({ iconName, title, isOpen, onToggle, children }) => (
-  <View style={styles.expandableSection}>
-    <Pressable style={styles.expandableHeader} onPress={onToggle}>
-      <View style={styles.expandableHeaderTitleWrap}>
-        <View style={styles.sectionIconBadge}>
-          <FontAwesome6
-            name={iconName}
-            size={13}
-            color="#1D4ED8"
-            iconStyle="solid"
-          />
+const ExpandableSection = ({ iconName, title, isOpen, onToggle, children }) => {
+  const normalizedTitle = unwrapLocalizedValue(title, 'ru');
+  return (
+    <View style={styles.expandableSection}>
+      <Pressable style={styles.expandableHeader} onPress={onToggle}>
+        <View style={styles.expandableHeaderTitleWrap}>
+          <View style={styles.sectionIconBadge}>
+            <FontAwesome6
+              name={iconName}
+              size={13}
+              color="#1D4ED8"
+              iconStyle="solid"
+            />
+          </View>
+          <Text style={styles.expandableHeaderText}>{normalizedTitle}</Text>
         </View>
-        <Text style={styles.expandableHeaderText}>{title}</Text>
-      </View>
-      <Text style={styles.expandableHeaderChevron}>
-        {isOpen ? '▲' : '▼'}
-      </Text>
-    </Pressable>
-    {isOpen ? <View style={styles.expandableBody}>{children}</View> : null}
-  </View>
-);
+        <Text style={styles.expandableHeaderChevron}>
+          {isOpen ? '▲' : '▼'}
+        </Text>
+      </Pressable>
+      {isOpen ? <View style={styles.expandableBody}>{children}</View> : null}
+    </View>
+  );
+};
 
 const openMaps = (address, latitude, longitude) => {
   const hasCoords =
@@ -326,19 +340,7 @@ export default function SchoolDetailScreen() {
   const { t, locale } = useLocale();
 
   const getLocalizedMapText = (value) => {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    const localized = value?.[locale];
-    if (typeof localized === 'string') return localized;
-    if (localized && typeof localized === 'object') {
-      return Object.values(localized).filter(Boolean).join(', ');
-    }
-    const fallback = value?.ru || value?.en;
-    if (typeof fallback === 'string') return fallback;
-    if (fallback && typeof fallback === 'object') {
-      return Object.values(fallback).filter(Boolean).join(', ');
-    }
-    return '';
+    return unwrapLocalizedValue(value, locale);
   };
 
   const profile = useMemo(() => {
@@ -1185,7 +1187,9 @@ export default function SchoolDetailScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.summaryType}>{displayType}</Text>
+            <Text style={styles.summaryType}>
+              {unwrapLocalizedValue(displayType, locale)}
+            </Text>
             <Text style={styles.summaryTitle}>
               {displayNameText || t('schoolDetail.value.school')}
             </Text>
@@ -1547,7 +1551,9 @@ export default function SchoolDetailScreen() {
                     >
                       <View style={styles.clubCatalogHeader}>
                         <View style={styles.clubCatalogHeaderMain}>
-                          <Text style={styles.clubCatalogTitle}>{club.name}</Text>
+                          <Text style={styles.clubCatalogTitle}>
+                            {unwrapLocalizedValue(club.name, locale)}
+                          </Text>
                           <Text style={styles.clubCatalogHeaderPrice}>
                             {club.priceLabel}
                           </Text>
@@ -1672,7 +1678,9 @@ export default function SchoolDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
-                    <Text style={styles.reviewText}>{review.text}</Text>
+                    <Text style={styles.reviewText}>
+                      {unwrapLocalizedValue(review.text, locale)}
+                    </Text>
                   </View>
                 );
               })
@@ -2154,7 +2162,10 @@ export default function SchoolDetailScreen() {
           <View style={styles.programModalCard}>
             <View style={styles.reviewModalHeader}>
               <Text style={styles.reviewModalTitle}>
-                {programModal.info?.title || programModal.label}
+                {unwrapLocalizedValue(
+                  programModal.info?.title || programModal.label,
+                  locale
+                )}
               </Text>
               <Pressable style={styles.reviewModalClose} onPress={handleCloseProgramInfo}>
                 <XMarkIcon color="#0F172A" size={20} />
@@ -2162,10 +2173,10 @@ export default function SchoolDetailScreen() {
             </View>
             <View style={styles.programModalIntro}>
               <Text style={styles.programModalSectionLabel}>
-                {programsUiText.whatIs}
+                {unwrapLocalizedValue(programsUiText.whatIs, locale)}
               </Text>
               <Text style={styles.programModalText}>
-                {programModal.info?.short || ''}
+                {unwrapLocalizedValue(programModal.info?.short || '', locale)}
               </Text>
             </View>
             {programModalExpanded ? (
@@ -2213,7 +2224,7 @@ export default function SchoolDetailScreen() {
                   }}
                 >
                   <Text style={styles.programModalPrimaryText}>
-                    {programsUiText.details}
+                    {unwrapLocalizedValue(programsUiText.details, locale)}
                   </Text>
                 </Pressable>
               ) : null}
@@ -2222,7 +2233,7 @@ export default function SchoolDetailScreen() {
                 onPress={handleCloseProgramInfo}
               >
                 <Text style={styles.programModalSecondaryText}>
-                  {programsUiText.close}
+                  {unwrapLocalizedValue(programsUiText.close, locale)}
                 </Text>
               </Pressable>
             </View>
@@ -2285,8 +2296,11 @@ export default function SchoolDetailScreen() {
                   </View>
                 )}
                 <Text style={styles.teacherModalTitle} numberOfLines={3}>
-                  {teacherModal.member?.full_name ||
-                    t('schoolDetail.staff.defaultName')}
+                  {unwrapLocalizedValue(
+                    teacherModal.member?.full_name ||
+                      t('schoolDetail.staff.defaultName'),
+                    locale
+                  )}
                 </Text>
               </View>
               <Pressable style={styles.teacherModalClose} onPress={handleCloseTeacher}>

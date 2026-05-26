@@ -232,27 +232,10 @@ export default function SchoolChatScreen() {
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
-    const usage = await consumeFeatureUsage({
+    void consumeFeatureUsage({
       userKey: account?.id || account?.email || 'guest',
       feature: 'ai_chat',
-    });
-    if (!usage.ok) {
-      const windowRu = usage.window === 'day' ? 'в день' : 'за период';
-      const windowEn = usage.window === 'day' ? 'per day' : 'per period';
-      const windowKk = usage.window === 'day' ? 'күніне' : 'кезеңге';
-      const limitText =
-        locale === 'en'
-          ? `AI chat limit reached (${usage.limit} ${windowEn}).`
-          : locale === 'kk'
-          ? `AI чат лимиті аяқталды (${usage.limit} ${windowKk}).`
-          : `Лимит AI-чата исчерпан (${usage.limit} ${windowRu}).`;
-      appendMessage({
-        id: `assistant-limit-${Date.now()}`,
-        role: 'assistant',
-        text: limitText,
-      });
-      return;
-    }
+    }).catch(() => {});
     const userMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
