@@ -518,6 +518,30 @@ const toExternalUrl = (value: string) => {
   return `https://${trimmed}`;
 };
 
+const normalizePhoneDigits = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('8') && digits.length >= 11) return `7${digits.slice(1, 11)}`;
+  if (digits.startsWith('7') && digits.length >= 11) return digits.slice(0, 11);
+  if (digits.length === 10) return `7${digits}`;
+  return digits;
+};
+
+const toWhatsAppUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^(https?:\/\/)?(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)/i.test(trimmed)) {
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  }
+  const digits = normalizePhoneDigits(trimmed);
+  return digits ? `https://wa.me/${digits}` : '';
+};
+
+const toPhoneUrl = (value: string) => {
+  const digits = normalizePhoneDigits(value);
+  return digits ? `tel:${digits}` : '';
+};
+
 const isImageUrl = (value: string) =>
   /\.(png|jpe?g|webp|gif|bmp|svg|avif)(\?.*)?$/i.test(value.trim());
 
@@ -1294,7 +1318,9 @@ export default function ParentSchoolDetailsPage() {
       toText(getIn(school, 'basic_info.city')) || toText(getIn(school, 'basic_info.district')) || 'Город',
       locale
     );
-  const phone = formatKzPhone(toText(getIn(school, 'basic_info.phone'))) || 'Телефон не указан';
+  const primaryPhoneRaw = toText(getIn(school, 'basic_info.phone')).trim();
+  const whatsappPhoneRaw = toText(getIn(school, 'basic_info.whatsapp_phone')).trim();
+  const phone = formatKzPhone(primaryPhoneRaw);
   const rating = String(getIn(school, 'system.rating') ?? '0.0');
   const reviews = String(getIn(school, 'system.reviews_count') ?? 0);
   const feedbackCount = Number(getIn(school, 'system.feedback_count') ?? 0);
@@ -1682,12 +1708,15 @@ export default function ParentSchoolDetailsPage() {
     { label: locale === 'en' ? 'Rating' : locale === 'kk' ? 'Рейтинг' : 'Рейтинг', value: rating },
     { label: locale === 'en' ? 'Reviews count' : locale === 'kk' ? 'Пікір саны' : 'Количество отзывов', value: reviews },
   ];
-  const phoneDigits = phone.replaceAll(/[^\d]/g, '');
+  const phoneHref = toPhoneUrl(primaryPhoneRaw);
+  const whatsappHref = toWhatsAppUrl(whatsappPhoneRaw);
+  const consultationHref = whatsappHref || phoneHref;
+  const consultationEventType = whatsappHref ? 'contact_whatsapp_click' : 'contact_phone_click';
   const extraPhonesSource = getIn(school, 'basic_info.phones');
   const extraPhoneItems = (Array.isArray(extraPhonesSource) ? (extraPhonesSource as any[]) : [])
     .map((item: any) => {
       const value = formatKzPhone(toText(item?.number));
-      const digits = value.replaceAll(/[^\d]/g, '');
+      const href = toPhoneUrl(toText(item?.number));
       return {
         label:
           pickFirstText(
@@ -1697,7 +1726,7 @@ export default function ParentSchoolDetailsPage() {
           ) ||
           (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
         value,
-        href: isMobileViewport && digits ? `tel:${digits}` : undefined,
+        href: isMobileViewport && href ? href : undefined,
       };
     })
     .filter((item: { value: string }) => item.value);
@@ -1706,7 +1735,7 @@ export default function ParentSchoolDetailsPage() {
       phone
         ? {
             value: phone,
-            href: isMobileViewport && phoneDigits ? `tel:${phoneDigits}` : undefined,
+            href: isMobileViewport && phoneHref ? phoneHref : undefined,
           }
         : extraPhoneItems[0]
     ) || null;
@@ -2406,6 +2435,18 @@ export default function ParentSchoolDetailsPage() {
                 type="button"
                 className="school-consult-btn"
                 onClick={() => {
+                  if (consultationHref) {
+                    if (trackedSchoolId) {
+                      void recordEngagementEvent({
+                        eventType: consultationEventType,
+                        schoolId: trackedSchoolId,
+                        locale,
+                        source: 'school_card_consultation_cta',
+                      }).catch(() => undefined);
+                    }
+                    window.open(consultationHref, '_blank', 'noopener,noreferrer');
+                    return;
+                  }
                   setConsultationOpen((prev) => !prev);
                   setConsultationError('');
                   setConsultationMessage('');
