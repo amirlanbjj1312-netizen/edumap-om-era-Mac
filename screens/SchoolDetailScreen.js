@@ -320,6 +320,33 @@ const buildWhatsAppUrl = (value) => {
   return `https://wa.me/${digits}`;
 };
 
+const buildWebsiteUrl = (value) => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
+const localizeContactLabel = (value, locale, t) => {
+  const raw = unwrapLocalizedValue(value, locale).trim();
+  if (!raw) return t('schoolDetail.field.phone');
+  const normalized = raw.toLowerCase();
+  if (
+    normalized === 'приемная' ||
+    normalized === 'қабылдау' ||
+    normalized === 'reception' ||
+    normalized === 'admissions' ||
+    normalized === 'admission office'
+  ) {
+    return locale === 'en'
+      ? 'Reception'
+      : locale === 'kk'
+        ? 'Қабылдау'
+        : 'Приемная';
+  }
+  return raw;
+};
+
 const matchesExperienceFilter = (value, filter) => {
   const years = Number(value);
   if (!filter || filter === 'all') return true;
@@ -446,6 +473,9 @@ export default function SchoolDetailScreen() {
     return match ? match.trim() : '';
   }, [basic_info.whatsapp_phone, profile?.contact_info?.whatsapp]);
   const whatsappChatUrl = buildWhatsAppUrl(schoolWhatsApp);
+  const websiteUrl = buildWebsiteUrl(basic_info.website);
+  const websiteActionLabel =
+    locale === 'en' ? 'Tap' : locale === 'kk' ? 'Басу' : 'Нажать';
   const socialLinks = media?.social_links || {};
   const socialRows = [
     { key: 'instagram', labelKey: 'schoolDetail.field.social.instagram', symbol: 'IG', url: socialLinks.instagram },
@@ -1418,7 +1448,7 @@ export default function SchoolDetailScreen() {
                   .map((item, index) => (
                     <DetailRow
                       key={item?.id || `extra-phone-${index}`}
-                      label={item?.label || t('schoolDetail.field.phone')}
+                      label={localizeContactLabel(item?.label, locale, t)}
                       value={item?.number}
                       labelColor="#2563EB"
                     />
@@ -1439,21 +1469,16 @@ export default function SchoolDetailScreen() {
               value={basic_info.email}
               labelColor="#2563EB"
             />
-            <DetailRow
-              label={t('schoolDetail.field.website')}
-              value={basic_info.website}
-              labelColor="#2563EB"
-            />
-            <DetailRow
-              label={t('schoolDetail.field.address')}
-              value={displayAddress}
-              labelColor="#2563EB"
-            />
-            <DetailRow
-              label={t('schoolDetail.field.district')}
-              value={displayDistrict}
-              labelColor="#2563EB"
-            />
+            {websiteUrl ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>
+                  {t('schoolDetail.field.website')}
+                </Text>
+                <Pressable onPress={() => openSocialLink(websiteUrl)}>
+                  <Text style={styles.detailValueLink}>{websiteActionLabel}</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </ExpandableSection>
 
           {socialRows.length ? (

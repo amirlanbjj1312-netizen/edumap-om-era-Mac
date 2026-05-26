@@ -542,6 +542,27 @@ const toPhoneUrl = (value: string) => {
   return digits ? `tel:${digits}` : '';
 };
 
+const localizeContactLabel = (value: string, locale: 'ru' | 'en' | 'kk') => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон';
+  }
+  if (
+    normalized === 'приемная' ||
+    normalized === 'қабылдау' ||
+    normalized === 'reception' ||
+    normalized === 'admissions' ||
+    normalized === 'admission office'
+  ) {
+    return locale === 'en'
+      ? 'Reception'
+      : locale === 'kk'
+        ? 'Қабылдау'
+        : 'Приемная';
+  }
+  return value;
+};
+
 const isImageUrl = (value: string) =>
   /\.(png|jpe?g|webp|gif|bmp|svg|avif)(\?.*)?$/i.test(value.trim());
 
@@ -919,6 +940,7 @@ export default function ParentSchoolDetailsPage() {
     address: locale === 'en' ? 'Address' : locale === 'kk' ? 'Мекенжай' : 'Адрес',
     city: locale === 'en' ? 'City' : locale === 'kk' ? 'Қала' : 'Город',
     district: locale === 'en' ? 'District' : locale === 'kk' ? 'Аудан' : 'Район',
+    tapLink: locale === 'en' ? 'Tap' : locale === 'kk' ? 'Басу' : 'Нажать',
     clubs: locale === 'en' ? 'Clubs and sections' : locale === 'kk' ? 'Үйірмелер мен секциялар' : 'Кружки и секции',
     consultationCta:
       locale === 'en'
@@ -1719,12 +1741,15 @@ export default function ParentSchoolDetailsPage() {
       const href = toPhoneUrl(toText(item?.number));
       return {
         label:
-          pickFirstText(
-            item,
-            [`label.${locale}`, 'label.ru', 'label.kk', 'label.en', 'label'],
-            ''
-          ) ||
-          (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
+          localizeContactLabel(
+            pickFirstText(
+              item,
+              [`label.${locale}`, 'label.ru', 'label.kk', 'label.en', 'label'],
+              ''
+            ) ||
+              (locale === 'en' ? 'Phone' : locale === 'kk' ? 'Телефон' : 'Телефон'),
+            locale
+          ),
         value,
         href: isMobileViewport && href ? href : undefined,
       };
@@ -1755,7 +1780,7 @@ export default function ParentSchoolDetailsPage() {
     { label: 'Email', value: pickFirstText(school, ['basic_info.email']) },
     {
       label: locale === 'en' ? 'Website' : locale === 'kk' ? 'Сайт' : 'Сайт',
-      value: pickFirstText(school, ['basic_info.website']),
+      value: ui.tapLink,
       href: toExternalUrl(pickFirstText(school, ['basic_info.website'])),
     },
   ].filter((item): item is ContactItem => Boolean(item?.value));
@@ -1787,38 +1812,7 @@ export default function ParentSchoolDetailsPage() {
       value,
     })),
   ];
-  const contactRows = [
-    ...(addressLabel
-      ? [
-          {
-            label:
-              totalAddressCount <= 1
-                ? ui.address
-                : locale === 'en'
-                  ? 'Branch 1'
-                  : locale === 'kk'
-                    ? '1-филиал'
-                    : 'Филиал 1',
-            value: addressLabel,
-          },
-        ]
-      : []),
-    ...visibleAdditionalAddresses.map((value, index) => ({
-      label:
-        locale === 'en'
-          ? `Branch ${index + 2}`
-          : locale === 'kk'
-            ? `${index + 2}-филиал`
-            : `Филиал ${index + 2}`,
-      value,
-    })),
-    ...contactItems.map((item) => ({ label: item.label, value: item.value })),
-  ];
-  const addressRows = contactRows.filter((row) => {
-    const normalized = String(row.label || '').toLowerCase();
-    return normalized.includes('адрес') || normalized.includes('branch') || normalized.includes('филиал');
-  });
-  const otherContactRows = contactRows.filter((row) => !addressRows.includes(row));
+  const otherContactRows = contactItems.map((item) => ({ label: item.label, value: item.value }));
   const educationLanguages = localizeUniqueList(getIn(school, 'education.languages'), locale);
   const educationPrograms = Array.from(
     new Set(
@@ -2771,21 +2765,6 @@ export default function ParentSchoolDetailsPage() {
                       </div>
                     ) : section.key === 'basic_info' ? (
                       <div className="school-service-list">
-                        {addressRows.length ? (
-                          <div className="school-address-grid">
-                            {addressRows.slice(0, 3).map((row, index) => (
-                              <div
-                                key={`${row.label}-${index}`}
-                                className={`school-service-item school-address-item${
-                                  index === 2 ? ' is-full-width' : ''
-                                }`}
-                              >
-                                <p>{row.label}</p>
-                                <strong>{row.value}</strong>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
                         {otherContactRows.map((row, index) => (
                           <div key={`${row.label}-${index}`} className="school-service-item">
                             <p>{row.label}</p>
