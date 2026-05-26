@@ -2610,7 +2610,7 @@ export default function ParentSchoolDetailsPage() {
                   : section.key === 'services'
                     ? serviceCards
                     : section.key === 'basic_info'
-                      ? contactRows
+                      ? otherContactRows
                     : section.key === 'education'
                         ? educationRows
                       : flattenDetails(school[section.key]);
