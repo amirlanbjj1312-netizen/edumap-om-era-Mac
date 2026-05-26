@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildApiUrl } from '../config/apiConfig';
+import { supabase } from './supabaseClient';
 
 const PLAN_KEY_PREFIX = 'EDUMAP_PARENT_PLAN_V1';
 const USAGE_KEY_PREFIX = 'EDUMAP_PARENT_USAGE_V1';
@@ -30,6 +32,8 @@ const PLAN_CONFIG = {
   },
 };
 
+const REMOTE_CACHE_TTL_MS = 60 * 1000;
+
 const buildUserKey = (value) => String(value || 'guest').trim().toLowerCase() || 'guest';
 const nowIso = () => new Date().toISOString();
 const toTs = (value) => {
@@ -48,6 +52,12 @@ const safeParse = (raw, fallback) => {
   } catch (_error) {
     return fallback;
   }
+};
+
+const normalizePlanId = (value) => {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'standard' || key === 'pro' || key === 'trial') return key;
+  return 'trial';
 };
 
 const getPlanConfig = (planId) => PLAN_CONFIG[planId] || PLAN_CONFIG.trial;
@@ -71,39 +81,94 @@ const buildNewPlanPayload = (planId) => {
   };
 };
 
-export const getActivePlan = async (userKey) => {
+const withRemotePlan = (localPlan, remotePlanId) => {
+  if (!remotePlanId || remotePlanId === localPlan.planId) return localPlan;
+  const next = buildNewPlanPayload(remotePlanId);
+  return {
+    ...next,
+    updatedAt: localPlan.updatedAt || next.updatedAt,
+  };
+};
+
+let remoteEntitlementsCache = {
+  fetchedAt: 0,
+  token: '',
+  data: null,
+};
+
+const getAccessToken = async () => {
+  if (!supabase) return '';
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.access_token || '';
+};
+
+const requestRemoteEntitlements = async () => {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  const now = Date.now();
+  if (
+    remoteEntitlementsCache.data &&
+    remoteEntitlementsCache.token === token &&
+    now - remoteEntitlementsCache.fetchedAt < REMOTE_CACHE_TTL_MS
+  ) {
+    return remoteEntitlementsCache.data;
+  }
+
   try {
-    const raw = await AsyncStorage.getItem(getPlanStorageKey(userKey));
-    const parsed = safeParse(raw, null);
-    if (!parsed?.planId) return buildNewPlanPayload('trial');
-    if (hasPlanExpired(parsed)) return buildNewPlanPayload('trial');
-    return parsed;
+    const response = await fetch(buildApiUrl('/auth/me/settings'), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error || payload?.message || 'Request failed');
+    }
+    const settings = payload?.data?.settings || {};
+    const expiresAt = String(settings?.ai_limits?.bonus_expires_at || '').trim();
+    const notExpired = !expiresAt || (toTs(expiresAt) || 0) > Date.now();
+    const next = {
+      planId: normalizePlanId(settings?.subscription?.plan),
+      aiLimits: {
+        chatBonus: notExpired ? Math.max(0, Number(settings?.ai_limits?.chat_bonus) || 0) : 0,
+        selectorBonus: notExpired
+          ? Math.max(0, Number(settings?.ai_limits?.selector_bonus) || 0)
+          : 0,
+        bonusExpiresAt: expiresAt,
+      },
+    };
+    remoteEntitlementsCache = {
+      fetchedAt: now,
+      token,
+      data: next,
+    };
+    return next;
   } catch (_error) {
-    return buildNewPlanPayload('trial');
+    return null;
   }
 };
 
-export const setActivePlan = async (userKey, planId) => {
-  const normalizedPlan = PLAN_CONFIG[planId] ? planId : 'trial';
-  const payload = buildNewPlanPayload(normalizedPlan);
-  try {
-    await AsyncStorage.setItem(getPlanStorageKey(userKey), JSON.stringify(payload));
-    await AsyncStorage.removeItem(getUsageStorageKey(userKey));
-  } catch (_error) {
-    // ignore storage failures; UI still continues
-  }
-  return payload;
-};
-
-const getFeaturePolicy = (planId, feature) => {
+const getFeaturePolicy = (planId, feature, entitlements = null) => {
   const config = getPlanConfig(planId);
   const raw = config?.limits?.[feature];
   if (raw == null) return { limit: null, window: 'plan' };
   if (typeof raw === 'number') return { limit: raw, window: 'plan' };
-  return {
-    limit: raw?.limit ?? null,
-    window: raw?.window === 'day' ? 'day' : 'plan',
-  };
+  let limit = raw?.limit ?? null;
+  const window = raw?.window === 'day' ? 'day' : 'plan';
+
+  if (limit != null && entitlements?.aiLimits) {
+    if (feature === 'ai_chat') {
+      limit += entitlements.aiLimits.chatBonus || 0;
+    }
+    if (feature === 'ai_match') {
+      limit += entitlements.aiLimits.selectorBonus || 0;
+    }
+  }
+
+  return { limit, window };
 };
 
 const readUsage = async (userKey) => {
@@ -132,9 +197,44 @@ const getWindowKey = (plan, windowType) =>
 const isWithinWindow = (entry, plan, windowType) =>
   String(entry?.windowKey || '') === getWindowKey(plan, windowType);
 
+export const getActivePlan = async (userKey) => {
+  let localPlan;
+  try {
+    const raw = await AsyncStorage.getItem(getPlanStorageKey(userKey));
+    const parsed = safeParse(raw, null);
+    if (!parsed?.planId) {
+      localPlan = buildNewPlanPayload('trial');
+    } else if (hasPlanExpired(parsed)) {
+      localPlan = buildNewPlanPayload('trial');
+    } else {
+      localPlan = parsed;
+    }
+  } catch (_error) {
+    localPlan = buildNewPlanPayload('trial');
+  }
+
+  const entitlements = await requestRemoteEntitlements();
+  return withRemotePlan(localPlan, entitlements?.planId);
+};
+
+export const setActivePlan = async (userKey, planId) => {
+  const normalizedPlan = PLAN_CONFIG[planId] ? planId : 'trial';
+  const payload = buildNewPlanPayload(normalizedPlan);
+  try {
+    await AsyncStorage.setItem(getPlanStorageKey(userKey), JSON.stringify(payload));
+    await AsyncStorage.removeItem(getUsageStorageKey(userKey));
+  } catch (_error) {
+    // ignore storage failures; UI still continues
+  }
+  return payload;
+};
+
 export const getUsageStatus = async (userKey, feature) => {
-  const plan = await getActivePlan(userKey);
-  const policy = getFeaturePolicy(plan.planId, feature);
+  const [plan, entitlements] = await Promise.all([
+    getActivePlan(userKey),
+    requestRemoteEntitlements(),
+  ]);
+  const policy = getFeaturePolicy(plan.planId, feature, entitlements);
   const limit = policy.limit;
   if (limit == null) {
     return {
@@ -168,8 +268,11 @@ export const consumeFeatureUsage = async ({ userKey, feature }) => {
   if (!status.ok) return status;
   if (status.limit == null) return status;
 
-  const plan = await getActivePlan(userKey);
-  const policy = getFeaturePolicy(plan.planId, feature);
+  const [plan, entitlements] = await Promise.all([
+    getActivePlan(userKey),
+    requestRemoteEntitlements(),
+  ]);
+  const policy = getFeaturePolicy(plan.planId, feature, entitlements);
   const usage = await readUsage(userKey);
   const currentEntry = usage?.[feature];
   const used = isWithinWindow(currentEntry, plan, policy.window)

@@ -170,6 +170,33 @@ const buildAuthRouter = (config) => {
     }
   });
 
+  router.get('/me/settings', async (req, res, next) => {
+    try {
+      if (!supabaseAdmin) {
+        return res.status(500).json({ error: 'Supabase admin is not configured' });
+      }
+
+      const actor = await getActor(req);
+      const actorRole = getUserRole(actor) || 'user';
+      const settings = await getUserAdminSettings(actor.id, actor.email || '');
+
+      return res.json({
+        data: {
+          user: {
+            id: actor.id,
+            email: actor.email || '',
+            role: actorRole,
+            firstName: String(actor?.user_metadata?.firstName || '').trim(),
+            lastName: String(actor?.user_metadata?.lastName || '').trim(),
+          },
+          settings,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/verify-code', (req, res) => {
     let validated;
     try {
