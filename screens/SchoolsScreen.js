@@ -830,6 +830,33 @@ export default function SchoolsScreen() {
     paddingVertical: isRu ? 12 : 10,
   };
   const topActionTextStyle = isRu ? { fontSize: 15 } : null;
+  const compareUi =
+    locale === 'en'
+      ? {
+          start: 'Compare',
+          cancel: 'Cancel',
+          selected: 'Selected',
+          show: 'Compare selected',
+          hint: 'Tap school cards to select them for comparison.',
+          title: 'Comparison',
+        }
+      : locale === 'kk'
+        ? {
+            start: 'Салыстыру',
+            cancel: 'Бас тарту',
+            selected: 'Таңдалды',
+            show: 'Таңдалғандарды салыстыру',
+            hint: 'Салыстыру үшін мектеп карточкаларын басыңыз.',
+            title: 'Салыстыру',
+          }
+        : {
+            start: 'Сравнить',
+            cancel: 'Отмена',
+            selected: 'Выбрано',
+            show: 'Сравнить выбранные',
+            hint: 'Нажмите на карточки школ, чтобы выбрать их для сравнения.',
+            title: 'Сравнение',
+          };
 
   const getLabel = (map, value) => {
     const key = map[value];
@@ -1086,7 +1113,9 @@ export default function SchoolsScreen() {
     } catch (error) {
       parsed = parseBotQuery(trimmed);
       source = 'local';
-      setBotError(t('schools.bot.llmFallback'));
+      if (!String(error?.message || '').includes('Authorization token is required')) {
+        setBotError(t('schools.bot.llmFallback'));
+      }
     } finally {
       setBotLoading(false);
     }
@@ -1587,7 +1616,7 @@ export default function SchoolsScreen() {
               className="font-exoSemibold"
               style={{ color: '#111827', fontSize: 12 }}
             >
-              {isCompareMode ? 'Отмена' : 'Сравнить'}
+              {isCompareMode ? compareUi.cancel : compareUi.start}
             </Text>
           </Pressable>
         </View>
@@ -1598,7 +1627,7 @@ export default function SchoolsScreen() {
           >
             <View className="flex-row items-center justify-between">
               <Text className="text-darkGrayText font-exoSemibold text-sm">
-                {`Выбрано ${selectedCompareIds.length}/${compareLimit}`}
+                {`${compareUi.selected} ${selectedCompareIds.length}/${compareLimit}`}
               </Text>
               <Pressable
                 onPress={async () => {
@@ -1612,11 +1641,11 @@ export default function SchoolsScreen() {
                     const windowEn = usage.window === 'day' ? 'per day' : 'per period';
                     const windowKk = usage.window === 'day' ? 'күніне' : 'кезеңге';
                     if (locale === 'en') {
-                      Alert.alert('Comparison', `Comparison limit reached (${usage.limit} ${windowEn}).`);
+                      Alert.alert(compareUi.title, `Comparison limit reached (${usage.limit} ${windowEn}).`);
                     } else if (locale === 'kk') {
-                      Alert.alert('Салыстыру', `Салыстыру лимиті аяқталды (${usage.limit} ${windowKk}).`);
+                      Alert.alert(compareUi.title, `Салыстыру лимиті аяқталды (${usage.limit} ${windowKk}).`);
                     } else {
-                      Alert.alert('Сравнение', `Лимит сравнения исчерпан (${usage.limit} ${windowRu}).`);
+                      Alert.alert(compareUi.title, `Лимит сравнения исчерпан (${usage.limit} ${windowRu}).`);
                     }
                     return;
                   }
@@ -1637,12 +1666,12 @@ export default function SchoolsScreen() {
                 disabled={selectedCompareSchools.length < 2}
               >
                 <Text className="font-exoSemibold" style={{ color: '#FFFFFF', fontSize: 12 }}>
-                  Сравнить выбранные
+                  {compareUi.show}
                 </Text>
               </Pressable>
             </View>
             <Text className="text-darkGrayText/70 font-exo text-xs mt-2">
-              Нажмите на карточки школ, чтобы выбрать их для сравнения.
+              {compareUi.hint}
             </Text>
           </View>
         ) : null}

@@ -145,12 +145,21 @@ const DetailRow = ({ label, value, rowStyle, labelStyle, valueStyle }) => {
   const normalizedValue = (() => {
     if (!value) return '';
     if (Array.isArray(value)) {
-      return value.filter(Boolean).join(', ');
+      return value
+        .map((item) => {
+          if (!item) return '';
+          if (typeof item === 'object') {
+            return item.ru || item.kk || item.en || '';
+          }
+          return String(item).trim();
+        })
+        .filter(Boolean)
+        .join(', ');
     }
     if (typeof value === 'object') {
-      return value.ru || value.en || '';
+      return value.ru || value.kk || value.en || '';
     }
-    return String(value);
+    return String(value).trim();
   })();
   if (!normalizedValue) return null;
 

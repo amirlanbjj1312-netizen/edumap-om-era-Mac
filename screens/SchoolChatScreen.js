@@ -37,6 +37,8 @@ const CHAT_UI = {
     ],
     noResponse: 'Не удалось получить ответ. Попробуйте еще раз.',
     noResponseLater: 'Не удалось получить ответ. Попробуйте позже.',
+    localIntro: 'Показываю ближайшие совпадения по данным приложения:',
+    localNoMatches: 'Не нашел явных совпадений. Попробуйте уточнить город, бюджет, язык или программу.',
   },
   en: {
     title: 'AI Chat',
@@ -52,6 +54,8 @@ const CHAT_UI = {
     ],
     noResponse: "Couldn't get a response. Please try again.",
     noResponseLater: "Couldn't get a response. Please try again later.",
+    localIntro: 'Here are the closest matches from the app data:',
+    localNoMatches: 'I could not find clear matches. Try refining the city, budget, language, or program.',
   },
   kk: {
     title: 'AI чат',
@@ -67,6 +71,8 @@ const CHAT_UI = {
     ],
     noResponse: 'Жауап алу мүмкін болмады. Қайта көріңіз.',
     noResponseLater: 'Жауап алу мүмкін болмады. Кейінірек қайталап көріңіз.',
+    localIntro: 'Қолданба деректері бойынша ең жақын сәйкестіктер:',
+    localNoMatches: 'Нақты сәйкестік табылмады. Қала, бюджет, оқу тілі немесе бағдарламаны нақтылап көріңіз.',
   },
 };
 
@@ -124,6 +130,58 @@ const rankSchools = (cards, message) => {
   });
   const sorted = scored.sort((a, b) => b.score - a.score);
   return sorted.map((entry) => entry.card).slice(0, MAX_SCHOOLS);
+};
+
+const formatMoney = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  return `${Math.round(amount).toLocaleString('ru-RU')} ₸`;
+};
+
+const getSchoolName = (card) =>
+  extractText(card?.name) ||
+  extractText(card?.basic_info?.display_name) ||
+  extractText(card?.basic_info?.brand_name) ||
+  extractText(card?.basic_info?.short_name) ||
+  'School';
+
+const getSchoolCity = (card) =>
+  extractText(card?.city) ||
+  extractText(card?.basic_info?.city);
+
+const getSchoolFee = (card) => {
+  const raw =
+    card?.monthlyFee ??
+    card?.finance?.monthly_fee ??
+    card?.finance?.tuition_monthly ??
+    card?.finance?.price_monthly;
+  const text = extractText(raw);
+  if (!text) return '';
+  const numeric = Number(String(text).replace(/[^\d.,]/g, '').replace(',', '.'));
+  return formatMoney(numeric) || text;
+};
+
+const buildLocalReply = (cards, locale, chatUi) => {
+  const top = cards.slice(0, 3);
+  if (!top.length) {
+    return { text: chatUi.localNoMatches, recommendedSchoolIds: [] };
+  }
+
+  const lines = [chatUi.localIntro];
+  top.forEach((card, index) => {
+    const name = getSchoolName(card);
+    const city = getSchoolCity(card);
+    const fee = getSchoolFee(card);
+    const parts = [city, fee].filter(Boolean);
+    lines.push(`${index + 1}. ${name}${parts.length ? ` — ${parts.join(' • ')}` : ''}`);
+  });
+
+  return {
+    text: lines.join('\n'),
+    recommendedSchoolIds: top
+      .map((card) => card.school_id || String(card.id || ''))
+      .filter(Boolean),
+  };
 };
 
 export default function SchoolChatScreen() {
@@ -219,14 +277,12 @@ export default function SchoolChatScreen() {
       };
       appendMessage(assistantMessage);
     } catch (error) {
-      const fallbackText =
-        error?.message && error.message !== 'Request failed'
-          ? error.message
-          : chatUi.noResponseLater;
+      const fallback = buildLocalReply(ranked, locale, chatUi);
       appendMessage({
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        text: fallbackText,
+        text: fallback.text || chatUi.noResponseLater,
+        recommendedSchoolIds: fallback.recommendedSchoolIds || [],
       });
     } finally {
       setSending(false);
