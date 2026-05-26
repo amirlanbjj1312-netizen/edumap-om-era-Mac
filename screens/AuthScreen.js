@@ -7,8 +7,10 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -203,7 +205,7 @@ export default function AuthScreen({ initialMode = 'login' }) {
   const navigation = useNavigation();
   const [mode, setMode] = useState(initialMode);
   const { role, setRole, setGuest } = useRole();
-  const { t } = useLocale();
+  const { t, locale, setLocale } = useLocale();
   const [formMessage, setFormMessage] = useState('');
   const [formMessageTone, setFormMessageTone] = useState('error');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -631,115 +633,170 @@ export default function AuthScreen({ initialMode = 'login' }) {
       style={styles.gradient}
     >
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAwareScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          enableOnAndroid
-          extraScrollHeight={24}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoiding}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Image source={images.authLogo} style={styles.hero} resizeMode="contain" />
-
-          <View style={styles.card}>
-            <View style={styles.tabs}>
-              <TabButton
-                label={t('auth.logIn')}
-                active={isLogin}
-                onPress={() => setMode('login')}
-              />
-              <TabButton
-                label={t('auth.signUp')}
-                active={!isLogin}
-                onPress={() => setMode('signup')}
-              />
-            </View>
-
-            <View style={styles.form}>
-              {formInputs.map(
-                ({
-                  key,
-                  icon,
-                  value,
-                  onChangeText,
-                  placeholder,
-                  secureTextEntry,
-                  autoCapitalize,
-                  keyboardType,
-                  onToggleSecure,
-                  isSecureVisible,
-                }) => (
-                  <AuthInput
-                    key={key}
-                    icon={icon}
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    secureTextEntry={secureTextEntry}
-                    autoCapitalize={autoCapitalize}
-                    keyboardType={keyboardType}
-                    onToggleSecure={onToggleSecure}
-                    isSecureVisible={isSecureVisible}
-                  />
-                ),
-              )}
-            </View>
-
-            {isLogin ? (
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          >
+            <View style={styles.localeRow}>
               <Pressable
-                onPress={handleForgotPassword}
-                disabled={isSubmitting}
-                style={styles.forgotPasswordLinkContainer}
-              >
-                <Text style={styles.forgotPasswordLink}>{t('auth.forgotPassword')}</Text>
-              </Pressable>
-            ) : null}
-
-            <PrimaryButton
-              label={isLogin ? t('auth.logIn') : t('auth.register')}
-              onPress={handlePrimaryAction}
-              disabled={isSubmitting}
-              loading={isSubmitting}
-            />
-
-            {formMessage ? (
-              <Text
+                onPress={() => setLocale('ru')}
                 style={[
-                  styles.formMessage,
-                  formMessageTone === 'error'
-                    ? styles.formMessageError
-                    : styles.formMessageInfo,
+                  styles.localeButton,
+                  locale === 'ru' && styles.localeButtonActive,
                 ]}
               >
-                {formMessage}
-              </Text>
-            ) : null}
-
-            {role !== ROLES.ADMIN && (
-              <>
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>{t('auth.or')}</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <Pressable
-                  onPress={() => {
-                    setRole(ROLES.STUDENT);
-                    setGuest(true);
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'Home' }],
-                    });
-                  }}
-                  style={styles.guestLinkContainer}
+                <Text
+                  style={[
+                    styles.localeButtonText,
+                    locale === 'ru' && styles.localeButtonTextActive,
+                  ]}
                 >
-                  <Text style={styles.guestLink}>{t('auth.guest')}</Text>
+                  RU
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setLocale('en')}
+                style={[
+                  styles.localeButton,
+                  locale === 'en' && styles.localeButtonActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.localeButtonText,
+                    locale === 'en' && styles.localeButtonTextActive,
+                  ]}
+                >
+                  EN
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setLocale('kk')}
+                style={[
+                  styles.localeButton,
+                  locale === 'kk' && styles.localeButtonActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.localeButtonText,
+                    locale === 'kk' && styles.localeButtonTextActive,
+                  ]}
+                >
+                  KZ
+                </Text>
+              </Pressable>
+            </View>
+
+            <Image source={images.authLogo} style={styles.hero} resizeMode="contain" />
+
+            <View style={styles.card}>
+              <View style={styles.tabs}>
+                <TabButton
+                  label={t('auth.logIn')}
+                  active={isLogin}
+                  onPress={() => setMode('login')}
+                />
+                <TabButton
+                  label={t('auth.signUp')}
+                  active={!isLogin}
+                  onPress={() => setMode('signup')}
+                />
+              </View>
+
+              <View style={styles.form}>
+                {formInputs.map(
+                  ({
+                    key,
+                    icon,
+                    value,
+                    onChangeText,
+                    placeholder,
+                    secureTextEntry,
+                    autoCapitalize,
+                    keyboardType,
+                    onToggleSecure,
+                    isSecureVisible,
+                  }) => (
+                    <AuthInput
+                      key={key}
+                      icon={icon}
+                      value={value}
+                      onChangeText={onChangeText}
+                      placeholder={placeholder}
+                      secureTextEntry={secureTextEntry}
+                      autoCapitalize={autoCapitalize}
+                      keyboardType={keyboardType}
+                      onToggleSecure={onToggleSecure}
+                      isSecureVisible={isSecureVisible}
+                    />
+                  ),
+                )}
+              </View>
+
+              {isLogin ? (
+                <Pressable
+                  onPress={handleForgotPassword}
+                  disabled={isSubmitting}
+                  style={styles.forgotPasswordLinkContainer}
+                >
+                  <Text style={styles.forgotPasswordLink}>{t('auth.forgotPassword')}</Text>
                 </Pressable>
-              </>
-            )}
-          </View>
-        </KeyboardAwareScrollView>
+              ) : null}
+
+              <PrimaryButton
+                label={isLogin ? t('auth.logIn') : t('auth.register')}
+                onPress={handlePrimaryAction}
+                disabled={isSubmitting}
+                loading={isSubmitting}
+              />
+
+              {formMessage ? (
+                <Text
+                  style={[
+                    styles.formMessage,
+                    formMessageTone === 'error'
+                      ? styles.formMessageError
+                      : styles.formMessageInfo,
+                  ]}
+                >
+                  {formMessage}
+                </Text>
+              ) : null}
+
+              {role !== ROLES.ADMIN && (
+                <>
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>{t('auth.or')}</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <Pressable
+                    onPress={() => {
+                      setRole(ROLES.STUDENT);
+                      setGuest(true);
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Home' }],
+                      });
+                    }}
+                    style={styles.guestLinkContainer}
+                  >
+                    <Text style={styles.guestLink}>{t('auth.guest')}</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -752,10 +809,45 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  keyboardAvoiding: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 40,
     alignItems: 'center',
+    flexGrow: 1,
+  },
+  localeRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  localeButton: {
+    minWidth: 46,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  localeButtonActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#7C3AED',
+  },
+  localeButtonText: {
+    fontFamily: 'exoSemibold',
+    fontSize: 13,
+    color: '#4B5563',
+  },
+  localeButtonTextActive: {
+    color: '#111827',
   },
   hero: {
     width: 220,
