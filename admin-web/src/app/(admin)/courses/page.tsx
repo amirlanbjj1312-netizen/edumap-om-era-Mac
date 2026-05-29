@@ -8,7 +8,7 @@ import {
   upsertCourseTest,
 } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 const SUBJECTS = [
   { id: 'math', title: 'Mathematics' },
@@ -17,10 +17,44 @@ const SUBJECTS = [
   { id: 'art', title: 'Art & Creativity' },
 ];
 
+const LOCALE_FIELDS: Array<{ key: 'ru' | 'en' | 'kk'; label: string }> = [
+  { key: 'ru', label: 'RU' },
+  { key: 'en', label: 'EN' },
+  { key: 'kk', label: 'KK' },
+];
+
+const createEmptyLocalized = () => ({ ru: '', en: '', kk: '' });
+const createEmptyOptions = () => [
+  createEmptyLocalized(),
+  createEmptyLocalized(),
+  createEmptyLocalized(),
+  createEmptyLocalized(),
+];
+
+const normalizeLocalized = (value: any) => ({
+  ru: typeof value?.ru === 'string' ? value.ru : typeof value === 'string' ? value : '',
+  en: typeof value?.en === 'string' ? value.en : '',
+  kk: typeof value?.kk === 'string' ? value.kk : '',
+});
+
+const toLocaleText = (value: any, locale: 'ru' | 'en' | 'kk') => {
+  const normalized = normalizeLocalized(value);
+  return normalized[locale] || normalized.ru || normalized.kk || normalized.en || '';
+};
+
+const trimLocalized = (value: any) => {
+  const normalized = normalizeLocalized(value);
+  return {
+    ru: normalized.ru.trim(),
+    en: normalized.en.trim(),
+    kk: normalized.kk.trim(),
+  };
+};
+
 const isModerator = (role: string) => role === 'moderator' || role === 'superadmin';
 
 export default function AdminCoursesPage() {
-  const { t } = useAdminLocale();
+  const { t, locale } = useAdminLocale();
   const [authReady, setAuthReady] = useState(false);
   const [token, setToken] = useState('');
   const [actorRole, setActorRole] = useState('user');
@@ -29,11 +63,11 @@ export default function AdminCoursesPage() {
   const [message, setMessage] = useState('');
   const [testsBySubject, setTestsBySubject] = useState<Record<string, any[]>>({});
   const [subjectId, setSubjectId] = useState(SUBJECTS[0].id);
-  const [testTitle, setTestTitle] = useState('');
+  const [testTitle, setTestTitle] = useState(createEmptyLocalized());
   const [testGrade, setTestGrade] = useState('1');
   const [selectedTestId, setSelectedTestId] = useState('');
-  const [questionText, setQuestionText] = useState('');
-  const [questionOptions, setQuestionOptions] = useState(['', '', '', '']);
+  const [questionText, setQuestionText] = useState(createEmptyLocalized());
+  const [questionOptions, setQuestionOptions] = useState(createEmptyOptions());
   const [correctIndex, setCorrectIndex] = useState(0);
 
   useEffect(() => {
@@ -80,14 +114,14 @@ export default function AdminCoursesPage() {
   );
 
   const resetQuestionForm = () => {
-    setQuestionText('');
-    setQuestionOptions(['', '', '', '']);
+    setQuestionText(createEmptyLocalized());
+    setQuestionOptions(createEmptyOptions());
     setCorrectIndex(0);
   };
 
   const submitTest = useCallback(async () => {
     if (!token || !isModerator(actorRole)) return;
-    if (!testTitle.trim()) {
+    if (!toLocaleText(testTitle, locale).trim()) {
       setMessage('Test title is required');
       return;
     }
@@ -99,7 +133,7 @@ export default function AdminCoursesPage() {
         subjectId,
         test: {
           id,
-          title: testTitle.trim(),
+          title: trimLocalized(testTitle),
           grade: testGrade.trim(),
           questions: selectedTest?.questions || [],
         },
@@ -120,11 +154,14 @@ export default function AdminCoursesPage() {
     } finally {
       setSaving(false);
     }
-  }, [actorRole, selectedTest, selectedTestId, subjectId, t, testGrade, testTitle, token]);
+  }, [actorRole, locale, selectedTest, selectedTestId, subjectId, t, testGrade, testTitle, token]);
 
   const submitQuestion = useCallback(async () => {
     if (!token || !isModerator(actorRole) || !selectedTest) return;
-    if (!questionText.trim() || questionOptions.some((item) => !item.trim())) {
+    if (
+      !toLocaleText(questionText, locale).trim() ||
+      questionOptions.some((item) => !toLocaleText(item, locale).trim())
+    ) {
       setMessage('Question and all options are required');
       return;
     }
@@ -133,8 +170,8 @@ export default function AdminCoursesPage() {
     try {
       const question = {
         id: `${selectedTest.id}-q-${Date.now()}`,
-        text: questionText.trim(),
-        options: questionOptions.map((item) => item.trim()),
+        text: trimLocalized(questionText),
+        options: questionOptions.map((item) => trimLocalized(item)),
         correctIndex,
         video: '',
         image: '',
@@ -162,7 +199,7 @@ export default function AdminCoursesPage() {
     } finally {
       setSaving(false);
     }
-  }, [actorRole, correctIndex, questionOptions, questionText, selectedTest, subjectId, t, token]);
+  }, [actorRole, correctIndex, locale, questionOptions, questionText, selectedTest, subjectId, t, token]);
 
   const removeTest = useCallback(
     async (testId: string) => {
@@ -177,7 +214,7 @@ export default function AdminCoursesPage() {
         }));
         if (selectedTestId === testId) {
           setSelectedTestId('');
-          setTestTitle('');
+          setTestTitle(createEmptyLocalized());
           setTestGrade('1');
         }
       } catch (error) {
@@ -191,7 +228,7 @@ export default function AdminCoursesPage() {
 
   const onSelectTest = (test: any) => {
     setSelectedTestId(test.id);
-    setTestTitle(test.title || '');
+    setTestTitle(normalizeLocalized(test.title));
     setTestGrade(test.grade || '1');
   };
 
@@ -230,10 +267,22 @@ export default function AdminCoursesPage() {
         </label>
       </div>
 
-      <label className="field">
+      <div className="field">
         <span>Test title</span>
-        <input value={testTitle} onChange={(event) => setTestTitle(event.target.value)} />
-      </label>
+        <div className="form-row">
+          {LOCALE_FIELDS.map((field) => (
+            <label key={field.key} className="field">
+              <span>{field.label}</span>
+              <input
+                value={testTitle[field.key]}
+                onChange={(event) =>
+                  setTestTitle((prev) => ({ ...prev, [field.key]: event.target.value }))
+                }
+              />
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="actions">
         <button type="button" className="primary" disabled={saving} onClick={submitTest}>
@@ -245,7 +294,7 @@ export default function AdminCoursesPage() {
             className="button secondary"
             onClick={() => {
               setSelectedTestId('');
-              setTestTitle('');
+              setTestTitle(createEmptyLocalized());
               setTestGrade('1');
             }}
           >
@@ -263,9 +312,11 @@ export default function AdminCoursesPage() {
           <div className="schools-admin-list">
             {currentTests.map((test) => (
               <div key={test.id} className="schools-admin-card">
-                <p className="request-title">{test.title}</p>
+                <p className="request-title">{toLocaleText(test.title, locale) || 'Test'}</p>
                 <p className="muted">Grade: {test.grade || '—'}</p>
-                <p className="muted">Questions: {Array.isArray(test.questions) ? test.questions.length : 0}</p>
+                <p className="muted">
+                  Questions: {Array.isArray(test.questions) ? test.questions.length : 0}
+                </p>
                 <div className="schools-admin-actions">
                   <button type="button" className="button secondary" onClick={() => onSelectTest(test)}>
                     {t('newsAdminEdit')}
@@ -284,30 +335,48 @@ export default function AdminCoursesPage() {
 
       {selectedTest ? (
         <div className="card" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Add question to: {selectedTest.title}</h3>
-          <label className="field">
+          <h3 style={{ marginTop: 0 }}>
+            Add question to: {toLocaleText(selectedTest.title, locale) || 'Test'}
+          </h3>
+          <div className="field">
             <span>Question text</span>
-            <textarea
-              value={questionText}
-              rows={3}
-              onChange={(event) => setQuestionText(event.target.value)}
-            />
-          </label>
+            <div className="form-row">
+              {LOCALE_FIELDS.map((field) => (
+                <label key={field.key} className="field">
+                  <span>{field.label}</span>
+                  <textarea
+                    value={questionText[field.key]}
+                    rows={3}
+                    onChange={(event) =>
+                      setQuestionText((prev) => ({ ...prev, [field.key]: event.target.value }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
           {['A', 'B', 'C', 'D'].map((label, idx) => (
-            <label key={label} className="field">
+            <div key={label} className="field">
               <span>{`Option ${label}${correctIndex === idx ? ' (Correct)' : ''}`}</span>
-              <input
-                value={questionOptions[idx]}
-                onChange={(event) =>
-                  setQuestionOptions((prev) => {
-                    const next = [...prev];
-                    next[idx] = event.target.value;
-                    return next;
-                  })
-                }
-                onFocus={() => setCorrectIndex(idx)}
-              />
-            </label>
+              <div className="form-row">
+                {LOCALE_FIELDS.map((field) => (
+                  <label key={`${label}-${field.key}`} className="field">
+                    <span>{field.label}</span>
+                    <input
+                      value={questionOptions[idx]?.[field.key] || ''}
+                      onChange={(event) =>
+                        setQuestionOptions((prev) => {
+                          const next = [...prev];
+                          next[idx] = { ...next[idx], [field.key]: event.target.value };
+                          return next;
+                        })
+                      }
+                      onFocus={() => setCorrectIndex(idx)}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
           ))}
           <div className="actions">
             <button type="button" className="primary" disabled={saving} onClick={submitQuestion}>

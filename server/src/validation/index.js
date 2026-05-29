@@ -198,6 +198,29 @@ const ensureLocalizedText = (value, fieldName, maxLen) => {
   );
 };
 
+const normalizeRequiredLocalizedText = (value, fieldName, maxLen) => {
+  if (isString(value)) {
+    const text = trim(value);
+    ensure(text, `${fieldName} is required`);
+    ensureMaxLen(text, maxLen, fieldName);
+    return { ru: text, en: '', kk: '' };
+  }
+  ensure(isObject(value), `${fieldName} must be string or localized object`);
+  const normalized = {
+    ru: trim(value?.ru),
+    en: trim(value?.en),
+    kk: trim(value?.kk),
+  };
+  ensure(
+    normalized.ru || normalized.en || normalized.kk,
+    `${fieldName} is required`
+  );
+  ensureMaxLen(normalized.ru, maxLen, `${fieldName}.ru`);
+  ensureMaxLen(normalized.en, maxLen, `${fieldName}.en`);
+  ensureMaxLen(normalized.kk, maxLen, `${fieldName}.kk`);
+  return normalized;
+};
+
 const ensureNumericMap = (value, fieldName, { min = 0, max = 100000000, keyPattern } = {}) => {
   if (value == null || value === '') return;
   ensure(isObject(value), `${fieldName} must be object`);
@@ -407,9 +430,7 @@ const validateCourseTestPayload = (payload) => {
   const testId = trim(test.id || `${subjectId}-${Date.now()}`);
   ensureMaxLen(testId, 120, 'test.id');
 
-  const title = trim(test.title);
-  ensure(title, 'test.title is required');
-  ensureMaxLen(title, 180, 'test.title');
+  const title = normalizeRequiredLocalizedText(test.title, 'test.title', 180);
   ensureMaxLen(test.grade, 40, 'test.grade');
 
   const questions = Array.isArray(test.questions) ? test.questions : [];
@@ -439,16 +460,15 @@ const validateCourseQuestionPayload = (payload) => {
   ensure(isObject(question), 'question is required');
 
   const questionId = trim(question.id || `${testId}-q-${Date.now()}`);
-  const text = trim(question.text);
-  ensure(text, 'question.text is required');
+  const text = normalizeRequiredLocalizedText(question.text, 'question.text', 2000);
   ensureMaxLen(questionId, 120, 'question.id');
-  ensureMaxLen(text, 2000, 'question.text');
 
   const options = Array.isArray(question.options)
-    ? question.options.map((item) => trim(item)).filter(Boolean)
+    ? question.options.map((item, index) =>
+        normalizeRequiredLocalizedText(item, `question.options[${index}]`, 300)
+      )
     : [];
   ensure(options.length >= 2 && options.length <= 8, 'question.options must contain 2-8 items');
-  options.forEach((item) => ensureMaxLen(item, 300, 'question.options[]'));
 
   const correctIndex = Number(question.correctIndex);
   ensure(Number.isInteger(correctIndex), 'question.correctIndex must be integer');

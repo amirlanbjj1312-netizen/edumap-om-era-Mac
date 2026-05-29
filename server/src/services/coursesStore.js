@@ -15,6 +15,22 @@ const DEFAULT_COURSES_TESTS = {
   art: [],
 };
 
+const normalizeLocalized = (value) => {
+  if (!value) return { ru: '', en: '', kk: '' };
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return { ru: text, en: '', kk: '' };
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return { ru: '', en: '', kk: '' };
+  }
+  return {
+    ru: String(value?.ru || '').trim(),
+    en: String(value?.en || '').trim(),
+    kk: String(value?.kk || '').trim(),
+  };
+};
+
 const ensureStorage = async () => {
   await fs.mkdir(STORAGE_DIR, { recursive: true });
 };
@@ -28,14 +44,14 @@ const normalizeMap = (value) => {
     if (!Array.isArray(tests)) return;
     result[subjectId] = tests.map((test) => ({
       id: String(test?.id || '').trim(),
-      title: String(test?.title || '').trim(),
+      title: normalizeLocalized(test?.title),
       grade: String(test?.grade || '').trim(),
       questions: Array.isArray(test?.questions)
         ? test.questions.map((q) => ({
             id: String(q?.id || '').trim(),
-            text: String(q?.text || '').trim(),
+            text: normalizeLocalized(q?.text),
             options: Array.isArray(q?.options)
-              ? q.options.map((opt) => String(opt || '').trim())
+              ? q.options.map((opt) => normalizeLocalized(opt))
               : [],
             correctIndex: Number.isFinite(Number(q?.correctIndex))
               ? Number(q.correctIndex)
@@ -106,8 +122,8 @@ const upsertCourseTest = async ({ subjectId, test }) => {
   if (!key) throw new Error('subjectId is required');
   if (!test || typeof test !== 'object') throw new Error('test is required');
   const testId = String(test.id || `${key}-${Date.now()}`).trim();
-  const title = String(test.title || '').trim();
-  if (!title) throw new Error('test.title is required');
+  const title = normalizeLocalized(test.title);
+  if (!title.ru && !title.en && !title.kk) throw new Error('test.title is required');
 
   const nextTest = {
     id: testId,
@@ -144,9 +160,9 @@ const upsertCourseQuestion = async ({ subjectId, testId, question }) => {
   const questionId = String(question.id || `${id}-q-${Date.now()}`).trim();
   const nextQuestion = {
     id: questionId,
-    text: String(question.text || '').trim(),
+    text: normalizeLocalized(question.text),
     options: Array.isArray(question.options)
-      ? question.options.map((opt) => String(opt || '').trim())
+      ? question.options.map((opt) => normalizeLocalized(opt))
       : [],
     correctIndex: Number.isFinite(Number(question.correctIndex))
       ? Number(question.correctIndex)

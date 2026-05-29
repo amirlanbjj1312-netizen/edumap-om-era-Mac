@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { loadCourseTests } from '@/lib/api';
 import Link from 'next/link';
 import { isGuestMode } from '@/lib/guestMode';
+import { useParentLocale } from '@/lib/parentLocale';
 
 const SUBJECT_TITLES: Record<string, string> = {
   math: 'Mathematics',
@@ -25,6 +26,7 @@ const toText = (value: unknown): string => {
 };
 
 export default function ParentCoursesPage() {
+  const { locale, t } = useParentLocale();
   const [guest] = useState(() => isGuestMode());
   const [rows, setRows] = useState<Record<string, Array<{ id: string; title?: unknown; grade?: unknown }>>>({});
   const [loading, setLoading] = useState(() => !isGuestMode());
@@ -45,9 +47,37 @@ export default function ParentCoursesPage() {
     };
   }, [guest]);
 
+  const ui =
+    locale === 'en'
+      ? {
+          lockedTitle: 'Courses are available after sign in',
+          lockedHint: 'Sign in as a parent to take tests and save progress.',
+          empty: 'No courses have been added yet.',
+          subject: 'Subject',
+          test: 'Test',
+          grade: 'Grade',
+        }
+      : locale === 'kk'
+      ? {
+          lockedTitle: 'Курстар кіруден кейін қолжетімді',
+          lockedHint: 'Тесттерден өтіп, прогресті сақтау үшін ата-ана ретінде кіріңіз.',
+          empty: 'Курстар әлі қосылмаған.',
+          subject: 'Пән',
+          test: 'Тест',
+          grade: 'Сынып',
+        }
+      : {
+          lockedTitle: 'Курсы доступны после входа',
+          lockedHint: 'Войдите как родитель, чтобы пройти тесты и сохранить прогресс.',
+          empty: 'Курсы пока не добавлены.',
+          subject: 'Предмет',
+          test: 'Тест',
+          grade: 'Класс',
+        };
+
   return (
     <div className="card">
-      <h2 className="section-title">Курсы</h2>
+      <h2 className="section-title">{t('nav_courses')}</h2>
       {guest ? (
         <div
           style={{
@@ -58,17 +88,15 @@ export default function ParentCoursesPage() {
             background: '#f4f7ff',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 700 }}>Курсы доступны после входа</p>
-          <p className="muted" style={{ margin: '6px 0 0' }}>
-            Войдите как родитель, чтобы пройти тесты и сохранить прогресс.
-          </p>
+          <p style={{ margin: 0, fontWeight: 700 }}>{ui.lockedTitle}</p>
+          <p className="muted" style={{ margin: '6px 0 0' }}>{ui.lockedHint}</p>
           <Link className="button" href="/login">
-            Войти
+            {t('sign_in')}
           </Link>
         </div>
       ) : null}
-      {loading ? <p className="muted">Загрузка...</p> : null}
-      {!loading && !Object.keys(rows).length ? <p className="muted">Курсы пока не добавлены.</p> : null}
+      {loading ? <p className="muted">{t('loading')}</p> : null}
+      {!loading && !Object.keys(rows).length ? <p className="muted">{ui.empty}</p> : null}
       <div style={{ display: 'grid', gap: 14 }}>
         {Object.entries(rows).map(([subjectId, tests]) => (
           <div
@@ -81,14 +109,16 @@ export default function ParentCoursesPage() {
             }}
           >
             <p style={{ margin: 0, fontWeight: 700 }}>
-              {SUBJECT_TITLES[subjectId] || toText(subjectId) || 'Предмет'}
+              {SUBJECT_TITLES[subjectId] || toText(subjectId) || ui.subject}
             </p>
             <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
               {(tests || []).map((test) => (
                 <div key={test.id} style={{ borderRadius: 10, background: '#f6f8ff', padding: 10 }}>
-                  <p style={{ margin: 0, fontWeight: 600 }}>{toText(test.title) || 'Тест'}</p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>
+                    {toText((test.title as any)?.[locale] ?? test.title) || ui.test}
+                  </p>
                   <p className="muted" style={{ margin: '4px 0 0' }}>
-                    Класс: {toText(test.grade) || '—'}
+                    {ui.grade}: {toText(test.grade) || '—'}
                   </p>
                 </div>
               ))}
