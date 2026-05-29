@@ -11,10 +11,22 @@ import { useAdminLocale } from '@/lib/adminLocale';
 import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 const SUBJECTS = [
-  { id: 'math', title: 'Mathematics' },
-  { id: 'reading', title: 'Reading & Language' },
-  { id: 'science', title: 'Science Basics' },
-  { id: 'art', title: 'Art & Creativity' },
+  {
+    id: 'math',
+    title: { ru: 'Математика', en: 'Mathematics', kk: 'Математика' },
+  },
+  {
+    id: 'reading',
+    title: { ru: 'Чтение и язык', en: 'Reading & Language', kk: 'Оқу және тіл' },
+  },
+  {
+    id: 'science',
+    title: { ru: 'Основы науки', en: 'Science Basics', kk: 'Ғылым негіздері' },
+  },
+  {
+    id: 'art',
+    title: { ru: 'Искусство и творчество', en: 'Art & Creativity', kk: 'Өнер және шығармашылық' },
+  },
 ];
 
 const LOCALE_FIELDS: Array<{ key: 'ru' | 'en' | 'kk'; label: string }> = [
@@ -55,6 +67,54 @@ const isModerator = (role: string) => role === 'moderator' || role === 'superadm
 
 export default function AdminCoursesPage() {
   const { t, locale } = useAdminLocale();
+  const ui =
+    locale === 'en'
+      ? {
+          subject: 'Subject',
+          grade: 'Grade',
+          testTitle: 'Test title',
+          autofillHint: 'If empty, the field is auto-filled from RU on first open.',
+          addTest: 'Add test',
+          tests: 'Tests',
+          questionsCount: 'Questions',
+          addQuestionTo: 'Add question to',
+          questionText: 'Question text',
+          option: 'Option',
+          correct: 'Correct',
+          addQuestion: 'Add question',
+          testFallback: 'Test',
+        }
+      : locale === 'kk'
+      ? {
+          subject: 'Пән',
+          grade: 'Сынып',
+          testTitle: 'Тест атауы',
+          autofillHint: 'Егер бос болса, өріс алғаш ашылғанда RU тілінен автоматты толтырылады.',
+          addTest: 'Тест қосу',
+          tests: 'Тесттер',
+          questionsCount: 'Сұрақтар',
+          addQuestionTo: 'Сұрақты қосу',
+          questionText: 'Сұрақ мәтіні',
+          option: 'Нұсқа',
+          correct: 'Дұрыс',
+          addQuestion: 'Сұрақ қосу',
+          testFallback: 'Тест',
+        }
+      : {
+          subject: 'Предмет',
+          grade: 'Класс',
+          testTitle: 'Название теста',
+          autofillHint: 'Если пусто, поле автоматически заполнится из RU при первом открытии.',
+          addTest: 'Добавить тест',
+          tests: 'Тесты',
+          questionsCount: 'Вопросы',
+          addQuestionTo: 'Добавить вопрос в',
+          questionText: 'Текст вопроса',
+          option: 'Вариант',
+          correct: 'Правильный',
+          addQuestion: 'Добавить вопрос',
+          testFallback: 'Тест',
+        };
   const [authReady, setAuthReady] = useState(false);
   const [token, setToken] = useState('');
   const [actorRole, setActorRole] = useState('user');
@@ -284,17 +344,17 @@ export default function AdminCoursesPage() {
 
       <div className="form-row">
         <label className="field">
-          <span>Subject</span>
+          <span>{ui.subject}</span>
           <select value={subjectId} onChange={(event) => setSubjectId(event.target.value)}>
             {SUBJECTS.map((subject) => (
               <option key={subject.id} value={subject.id}>
-                {subject.title}
+                {toLocaleText(subject.title, locale)}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Grade</span>
+          <span>{ui.grade}</span>
           <input value={testGrade} onChange={(event) => setTestGrade(event.target.value)} />
         </label>
       </div>
@@ -331,7 +391,7 @@ export default function AdminCoursesPage() {
       </div>
 
       <div className="field">
-        <span>{`Test title (${editingLocale.toUpperCase()})`}</span>
+        <span>{`${ui.testTitle} (${editingLocale.toUpperCase()})`}</span>
         <input
           value={testTitle[editingLocale]}
           onChange={(event) =>
@@ -340,14 +400,14 @@ export default function AdminCoursesPage() {
         />
         {editingLocale !== 'ru' ? (
           <p className="muted" style={{ marginTop: 6 }}>
-            If empty, the field is auto-filled from RU on first open.
+            {ui.autofillHint}
           </p>
         ) : null}
       </div>
 
       <div className="actions">
         <button type="button" className="primary" disabled={saving} onClick={submitTest}>
-          {saving ? t('saving') : selectedTestId ? t('newsAdminUpdate') : 'Add test'}
+          {saving ? t('saving') : selectedTestId ? t('newsAdminUpdate') : ui.addTest}
         </button>
         {selectedTestId ? (
           <button
@@ -366,17 +426,17 @@ export default function AdminCoursesPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Tests</h3>
+        <h3 style={{ marginTop: 0 }}>{ui.tests}</h3>
         {loading ? (
           <p className="muted">{t('usersLoading')}</p>
         ) : currentTests.length ? (
           <div className="schools-admin-list">
             {currentTests.map((test) => (
               <div key={test.id} className="schools-admin-card">
-                <p className="request-title">{toLocaleText(test.title, locale) || 'Test'}</p>
-                <p className="muted">Grade: {test.grade || '—'}</p>
+                <p className="request-title">{toLocaleText(test.title, locale) || ui.testFallback}</p>
+                <p className="muted">{ui.grade}: {test.grade || '—'}</p>
                 <p className="muted">
-                  Questions: {Array.isArray(test.questions) ? test.questions.length : 0}
+                  {ui.questionsCount}: {Array.isArray(test.questions) ? test.questions.length : 0}
                 </p>
                 <div className="schools-admin-actions">
                   <button type="button" className="button secondary" onClick={() => onSelectTest(test)}>
@@ -397,10 +457,10 @@ export default function AdminCoursesPage() {
       {selectedTest ? (
         <div className="card" style={{ marginTop: 16 }}>
           <h3 style={{ marginTop: 0 }}>
-            Add question to: {toLocaleText(selectedTest.title, locale) || 'Test'}
+            {ui.addQuestionTo}: {toLocaleText(selectedTest.title, locale) || ui.testFallback}
           </h3>
           <div className="field">
-            <span>{`Question text (${editingLocale.toUpperCase()})`}</span>
+            <span>{`${ui.questionText} (${editingLocale.toUpperCase()})`}</span>
             <textarea
               value={questionText[editingLocale]}
               rows={3}
@@ -411,7 +471,7 @@ export default function AdminCoursesPage() {
           </div>
           {['A', 'B', 'C', 'D'].map((label, idx) => (
             <label key={label} className="field">
-              <span>{`Option ${label}${correctIndex === idx ? ' (Correct)' : ''} (${editingLocale.toUpperCase()})`}</span>
+              <span>{`${ui.option} ${label}${correctIndex === idx ? ` (${ui.correct})` : ''} (${editingLocale.toUpperCase()})`}</span>
               <input
                 value={questionOptions[idx]?.[editingLocale] || ''}
                 onChange={(event) =>
@@ -427,7 +487,7 @@ export default function AdminCoursesPage() {
           ))}
           <div className="actions">
             <button type="button" className="primary" disabled={saving} onClick={submitQuestion}>
-              {saving ? t('saving') : 'Add question'}
+              {saving ? t('saving') : ui.addQuestion}
             </button>
           </div>
         </div>
