@@ -69,6 +69,7 @@ export default function AdminCoursesPage() {
   const [questionText, setQuestionText] = useState(createEmptyLocalized());
   const [questionOptions, setQuestionOptions] = useState(createEmptyOptions());
   const [correctIndex, setCorrectIndex] = useState(0);
+  const [editingLocale, setEditingLocale] = useState<'ru' | 'en' | 'kk'>('ru');
 
   useEffect(() => {
     let mounted = true;
@@ -111,6 +112,37 @@ export default function AdminCoursesPage() {
   const selectedTest = useMemo(
     () => currentTests.find((item) => item.id === selectedTestId) || null,
     [currentTests, selectedTestId]
+  );
+
+  const ensureLocaleSeededFromRu = useCallback(
+    (nextLocale: 'ru' | 'en' | 'kk') => {
+      if (nextLocale === 'ru') {
+        setEditingLocale('ru');
+        return;
+      }
+
+      setTestTitle((prev) => {
+        if (String(prev?.[nextLocale] || '').trim() || !String(prev?.ru || '').trim()) return prev;
+        return { ...prev, [nextLocale]: prev.ru };
+      });
+
+      setQuestionText((prev) => {
+        if (String(prev?.[nextLocale] || '').trim() || !String(prev?.ru || '').trim()) return prev;
+        return { ...prev, [nextLocale]: prev.ru };
+      });
+
+      setQuestionOptions((prev) =>
+        prev.map((item) => {
+          if (String(item?.[nextLocale] || '').trim() || !String(item?.ru || '').trim()) {
+            return item;
+          }
+          return { ...item, [nextLocale]: item.ru };
+        })
+      );
+
+      setEditingLocale(nextLocale);
+    },
+    []
   );
 
   const resetQuestionForm = () => {
@@ -267,21 +299,50 @@ export default function AdminCoursesPage() {
         </label>
       </div>
 
+      <div
+        style={{
+          display: 'inline-flex',
+          gap: 8,
+          marginBottom: 16,
+          padding: 6,
+          borderRadius: 999,
+          background: '#f4f7ff',
+          border: '1px solid rgba(120,106,255,0.18)',
+        }}
+      >
+        {LOCALE_FIELDS.map((field) => {
+          const active = editingLocale === field.key;
+          return (
+            <button
+              key={field.key}
+              type="button"
+              className={active ? 'button' : 'button secondary'}
+              onClick={() => ensureLocaleSeededFromRu(field.key)}
+              style={{
+                minWidth: 64,
+                borderRadius: 999,
+                opacity: active ? 1 : 0.88,
+              }}
+            >
+              {field.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="field">
-        <span>Test title</span>
-        <div className="form-row">
-          {LOCALE_FIELDS.map((field) => (
-            <label key={field.key} className="field">
-              <span>{field.label}</span>
-              <input
-                value={testTitle[field.key]}
-                onChange={(event) =>
-                  setTestTitle((prev) => ({ ...prev, [field.key]: event.target.value }))
-                }
-              />
-            </label>
-          ))}
-        </div>
+        <span>{`Test title (${editingLocale.toUpperCase()})`}</span>
+        <input
+          value={testTitle[editingLocale]}
+          onChange={(event) =>
+            setTestTitle((prev) => ({ ...prev, [editingLocale]: event.target.value }))
+          }
+        />
+        {editingLocale !== 'ru' ? (
+          <p className="muted" style={{ marginTop: 6 }}>
+            If empty, the field is auto-filled from RU on first open.
+          </p>
+        ) : null}
       </div>
 
       <div className="actions">
@@ -339,44 +400,30 @@ export default function AdminCoursesPage() {
             Add question to: {toLocaleText(selectedTest.title, locale) || 'Test'}
           </h3>
           <div className="field">
-            <span>Question text</span>
-            <div className="form-row">
-              {LOCALE_FIELDS.map((field) => (
-                <label key={field.key} className="field">
-                  <span>{field.label}</span>
-                  <textarea
-                    value={questionText[field.key]}
-                    rows={3}
-                    onChange={(event) =>
-                      setQuestionText((prev) => ({ ...prev, [field.key]: event.target.value }))
-                    }
-                  />
-                </label>
-              ))}
-            </div>
+            <span>{`Question text (${editingLocale.toUpperCase()})`}</span>
+            <textarea
+              value={questionText[editingLocale]}
+              rows={3}
+              onChange={(event) =>
+                setQuestionText((prev) => ({ ...prev, [editingLocale]: event.target.value }))
+              }
+            />
           </div>
           {['A', 'B', 'C', 'D'].map((label, idx) => (
-            <div key={label} className="field">
-              <span>{`Option ${label}${correctIndex === idx ? ' (Correct)' : ''}`}</span>
-              <div className="form-row">
-                {LOCALE_FIELDS.map((field) => (
-                  <label key={`${label}-${field.key}`} className="field">
-                    <span>{field.label}</span>
-                    <input
-                      value={questionOptions[idx]?.[field.key] || ''}
-                      onChange={(event) =>
-                        setQuestionOptions((prev) => {
-                          const next = [...prev];
-                          next[idx] = { ...next[idx], [field.key]: event.target.value };
-                          return next;
-                        })
-                      }
-                      onFocus={() => setCorrectIndex(idx)}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
+            <label key={label} className="field">
+              <span>{`Option ${label}${correctIndex === idx ? ' (Correct)' : ''} (${editingLocale.toUpperCase()})`}</span>
+              <input
+                value={questionOptions[idx]?.[editingLocale] || ''}
+                onChange={(event) =>
+                  setQuestionOptions((prev) => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], [editingLocale]: event.target.value };
+                    return next;
+                  })
+                }
+                onFocus={() => setCorrectIndex(idx)}
+              />
+            </label>
           ))}
           <div className="actions">
             <button type="button" className="primary" disabled={saving} onClick={submitQuestion}>
