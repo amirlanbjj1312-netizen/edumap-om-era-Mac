@@ -5,10 +5,10 @@
     "slug": "edumap",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/branding/app-icon.png",
+    "icon": "./app/assets/branding/app-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/branding/splash-logo.png",
+      "image": "./app/assets/branding/splash-logo.png",
       "resizeMode": "cover",
       "backgroundColor": "#E9EEF6"
     },
@@ -28,7 +28,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/branding/adaptive-foreground.png",
+        "foregroundImage": "./app/assets/branding/adaptive-foreground.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -38,10 +38,10 @@
       "package": "com.ssanbaybe.edumap"
     },
     "web": {
-      "favicon": "./assets/branding/favicon.png"
+      "favicon": "./app/assets/branding/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "https://edumap-backend-nkr6.onrender.com/api",
+      "apiBaseUrl": "https://api.edu-map.kz/api",
       "mapTileUrl": "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=OgpGCgtItasOMvAnoObf",
       "mapStyleUrl": "https://api.maptiler.com/maps/streets-v2/style.json?key=OgpGCgtItasOMvAnoObf",
       "supabaseUrl": "https://jjjgagtqjvewqjczkbrg.supabase.co",

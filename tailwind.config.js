@@ -5,6 +5,10 @@ module.exports = {
     './screens/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
     './hooks/**/*.{js,jsx,ts,tsx}',
+    './app/App.{js,jsx,ts,tsx}',
+    './app/screens/**/*.{js,jsx,ts,tsx}',
+    './app/components/**/*.{js,jsx,ts,tsx}',
+    './app/hooks/**/*.{js,jsx,ts,tsx}',
   ],
   theme: {
     extend: {
