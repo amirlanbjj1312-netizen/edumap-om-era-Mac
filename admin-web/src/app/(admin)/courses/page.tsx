@@ -80,6 +80,30 @@ const trimLocalized = (value: any) => {
   };
 };
 
+const normalizeQuestionEntity = (question: any) => ({
+  ...question,
+  text: normalizeLocalized(question?.text),
+  options: Array.isArray(question?.options)
+    ? question.options.map((item: any) => normalizeLocalized(item))
+    : [],
+});
+
+const normalizeTestEntity = (test: any) => ({
+  ...test,
+  title: normalizeLocalized(test?.title),
+  questions: Array.isArray(test?.questions)
+    ? test.questions.map((item: any) => normalizeQuestionEntity(item))
+    : [],
+});
+
+const normalizeTestsMap = (value: Record<string, any[]> | null | undefined) => {
+  const next: Record<string, any[]> = {};
+  Object.entries(value || {}).forEach(([subjectId, tests]) => {
+    next[subjectId] = Array.isArray(tests) ? tests.map((item) => normalizeTestEntity(item)) : [];
+  });
+  return next;
+};
+
 const isModerator = (role: string) => role === 'moderator' || role === 'superadmin';
 
 export default function AdminCoursesPage() {
@@ -169,7 +193,7 @@ export default function AdminCoursesPage() {
     setMessage('');
     try {
       const result = await loadCourseTests();
-      setTestsBySubject(result?.data || {});
+      setTestsBySubject(normalizeTestsMap(result?.data || {}));
     } catch (error) {
       setMessage((error as Error)?.message || t('saveError'));
     } finally {
@@ -248,7 +272,7 @@ export default function AdminCoursesPage() {
         },
       };
       const result = await upsertCourseTest(token, payload);
-      const saved = result?.data;
+      const saved = normalizeTestEntity(result?.data);
       setTestsBySubject((prev) => {
         const list = Array.isArray(prev?.[subjectId]) ? [...prev[subjectId]] : [];
         const index = list.findIndex((item) => item.id === saved.id);
@@ -296,7 +320,7 @@ export default function AdminCoursesPage() {
         if (testIndex === -1) return prev;
         const target = { ...list[testIndex] };
         const questions = Array.isArray(target.questions) ? [...target.questions] : [];
-        questions.push(question);
+        questions.push(normalizeQuestionEntity(question));
         target.questions = questions;
         list[testIndex] = target;
         return { ...prev, [subjectId]: list };
