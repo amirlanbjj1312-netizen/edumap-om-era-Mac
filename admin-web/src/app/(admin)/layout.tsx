@@ -24,7 +24,6 @@ const NAV_ITEMS: Array<{
   { href: '/school-info', labelKey: 'navSchoolInfo' },
   { href: '/schools', labelKey: 'navSchools', minRole: 'moderator' },
   { href: '/news', labelKey: 'navNews', minRole: 'moderator' },
-  { href: '/courses', labelKey: 'navCourses', minRole: 'moderator' },
   { href: '/site-settings', labelKey: 'navSiteSettings', minRole: 'moderator' },
   { href: '/users', labelKey: 'navUsers', minRole: 'moderator' },
   { href: '/requests', labelKey: 'navRequests' },

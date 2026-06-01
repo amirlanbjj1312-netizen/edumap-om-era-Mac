@@ -12,7 +12,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
   ru: {
     nav_news: 'Новости',
     nav_schools: 'Школы',
-    nav_courses: 'Курсы',
     nav_chat: 'Чат',
     nav_ai_match: 'AI подбор',
     nav_compare: 'Сравнение',
@@ -44,7 +43,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
     register_school: 'Зарегистрировать школу',
     have_account: 'Уже есть аккаунт? Войти',
     parent_reg_title: 'Регистрация родителя',
-    parent_reg_subtitle: 'После подтверждения email вход выполняется через общую страницу /login.',
     first_name: 'Имя',
     last_name: 'Фамилия',
     first_name_placeholder: 'Имя',
@@ -104,7 +102,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
   en: {
     nav_news: 'News',
     nav_schools: 'Schools',
-    nav_courses: 'Courses',
     nav_chat: 'Chat',
     nav_ai_match: 'AI match',
     nav_compare: 'Compare',
@@ -136,7 +133,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
     register_school: 'Register school',
     have_account: 'Already have an account? Sign in',
     parent_reg_title: 'Parent registration',
-    parent_reg_subtitle: 'After email confirmation, sign in via /login.',
     first_name: 'First name',
     last_name: 'Last name',
     first_name_placeholder: 'First name',
@@ -196,7 +192,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
   kk: {
     nav_news: 'Жаңалықтар',
     nav_schools: 'Мектептер',
-    nav_courses: 'Курстар',
     nav_chat: 'Чат',
     nav_ai_match: 'AI іріктеу',
     nav_compare: 'Салыстыру',
@@ -228,7 +223,6 @@ const MESSAGES: Record<ParentLocale, Dictionary> = {
     register_school: 'Мектепті тіркеу',
     have_account: 'Тіркелгіңіз бар ма? Кіру',
     parent_reg_title: 'Ата-ана тіркелуі',
-    parent_reg_subtitle: 'Email расталғаннан кейін /login арқылы кіресіз.',
     first_name: 'Аты',
     last_name: 'Тегі',
     first_name_placeholder: 'Аты',

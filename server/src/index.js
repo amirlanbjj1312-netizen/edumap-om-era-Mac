@@ -1,21 +1,19 @@
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const { buildConfig } = require('./utils/config');
 const { buildConsultationsRouter } = require('./routes/consultations');
 const { buildAuthRouter } = require('./routes/auth');
 const { buildAiRouter } = require('./routes/ai');
 const { buildSchoolsRouter } = require('./routes/schools');
 const { buildNewsRouter } = require('./routes/news');
-const { buildCoursesRouter } = require('./routes/courses');
 const { buildChatRouter } = require('./routes/chat');
 const { buildRatingSurveysRouter } = require('./routes/ratingSurveys');
 const { buildSiteSettingsRouter } = require('./routes/siteSettings');
 const { buildRequestTimeoutMiddleware } = require('./middleware/requestTimeout');
 const { buildRateLimitMiddleware } = require('./middleware/rateLimit');
-
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const config = buildConfig();
 const app = express();
@@ -55,7 +53,6 @@ app.use('/api/auth', buildAuthRouter(config));
 app.use('/api/ai', buildAiRouter(config));
 app.use('/api/schools', buildSchoolsRouter());
 app.use('/api/news', buildNewsRouter(config));
-app.use('/api/courses', buildCoursesRouter(config));
 app.use('/api/chat', buildChatRouter(config));
 app.use('/api/schools/rating-surveys', buildRatingSurveysRouter());
 app.use('/api/site-settings', buildSiteSettingsRouter(config));

@@ -49,11 +49,6 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     en: 'News',
     kk: 'Жаңалықтар',
   },
-  navCourses: {
-    ru: 'Курсы',
-    en: 'Courses',
-    kk: 'Курстар',
-  },
   navPricing: {
     ru: 'Тарифы',
     en: 'Pricing',
@@ -703,21 +698,6 @@ const LABELS: Record<string, Record<AdminLocale, string>> = {
     ru: 'Редактируете только выбранный язык. Переключите RU/EN/KZ для перевода.',
     en: 'You edit only the selected language. Switch RU/EN/KZ for translations.',
     kk: 'Тек таңдалған тілді өңдейсіз. Аударма үшін RU/EN/KZ ауыстырыңыз.',
-  },
-  coursesAdminTitle: {
-    ru: 'Управление курсами',
-    en: 'Courses management',
-    kk: 'Курстарды басқару',
-  },
-  coursesAdminHint: {
-    ru: 'Создавайте и редактируйте тесты и вопросы для раздела обучения.',
-    en: 'Create and edit tests and questions for studying section.',
-    kk: 'Оқу бөлімі үшін тесттер мен сұрақтарды жасаңыз және өңдеңіз.',
-  },
-  coursesAdminForbidden: {
-    ru: 'Доступ только для moderator или superadmin.',
-    en: 'Access only for moderator or superadmin.',
-    kk: 'Қолжетімділік тек moderator немесе superadmin үшін.',
   },
   checkingSession: {
     ru: 'Проверяем сессию...',
