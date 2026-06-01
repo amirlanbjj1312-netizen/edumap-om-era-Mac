@@ -43,10 +43,27 @@ const createEmptyOptions = () => [
   createEmptyLocalized(),
 ];
 
+const extractLocalizedLeaf = (value: any, seen = new WeakSet()): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value !== 'object' || Array.isArray(value)) return '';
+  if (seen.has(value)) return '';
+  seen.add(value);
+  return (
+    extractLocalizedLeaf(value?.ru, seen) ||
+    extractLocalizedLeaf(value?.kk, seen) ||
+    extractLocalizedLeaf(value?.en, seen) ||
+    ''
+  );
+};
+
 const normalizeLocalized = (value: any) => ({
-  ru: typeof value?.ru === 'string' ? value.ru : typeof value === 'string' ? value : '',
-  en: typeof value?.en === 'string' ? value.en : '',
-  kk: typeof value?.kk === 'string' ? value.kk : '',
+  ru:
+    typeof value === 'string'
+      ? value.trim()
+      : extractLocalizedLeaf(value?.ru) || extractLocalizedLeaf(value),
+  en: extractLocalizedLeaf(value?.en),
+  kk: extractLocalizedLeaf(value?.kk),
 });
 
 const toLocaleText = (value: any, locale: 'ru' | 'en' | 'kk') => {

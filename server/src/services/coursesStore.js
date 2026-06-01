@@ -15,6 +15,20 @@ const DEFAULT_COURSES_TESTS = {
   art: [],
 };
 
+const extractLocalizedLeaf = (value, seen = new WeakSet()) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value !== 'object' || Array.isArray(value)) return '';
+  if (seen.has(value)) return '';
+  seen.add(value);
+  return (
+    extractLocalizedLeaf(value?.ru, seen) ||
+    extractLocalizedLeaf(value?.kk, seen) ||
+    extractLocalizedLeaf(value?.en, seen) ||
+    ''
+  );
+};
+
 const normalizeLocalized = (value) => {
   if (!value) return { ru: '', en: '', kk: '' };
   if (typeof value === 'string') {
@@ -25,9 +39,9 @@ const normalizeLocalized = (value) => {
     return { ru: '', en: '', kk: '' };
   }
   return {
-    ru: String(value?.ru || '').trim(),
-    en: String(value?.en || '').trim(),
-    kk: String(value?.kk || '').trim(),
+    ru: extractLocalizedLeaf(value?.ru),
+    en: extractLocalizedLeaf(value?.en),
+    kk: extractLocalizedLeaf(value?.kk),
   };
 };
 
