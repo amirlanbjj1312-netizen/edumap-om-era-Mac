@@ -381,6 +381,7 @@ export default function ParentChatPage() {
             guest: 'AI chat is unavailable in guest mode.',
             signIn: 'Sign in',
             left: 'Requests left today',
+            unlimited: 'Unlimited',
           }
         : locale === 'kk'
           ? {
@@ -396,6 +397,7 @@ export default function ParentChatPage() {
               guest: 'Қонақ режимінде AI чат қолжетімсіз.',
               signIn: 'Кіру',
               left: 'Бүгін қалған сұраныс',
+              unlimited: 'Шектеусіз',
             }
           : {
               title: 'AI чат',
@@ -410,6 +412,7 @@ export default function ParentChatPage() {
               guest: 'В гостевом режиме AI чат недоступен.',
               signIn: 'Войти',
               left: 'Осталось запросов сегодня',
+              unlimited: 'Без лимита',
             },
     [locale]
   );
