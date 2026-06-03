@@ -594,12 +594,13 @@ export default function ParentComparePage() {
     return m;
   }, [criteriaRows]);
 
-  const renderValue = (val: string, otherVal: string, color: string) => {
+  const renderValue = (val: string, otherVal: string, color: string, rowKey?: string) => {
     const isEmpty = !val || val === '—';
     const isDiff = val !== otherVal && !isEmpty && otherVal !== '—';
     const isYes = /^(да|yes|иә)$/i.test(val);
     const isNo = /^(нет|no|жоқ)$/i.test(val);
-    const isRating = /^\d+(\.\d+)?$/.test(val) && Number(val) <= 5;
+    // Only apply star styling specifically to the rating row, not to staff/clubs/reviews counts
+    const isRating = rowKey === 'rating' && /^\d+(\.\d+)?$/.test(val) && Number(val) <= 5;
 
     if (isEmpty) return <span style={{ color: '#CBD5E1', fontSize: 13 }}>—</span>;
     if (isYes) return (
@@ -684,10 +685,10 @@ export default function ParentComparePage() {
                           {row.label}
                         </td>
                         <td style={{ padding:'12px 20px', borderBottom:'1px solid #F1F5F9', borderLeft:'2px solid #E0E7FF' }}>
-                          {renderValue(row.left, row.right, '#4338CA')}
+                          {renderValue(row.left, row.right, '#4338CA', row.key)}
                         </td>
                         <td style={{ padding:'12px 20px', borderBottom:'1px solid #F1F5F9', borderLeft:'2px solid #DCFCE7' }}>
-                          {renderValue(row.right, row.left, '#16A34A')}
+                          {renderValue(row.right, row.left, '#16A34A', row.key)}
                         </td>
                       </tr>
                     ))}

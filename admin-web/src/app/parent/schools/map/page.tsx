@@ -795,6 +795,21 @@ export default function ParentSchoolsMapPage() {
             subdomains: '0123',
             maxZoom: 18,
           }).addTo(mapRef.current);
+
+          // Try geolocation to show user's city
+          if ('geolocation' in navigator && !activeFocusedSchoolId) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                if (mapRef.current) {
+                  mapRef.current.setView([pos.coords.latitude, pos.coords.longitude], 12);
+                }
+              },
+              () => {
+                // Permission denied or error — keep default Kazakhstan view
+              },
+              { timeout: 5000, maximumAge: 60000 }
+            );
+          }
         }
         setReady(true);
       })
