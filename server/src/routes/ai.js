@@ -211,7 +211,7 @@ const buildAiRouter = (config) => {
       }
       return res.status(400).json({ error: 'Invalid request payload.' });
     }
-    const { message, schoolIds, schools } = validated;
+    const { message, schoolIds, schools, locale } = validated;
     const MAX_SCHOOLS = 12;
 
     let trimmedSchools = [];
@@ -243,7 +243,7 @@ const buildAiRouter = (config) => {
     }
 
     try {
-      const data = await chatWithSchools(config, message, trimmedSchools);
+      const data = await chatWithSchools(config, message, trimmedSchools, locale);
       return res.json({ data });
     } catch (error) {
       if (error.code === 'LLM_NOT_CONFIGURED') {

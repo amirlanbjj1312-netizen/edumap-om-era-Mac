@@ -866,6 +866,8 @@ const validateAiSchoolChatPayload = (payload) => {
   const message = trim(payload.message);
   ensure(message, 'Message is required.');
   ensure(message.length <= 2000, 'Message is too long.');
+  const localeRaw = trim(payload.locale || '');
+  const locale = ['ru', 'kk', 'en'].includes(localeRaw) ? localeRaw : '';
 
   const rawSchoolIds = Array.isArray(payload.schoolIds) ? payload.schoolIds : [];
   const schoolIds = sanitizeSchoolIds(rawSchoolIds, 20);
@@ -897,7 +899,7 @@ const validateAiSchoolChatPayload = (payload) => {
     });
   }
 
-  return { message, schoolIds, schools };
+  return { message, schoolIds, schools, locale };
 };
 
 const validateChatUserSearchPayload = (query = {}) => {

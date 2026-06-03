@@ -73,6 +73,15 @@ const uniqueList = (items: string[]) => Array.from(new Set(items.filter(Boolean)
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
+const detectMessageLocale = (value: string, fallback: 'ru' | 'en' | 'kk'): 'ru' | 'en' | 'kk' => {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  if (/[әіңғүұқөһ]/i.test(text)) return 'kk';
+  if (/[а-яё]/i.test(text)) return 'ru';
+  if (/[a-z]/i.test(text)) return 'en';
+  return fallback;
+};
+
 const LEFT_BANK_KEYWORDS = ['левый берег', 'левом берег', 'левобереж', 'left bank', 'left'];
 const RIGHT_BANK_KEYWORDS = ['правый берег', 'правом берег', 'правобереж', 'right bank', 'right'];
 const LEFT_BANK_DISTRICTS = ['есиль', 'yesil'];
@@ -529,11 +538,13 @@ export default function ParentChatPage() {
         );
       }
 
+      const responseLocale = detectMessageLocale(body, locale);
       const aiResponse = await requestAiSchoolChat(token, {
         message: body,
         schoolIds,
+        locale: responseLocale,
       });
-      const reply = localizeReplyLanguages(String(aiResponse?.data?.reply || '').trim(), locale);
+      const reply = localizeReplyLanguages(String(aiResponse?.data?.reply || '').trim(), responseLocale);
       const recommendedSchoolIds = Array.isArray(aiResponse?.data?.recommendedSchoolIds)
         ? aiResponse.data.recommendedSchoolIds.map((id) => String(id || '').trim()).filter(Boolean)
         : [];
@@ -559,17 +570,17 @@ export default function ParentChatPage() {
         }).catch(() => undefined);
       });
       const replyHasList = /(^|\n)\s*(\d+\.|•|-)\s+/.test(reply);
-      const fallbackAnswer = composeAnswer(locale, body, rows);
+      const fallbackAnswer = composeAnswer(responseLocale, body, rows);
       const listLines = finalRecommendedIds.length
-        ? buildLinesFromRows(locale, rowsForSide, finalRecommendedIds).join('\n')
-        : buildLinesFromRows(locale, rowsForSide).join('\n');
+        ? buildLinesFromRows(responseLocale, rowsForSide, finalRecommendedIds).join('\n')
+        : buildLinesFromRows(responseLocale, rowsForSide).join('\n');
       const cleanedReply = replyHasList ? stripListLines(reply) : reply;
       const answer = reply
         ? cleanedReply
         : fallbackAnswer;
       const linkItems = finalRecommendedIds.length
-        ? buildLinkItemsFromRows(locale, rowsForSide, finalRecommendedIds)
-        : buildLinkItemsFromRows(locale, rowsForSide);
+        ? buildLinkItemsFromRows(responseLocale, rowsForSide, finalRecommendedIds)
+        : buildLinkItemsFromRows(responseLocale, rowsForSide);
 
       const userMessage: ChatMessage = {
         id: `${Date.now()}-u`,
@@ -585,7 +596,8 @@ export default function ParentChatPage() {
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setLeft(typeof usage.left === 'number' ? usage.left : null);
     } catch (error) {
-      const fallbackText = composeAnswer(locale, body, rows);
+      const fallbackLocale = detectMessageLocale(body, locale);
+      const fallbackText = composeAnswer(fallbackLocale, body, rows);
       const userMessage: ChatMessage = {
         id: `${Date.now()}-u`,
         role: 'user',

@@ -73,11 +73,11 @@ const normalizeChatResponse = (raw, schools) => {
   };
 };
 
-const buildMessages = (message, schools) => [
+const buildMessages = (message, schools, locale = '') => [
   {
     role: 'system',
     content:
-      'You are a school assistant. Use ONLY the provided school data. Do not invent schools. Always reply in the same language as the user message (ru/kk/en).',
+      `You are a school assistant. Use ONLY the provided school data. Do not invent schools. Always reply in the same language as the user message (ru/kk/en).${locale ? ` If the user message is ambiguous, prefer ${locale}.` : ''}`,
   },
   {
     role: 'user',
@@ -92,7 +92,7 @@ const buildMessages = (message, schools) => [
   },
 ];
 
-const chatWithSchools = async (config, message, schools) => {
+const chatWithSchools = async (config, message, schools, locale = '') => {
   if (!config?.llm?.apiKey) {
     const error = new Error('LLM is not configured');
     error.code = 'LLM_NOT_CONFIGURED';
@@ -102,7 +102,7 @@ const chatWithSchools = async (config, message, schools) => {
   const url = `${baseUrl}/chat/completions`;
   const payload = {
     model: config.llm.model,
-    messages: buildMessages(message, schools),
+    messages: buildMessages(message, schools, locale),
     temperature: 0.2,
   };
   if (config.llm.provider === 'openai') {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   FlatList,
@@ -89,6 +89,15 @@ const toTokens = (value) =>
     .split(/\s+/)
     .filter(Boolean);
 
+const detectMessageLocale = (value, fallback = 'ru') => {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  if (/[әіңғүұқөһ]/i.test(text)) return 'kk';
+  if (/[а-яё]/i.test(text)) return 'ru';
+  if (/[a-z]/i.test(text)) return 'en';
+  return fallback;
+};
+
 const buildSchoolText = (school) =>
   [
     school.name,
@@ -125,10 +134,13 @@ const rankSchools = (cards, message) => {
   return sorted.map((entry) => entry.card).slice(0, MAX_SCHOOLS);
 };
 
+const getChatUiByLocale = (value) => CHAT_UI[value] || CHAT_UI.ru;
+
 export default function SchoolChatScreen() {
   const navigation = useNavigation();
   const { schoolCards } = useSchools();
   const { locale } = useLocale();
+  const insets = useSafeAreaInsets();
   const chatUi = CHAT_UI[locale] || CHAT_UI.ru;
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState(() => [
@@ -187,19 +199,23 @@ export default function SchoolChatScreen() {
       .filter(Boolean);
 
     try {
-      const result = await askSchoolChat(text, schoolIds, locale);
+      const responseLocale = detectMessageLocale(text, locale);
+      const responseUi = getChatUiByLocale(responseLocale);
+      const result = await askSchoolChat(text, schoolIds, responseLocale);
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        text: result?.reply || chatUi.noResponse,
+        text: result?.reply || responseUi.noResponse,
         recommendedSchoolIds: result?.recommendedSchoolIds || [],
       };
       appendMessage(assistantMessage);
     } catch (error) {
+      const fallbackLocale = detectMessageLocale(text, locale);
+      const fallbackUi = getChatUiByLocale(fallbackLocale);
       const fallbackText =
         error?.message && error.message !== 'Request failed'
           ? error.message
-          : chatUi.noResponseLater;
+          : fallbackUi.noResponseLater;
       appendMessage({
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -264,7 +280,7 @@ export default function SchoolChatScreen() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 8) : 0}
         >
           <View className="px-6 pt-6 pb-4">
             <Pressable
@@ -302,6 +318,7 @@ export default function SchoolChatScreen() {
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 20 }}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <View
                 className={`mb-3 ${
@@ -312,9 +329,13 @@ export default function SchoolChatScreen() {
                   className={`rounded-2xl px-4 py-3 ${
                     item.role === 'user'
                       ? 'bg-white/90'
-                      : 'bg-bgPurple/20'
+                      : ''
                   }`}
-                  style={{ maxWidth: '85%' }}
+                  style={{
+                    maxWidth: '85%',
+                    backgroundColor:
+                      item.role === 'user' ? 'rgba(255,255,255,0.92)' : '#4F46E5',
+                  }}
                 >
                   <Text
                     className={`font-exo text-sm ${
@@ -322,6 +343,9 @@ export default function SchoolChatScreen() {
                         ? 'text-darkGrayText'
                         : 'text-white'
                     }`}
+                    style={{
+                      color: item.role === 'user' ? '#111827' : '#FFFFFF',
+                    }}
                   >
                     {item.text}
                   </Text>
@@ -334,7 +358,7 @@ export default function SchoolChatScreen() {
             ListFooterComponent={
               sending ? (
                 <View className="items-start mb-3">
-                  <View className="bg-bgPurple/20 rounded-2xl px-4 py-3">
+                  <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#4F46E5' }}>
                     <ActivityIndicator color="#FFFFFF" />
                   </View>
                 </View>
@@ -342,7 +366,7 @@ export default function SchoolChatScreen() {
             }
           />
 
-          <View className="px-6 pb-6">
+          <View className="px-6" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
             <View className="flex-row items-center bg-white rounded-2xl px-4 py-2">
               <TextInput
                 className="flex-1 font-exo text-darkGrayText"

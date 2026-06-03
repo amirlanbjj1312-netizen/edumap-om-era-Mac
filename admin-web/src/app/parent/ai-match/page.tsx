@@ -62,6 +62,15 @@ const toList = (value: unknown): string[] => {
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
+const detectMessageLocale = (value: string, fallback: 'ru' | 'en' | 'kk'): 'ru' | 'en' | 'kk' => {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  if (/[әіңғүұқөһ]/i.test(text)) return 'kk';
+  if (/[а-яё]/i.test(text)) return 'ru';
+  if (/[a-z]/i.test(text)) return 'en';
+  return fallback;
+};
+
 const CITY_ALIAS_TO_KEY: Record<string, 'astana' | 'almaty'> = {
   astana: 'astana',
   'астана': 'astana',
@@ -364,6 +373,7 @@ export default function ParentAiMatchPage() {
       ? `${baseMessage}\n\n${ui.chipsApply}: ${criteriaParts.join('; ')}.`
       : baseMessage;
 
+    const responseLocale = detectMessageLocale(baseMessage, locale);
     const usage = previewUnlocked ? { ok: true, left } : consumeAiMatch(getParentPlan());
     if (!usage.ok) {
       setError(ui.limit);
@@ -401,6 +411,7 @@ export default function ParentAiMatchPage() {
       const response = await requestAiSchoolChat(token, {
         message,
         schoolIds,
+        locale: responseLocale,
       });
       const payload = response?.data;
       setAiReply(String(payload?.reply || '').trim());
@@ -655,14 +666,14 @@ export default function ParentAiMatchPage() {
         <div
           style={{
             marginTop: 12,
-            border: '1px solid rgba(120,106,255,0.2)',
+            border: '1px solid rgba(79,70,229,0.24)',
             borderRadius: 14,
-            padding: 12,
-            background: '#f7f8ff',
+            padding: 14,
+            background: '#eaf0ff',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 700 }}>{ui.aiAnswer}</p>
-          <p className="muted" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
+          <p style={{ margin: 0, fontWeight: 700, color: '#243b8a' }}>{ui.aiAnswer}</p>
+          <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', color: '#172033', lineHeight: 1.6 }}>
             {aiReply}
           </p>
         </div>

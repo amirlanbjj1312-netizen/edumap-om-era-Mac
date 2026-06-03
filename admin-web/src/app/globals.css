@@ -914,7 +914,8 @@ a {
 
 .parent-ai-chat-row.assistant {
   justify-self: flex-start;
-  background: #eef3ff;
+  background: #e0eaff;
+  border-color: rgba(79, 70, 229, 0.28);
 }
 
 .parent-ai-chat-row.user {
@@ -931,6 +932,8 @@ a {
 .parent-ai-chat-text {
   margin: 4px 0 0;
   white-space: pre-wrap;
+  color: #172033;
+  line-height: 1.55;
 }
 
 .parent-ai-chat-links {

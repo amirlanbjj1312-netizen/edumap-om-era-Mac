@@ -656,7 +656,7 @@ export async function resetEngagementAnalytics(token: string) {
 
 export async function requestAiSchoolChat(
   token: string,
-  payload: { message: string; schoolIds: string[] }
+  payload: { message: string; schoolIds: string[]; locale?: 'ru' | 'kk' | 'en' }
 ) {
   return authRequestJson<{
     data: {
