@@ -1,7 +1,8 @@
 'use client';
 
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth } from '@/lib/supabaseAuth';
+import { supabaseStorage } from '@/lib/supabaseStorage';
 import { loadParentFooterSettings, updateParentFooterSettings } from '@/lib/api';
 import { useAdminLocale } from '@/lib/adminLocale';
 
@@ -181,7 +182,7 @@ export default function SiteSettingsPage() {
     let lastError: any = null;
 
     for (const bucket of buckets) {
-      const { error } = await supabase.storage.from(bucket).upload(path, file, {
+      const { error } = await supabaseStorage.storage.from(bucket).upload(path, file, {
         upsert: true,
         contentType: file.type || undefined,
       });
@@ -190,7 +191,7 @@ export default function SiteSettingsPage() {
         if (/bucket not found/i.test(error.message || '')) continue;
         throw error;
       }
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+      const { data } = supabaseStorage.storage.from(bucket).getPublicUrl(path);
       const publicUrl = data?.publicUrl || '';
       setDraft((prev) => ({
         ...prev,
@@ -223,7 +224,7 @@ export default function SiteSettingsPage() {
     setSaving(true);
     setStatus('');
     try {
-      const token = await supabase.auth.getSession().then(({ data }) => data?.session?.access_token || '');
+      const token = await supabaseAuth.auth.getSession().then(({ data }) => data?.session?.access_token || '');
       if (!token) throw new Error('No token');
       await updateParentFooterSettings(token, draft);
       setStatus(ui.saved);

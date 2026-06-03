@@ -380,7 +380,6 @@ export default function ParentChatPage() {
             backToSchools: 'Back to schools',
             guest: 'AI chat is unavailable in guest mode.',
             signIn: 'Sign in',
-            limit: 'Daily AI chat limit reached for your plan.',
             left: 'Requests left today',
           }
         : locale === 'kk'
@@ -396,7 +395,6 @@ export default function ParentChatPage() {
               backToSchools: 'Мектептер тізіміне оралу',
               guest: 'Қонақ режимінде AI чат қолжетімсіз.',
               signIn: 'Кіру',
-              limit: 'Тариф бойынша AI чат лимиті таусылды.',
               left: 'Бүгін қалған сұраныс',
             }
           : {
@@ -411,7 +409,6 @@ export default function ParentChatPage() {
               backToSchools: 'Вернуться к школам',
               guest: 'В гостевом режиме AI чат недоступен.',
               signIn: 'Войти',
-              limit: 'Лимит AI чата по вашему тарифу исчерпан.',
               left: 'Осталось запросов сегодня',
             },
     [locale]
@@ -499,11 +496,6 @@ export default function ParentChatPage() {
     const body = text.trim();
     if (!body || sending) return;
     const usage = previewUnlocked ? { ok: true, left } : consumeAiChat(getParentPlan());
-    if (!usage.ok) {
-      setError(ui.limit);
-      syncLeft();
-      return;
-    }
     setSending(true);
     setText('');
     setError('');

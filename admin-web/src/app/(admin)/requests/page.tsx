@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { requestJson } from '@/lib/api';
 import { formatKzPhone } from '@/lib/phone';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 type ConsultationRequest = {
   id: string;

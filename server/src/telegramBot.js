@@ -6,7 +6,7 @@ const POLL_TIMEOUT_SEC = 30;
 const PAGE_SIZE = 5;
 const REMOTE_SCHOOLS_URL =
   String(process.env.TELEGRAM_SCHOOLS_API_URL || '').trim() ||
-  'https://edumap-backend-nkr6.onrender.com/api/schools?include_inactive=1&include_hidden=1';
+  'https://api.edu-map.kz/api/schools?include_inactive=1&include_hidden=1';
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
 if (!BOT_TOKEN) {

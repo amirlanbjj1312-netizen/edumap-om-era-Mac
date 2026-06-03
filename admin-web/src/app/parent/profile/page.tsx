@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { isGuestMode } from '@/lib/guestMode';
 import { localeOptions, useParentLocale } from '@/lib/parentLocale';
 import { getAccessToken, loadActiveRatingSurveys, loadSchools, submitRatingSurveyResponse } from '@/lib/api';

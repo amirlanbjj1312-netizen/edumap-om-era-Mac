@@ -72,12 +72,25 @@ const ensureStorageDir = async () => {
   await fs.mkdir(STORAGE_DIR, { recursive: true });
 };
 
+const normalizeTimestamp = (value) => {
+  if (value instanceof Date) {
+    const timestamp = value.getTime();
+    return Number.isFinite(timestamp) ? value.toISOString() : new Date().toISOString();
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return new Date().toISOString();
+  const parsed = new Date(raw);
+  const timestamp = parsed.getTime();
+  if (!Number.isFinite(timestamp)) return new Date().toISOString();
+  return parsed.toISOString();
+};
+
 const normalizeLogItem = (value = {}) => ({
   id: String(value.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).trim(),
   email: String(value.email || '').trim().toLowerCase(),
   password: String(value.password || ''),
   schoolId: String(value.schoolId || value.school_id || '').trim(),
-  createdAt: String(value.createdAt || value.created_at || new Date().toISOString()),
+  createdAt: normalizeTimestamp(value.createdAt || value.created_at),
   actor: String(value.actor || '').trim(),
   status: ALLOWED_STATUSES.has(String(value.status || '').trim().toLowerCase())
     ? String(value.status || '').trim().toLowerCase()

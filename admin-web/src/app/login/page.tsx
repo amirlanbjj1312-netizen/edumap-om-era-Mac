@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { portalHomeByRole, resolvePortalRole } from '@/lib/portalRole';
 import { setGuestMode } from '@/lib/guestMode';
 import { localeOptions, useParentLocale } from '@/lib/parentLocale';

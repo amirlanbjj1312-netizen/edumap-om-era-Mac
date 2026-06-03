@@ -6,7 +6,7 @@ import { buildFallbackSchoolId } from '@/lib/auth';
 import { useAdminLocale } from '@/lib/adminLocale';
 import { createEmptySchoolProfile } from '@/lib/schoolProfile';
 import { formatKzPhone } from '@/lib/phone';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 
 type ProfileForm = {
   firstName: string;

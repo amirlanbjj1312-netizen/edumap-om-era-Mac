@@ -5,6 +5,28 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/supabaseClient",
+              message: "Use '@/lib/supabaseAuth' or '@/lib/supabaseStorage' to keep the auth/storage boundary explicit.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/lib/supabaseClient.ts", "src/lib/supabaseAuth.ts", "src/lib/supabaseStorage.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

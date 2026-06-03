@@ -52,7 +52,7 @@ export default function ParentSupportPage() {
 
   useEffect(() => {
     let mounted = true;
-    getAccessToken().then((nextToken) => {
+    getAccessToken().then((nextToken: string) => {
       if (!mounted) return;
       setToken(nextToken || '');
     });

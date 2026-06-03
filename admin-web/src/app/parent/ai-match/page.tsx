@@ -8,7 +8,7 @@ import { useParentLocale } from '@/lib/parentLocale';
 import { getParentPlan } from '@/lib/parentSubscription';
 import { consumeAiMatch, getAiMatchLeft } from '@/lib/parentUsage';
 import { isGuestMode } from '@/lib/guestMode';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAuth as supabase } from '@/lib/supabaseAuth';
 import { clearCompareIds, toggleCompareId } from '@/lib/parentCompare';
 
 type SchoolRow = {
