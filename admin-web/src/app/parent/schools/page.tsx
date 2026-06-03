@@ -1263,6 +1263,13 @@ export default function ParentSchoolsPage() {
     minClubs > 0 ? 'clubs' : '',
   ].filter(Boolean).length;
 
+  const guestAdvancedFiltersHint =
+    locale === 'en'
+      ? 'Advanced filters are available for registered users.'
+      : locale === 'kk'
+        ? 'Кеңейтілген сүзгілер тіркелген пайдаланушыларға қолжетімді.'
+        : 'Расширенные фильтры доступны зарегистрированным пользователям.';
+
   const filtersContent = (
     <>
       <label className="field">
@@ -1359,6 +1366,7 @@ export default function ParentSchoolsPage() {
           ))}
         </div>
       </div>
+      <div style={guest ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
       <label className="field">
         <span>{ft('gradesRange')}</span>
         <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
@@ -1481,6 +1489,8 @@ export default function ParentSchoolsPage() {
           onChange={(e) => setMinClubs(Number(e.target.value))}
         />
       </label>
+      </div>
+      {guest ? <p className="muted">{guestAdvancedFiltersHint}</p> : null}
       {!mobileFiltersOpen ? (
         <button type="button" className="button secondary schools-filter-reset" onClick={resetFilters}>
           {ft('reset')}
@@ -1564,12 +1574,8 @@ export default function ParentSchoolsPage() {
         </button>
         <button
           type="button"
-          className={`schools-mobile-action schools-mobile-action-filter-inline${mobileFiltersOpen ? ' active' : ''}${guest ? ' guest-locked-button' : ''}`}
+          className={`schools-mobile-action schools-mobile-action-filter-inline${mobileFiltersOpen ? ' active' : ''}`}
           onClick={() => {
-            if (guest) {
-              showGuestGateMessage(guestGateUi.filters);
-              return;
-            }
             setMobileFiltersOpen((prev) => !prev);
           }}
           aria-expanded={mobileFiltersOpen}
@@ -1642,12 +1648,8 @@ export default function ParentSchoolsPage() {
       <div className="schools-mobile-filter-bar">
         <button
           type="button"
-          className={`button secondary schools-mobile-filter-trigger${mobileFiltersOpen ? ' active' : ''}${guest ? ' guest-locked-button' : ''}`}
+          className={`button secondary schools-mobile-filter-trigger${mobileFiltersOpen ? ' active' : ''}`}
           onClick={() => {
-            if (guest) {
-              showGuestGateMessage(guestGateUi.filters);
-              return;
-            }
             setMobileFiltersOpen((prev) => !prev);
           }}
           aria-expanded={mobileFiltersOpen}
@@ -1707,20 +1709,9 @@ export default function ParentSchoolsPage() {
 
       <div className="schools-booking-layout">
         <aside className="schools-filter-sidebar">
-          <div className={`schools-filter-card${guest ? ' guest-gated-panel' : ''}`}>
-            <div className={guest ? 'guest-gated-content' : ''}>
-              <p className="schools-filter-title">{ft('filters')}</p>
-              {filtersContent}
-            </div>
-            {guest ? (
-              <div className="guest-gated-overlay">
-                <p className="guest-gated-title">{ft('filters')}</p>
-                <p className="guest-gated-text">{guestGateUi.filters}</p>
-                <Link className="button" href="/login">
-                  {t('sign_in_account')}
-                </Link>
-              </div>
-            ) : null}
+          <div className="schools-filter-card">
+            <p className="schools-filter-title">{ft('filters')}</p>
+            {filtersContent}
           </div>
           {guest ? <p className="muted">{t('guest_schools_note')}</p> : null}
         </aside>

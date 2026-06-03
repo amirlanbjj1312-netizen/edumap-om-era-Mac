@@ -568,6 +568,12 @@ export default function ParentSchoolsMapPage() {
     mapLoadError: { ru: 'Не удалось загрузить карту.', en: 'Failed to load map.', kk: 'Картаны жүктеу сәтсіз болды.' },
   };
   const ft = (key: keyof typeof FILTER_TEXT) => FILTER_TEXT[key][locale];
+  const guestAdvancedFiltersHint =
+    locale === 'en'
+      ? 'Advanced filters are available for registered users.'
+      : locale === 'kk'
+        ? 'Кеңейтілген сүзгілер тіркелген пайдаланушыларға қолжетімді.'
+        : 'Расширенные фильтры доступны зарегистрированным пользователям.';
   const mapLoadErrorText = FILTER_TEXT.mapLoadError[locale];
   const noCityText = FILTER_TEXT.noCity[locale];
   const schoolDefaultText = locale === 'en' ? 'School' : locale === 'kk' ? 'Мектеп' : 'Школа';
@@ -1023,28 +1029,23 @@ export default function ParentSchoolsMapPage() {
             </label>
           ) : null}
           <label className="field">
-            <span>{ft('gradesRange')}</span>
-            <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
-              <option value="">{ft('allGrades')}</option>
-              <option value="0">0</option>
-              <option value="1-4">1-4</option>
-              <option value="5-9">5-9</option>
-              <option value="10-12">10-12</option>
-              <option value="1-12">1-12</option>
-            </select>
+            <span>{ft('minRating')}: {minRating > 0 ? `${minRating}+` : ft('examAny')}</span>
+            <input type="range" min={0} max={5} step={0.5} value={minRating}
+              onChange={(e) => setMinRating(Number(e.target.value))} />
           </label>
+          <div style={isGuest ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
+            <label className="field">
+              <span>{ft('gradesRange')}</span>
+              <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
+                <option value="">{ft('allGrades')}</option>
+                <option value="0">0</option>
+                <option value="1-4">1-4</option>
+                <option value="5-9">5-9</option>
+                <option value="10-12">10-12</option>
+                <option value="1-12">1-12</option>
+              </select>
+            </label>
 
-          {/* Extended filters — locked for guests */}
-          {isGuest ? (
-            <div style={{ margin:'12px 0', padding:'14px', borderRadius:12, background:'#F8FAFC', border:'1px solid #E2E8F0', textAlign:'center' }}>
-              <div style={{ fontSize:20, marginBottom:6 }}>🔒</div>
-              <p style={{ fontSize:13, color:'#64748B', margin:'0 0 10px' }}>{ft('guestLock')}</p>
-              <a href="/login" style={{ display:'inline-block', background:'#2563EB', color:'#fff', borderRadius:8, padding:'7px 18px', fontSize:13, fontWeight:600, textDecoration:'none' }}>
-                {ft('signIn')}
-              </a>
-            </div>
-          ) : (
-            <>
               {/* Curricula */}
               <div className="schools-filter-section">
                 <p className="schools-filter-label">{ft('programs')}</p>
@@ -1084,15 +1085,10 @@ export default function ParentSchoolsMapPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Rating */}
-              <label className="field">
-                <span>{ft('minRating')}: {minRating > 0 ? `${minRating}+` : ft('examAny')}</span>
-                <input type="range" min={0} max={5} step={0.5} value={minRating}
-                  onChange={(e) => setMinRating(Number(e.target.value))} />
-              </label>
-            </>
-          )}
+          </div>
+          {isGuest ? (
+            <p className="muted" style={{ marginTop: 12 }}>{guestAdvancedFiltersHint}</p>
+          ) : null}
 
           <button
             type="button"

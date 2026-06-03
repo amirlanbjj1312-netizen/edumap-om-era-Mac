@@ -865,10 +865,10 @@ export default function SchoolsScreen() {
     locale === 'kk' ? 'Тіркелу' : locale === 'en' ? 'Sign up' : 'Регистрация';
   const guestFiltersHint =
     locale === 'kk'
-      ? 'Барлық фильтрлер тіркелген қолданушыларға қолжетімді.'
+      ? 'Кеңейтілген сүзгілер тіркелген қолданушыларға қолжетімді.'
       : locale === 'en'
-      ? 'All filters are available for registered users.'
-      : 'Все фильтры доступны зарегистрированным пользователям.';
+      ? 'Advanced filters are available for registered users.'
+      : 'Расширенные фильтры доступны зарегистрированным пользователям.';
   const guestDisabledSorts = ['price_asc', 'price_desc', 'reviews_desc', 'distance_asc'];
 
   const activeAreas = useMemo(
@@ -958,7 +958,6 @@ export default function SchoolsScreen() {
     setRadiusKm(5);
     setUserLocation(null);
     setLocationError(null);
-    setPriceRange([PRICE_MIN, PRICE_MAX]);
     setSelectedCurricula([]);
     setSelectedSpecialists([]);
     setSelectedServices([]);
@@ -1650,12 +1649,8 @@ export default function SchoolsScreen() {
               ...topActionButtonStyle,
               borderColor: '#D97706',
               backgroundColor: '#F59E0B',
-              opacity: isGuest ? 0.55 : 1,
             }}
-            onPress={() => {
-              if (isGuest) { showGuestLock(); return; }
-              setFilterModalVisible(true);
-            }}
+            onPress={() => setFilterModalVisible(true)}
           >
             <AdjustmentsHorizontalIcon color="#111827" size={18} />
             <Text
@@ -2169,40 +2164,9 @@ export default function SchoolsScreen() {
               ) : null}
               </View>
               {isGuest ? (
-                <Pressable
-                  onPress={showGuestLock}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 12,
-                  }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(17,24,39,0.72)',
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: '#FFFFFF',
-                        fontFamily: 'exoSemibold',
-                        fontSize: 12,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {guestFiltersHint}
-                    </Text>
-                  </View>
-                </Pressable>
+                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                  {guestFiltersHint}
+                </Text>
               ) : null}
             </View>
 
@@ -2239,11 +2203,7 @@ export default function SchoolsScreen() {
             </View>
             {isPrivateSelected ? (
               <>
-                <View style={{ position: 'relative' }}>
-                  <View
-                    style={{ opacity: isGuest ? 0.35 : 1 }}
-                    pointerEvents={isGuest ? 'none' : 'auto'}
-                  >
+                <View>
                 <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
                   {t('schools.filters.monthlyFeeTitle')}
                 </Text>
@@ -2353,44 +2313,7 @@ export default function SchoolsScreen() {
                       );
                     })()}
                   </View>
-                </View>
                   </View>
-                  {isGuest ? (
-                    <Pressable
-                      onPress={showGuestLock}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: 16,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 12,
-                      }}
-                    >
-                      <View
-                        style={{
-                          backgroundColor: 'rgba(17,24,39,0.72)',
-                          borderRadius: 12,
-                          paddingHorizontal: 12,
-                          paddingVertical: 8,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#FFFFFF',
-                            fontFamily: 'exoSemibold',
-                            fontSize: 12,
-                            textAlign: 'center',
-                          }}
-                        >
-                          {guestFiltersHint}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ) : null}
                 </View>
               </>
             ) : null}
@@ -2686,40 +2609,9 @@ export default function SchoolsScreen() {
             </View>
               </View>
               {isGuest ? (
-                <Pressable
-                  onPress={showGuestLock}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 12,
-                  }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(17,24,39,0.72)',
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: '#FFFFFF',
-                        fontFamily: 'exoSemibold',
-                        fontSize: 12,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {guestFiltersHint}
-                    </Text>
-                  </View>
-                </Pressable>
+                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                  {guestFiltersHint}
+                </Text>
               ) : null}
             </View>
             <View className="mt-6" style={{ position: 'relative' }}>
@@ -2754,44 +2646,17 @@ export default function SchoolsScreen() {
               </View>
               </View>
               {isGuest ? (
-                <Pressable
-                  onPress={showGuestLock}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 12,
-                  }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(17,24,39,0.72)',
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: '#FFFFFF',
-                        fontFamily: 'exoSemibold',
-                        fontSize: 12,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {guestFiltersHint}
-                    </Text>
-                  </View>
-                </Pressable>
+                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                  {guestFiltersHint}
+                </Text>
               ) : null}
             </View>
 
-            <View className="mt-4">
+            <View className="mt-4" style={{ position: 'relative' }}>
+              <View
+                style={{ opacity: isGuest ? 0.35 : 1 }}
+                pointerEvents={isGuest ? 'none' : 'auto'}
+              >
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.clubsTitle')}
               </Text>
@@ -2817,6 +2682,12 @@ export default function SchoolsScreen() {
                   </Pressable>
                 </View>
               </View>
+              </View>
+              {isGuest ? (
+                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                  {guestFiltersHint}
+                </Text>
+              ) : null}
             </View>
             <Pressable
               className="mt-4 rounded-2xl bg-bgPurple px-4 py-4 items-center"

@@ -4,6 +4,7 @@ import { XMarkIcon } from 'react-native-heroicons/solid';
 import { AdjustmentsHorizontalIcon } from 'react-native-heroicons/solid';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocale } from '../context/LocaleContext';
+import { useRole } from '../context/RoleContext';
 
 const CITY_L = { Almaty: 'schools.city.almaty', Astana: 'schools.city.astana', Karaganda: 'schools.city.karaganda' };
 const TYPE_L = { State: 'schools.type.state', Private: 'schools.type.private', International: 'schools.type.international' };
@@ -148,6 +149,7 @@ const createDefaultFilters = () => ({
 });
 
 export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
+  const { isGuest } = useRole();
   const [draft, setDraft] = useState(createDefaultFilters());
   const [applied, setApplied] = useState(createDefaultFilters());
   const [sliderWidth, setSliderWidth] = useState(0);
@@ -526,7 +528,13 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
   };
 
   const FiltersModal = ({ visible, onClose }) => {
-    const { t } = useLocale();
+    const { t, locale } = useLocale();
+    const guestAdvancedFiltersHint =
+      locale === 'kk'
+        ? 'Кеңейтілген сүзгілер тіркелген қолданушыларға қолжетімді.'
+        : locale === 'en'
+          ? 'Advanced filters are available for registered users.'
+          : 'Расширенные фильтры доступны зарегистрированным пользователям.';
     if (!visible) return null;
     return (
       <View style={styles.overlay}>
@@ -631,7 +639,7 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
               })}
             </View>
 
-            <View className="mt-2">
+            <View className="mt-2" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.nearbyTitle')}
               </Text>
@@ -693,6 +701,11 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 </View>
               ) : null}
             </View>
+            {isGuest ? (
+              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                {guestAdvancedFiltersHint}
+              </Text>
+            ) : null}
 
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.typeTitle')}
@@ -860,6 +873,7 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
+            <View style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.accreditationTitle')}
             </Text>
@@ -1107,6 +1121,11 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
+            {isGuest ? (
+              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                {guestAdvancedFiltersHint}
+              </Text>
+            ) : null}
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.ratingTitle')}
             </Text>
@@ -1138,7 +1157,7 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
-            <View className="mt-6">
+            <View className="mt-6" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.classSizeTitle')}
               </Text>
@@ -1169,8 +1188,13 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 </View>
               </View>
             </View>
+            {isGuest ? (
+              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                {guestAdvancedFiltersHint}
+              </Text>
+            ) : null}
 
-            <View className="mt-4">
+            <View className="mt-4" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.clubsTitle')}
               </Text>
@@ -1197,6 +1221,11 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 </View>
               </View>
             </View>
+            {isGuest ? (
+              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
+                {guestAdvancedFiltersHint}
+              </Text>
+            ) : null}
           </ScrollView>
           <View
             className="px-6 pb-6 pt-3"
