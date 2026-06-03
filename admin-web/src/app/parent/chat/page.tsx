@@ -94,6 +94,19 @@ const detectBankSide = (question: string) => {
   return '';
 };
 
+const buildLanguageDirectedMessage = (
+  text: string,
+  locale: 'ru' | 'en' | 'kk'
+) => {
+  const instruction =
+    locale === 'en'
+      ? 'Answer only in English.'
+      : locale === 'kk'
+        ? 'Жауапты тек қазақ тілінде бер.'
+        : 'Отвечай только на русском языке.';
+  return `${instruction}\n\n${text}`;
+};
+
 const matchesBank = (row: SchoolRow, side: 'left' | 'right') => {
   const district = normalize(toText(row.basic_info?.district || ''));
   const address = normalize(toText(row.basic_info?.address || ''));
@@ -540,7 +553,7 @@ export default function ParentChatPage() {
 
       const responseLocale = detectMessageLocale(body, locale);
       const aiResponse = await requestAiSchoolChat(token, {
-        message: body,
+        message: buildLanguageDirectedMessage(body, responseLocale),
         schoolIds,
         locale: responseLocale,
       });

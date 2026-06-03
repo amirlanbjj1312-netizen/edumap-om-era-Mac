@@ -136,6 +136,16 @@ const rankSchools = (cards, message) => {
 
 const getChatUiByLocale = (value) => CHAT_UI[value] || CHAT_UI.ru;
 
+const buildLanguageDirectedMessage = (text, locale) => {
+  const instruction =
+    locale === 'en'
+      ? 'Answer only in English.'
+      : locale === 'kk'
+        ? 'Жауапты тек қазақ тілінде бер.'
+        : 'Отвечай только на русском языке.';
+  return `${instruction}\n\n${text}`;
+};
+
 export default function SchoolChatScreen() {
   const navigation = useNavigation();
   const { schoolCards } = useSchools();
@@ -201,7 +211,8 @@ export default function SchoolChatScreen() {
     try {
       const responseLocale = detectMessageLocale(text, locale);
       const responseUi = getChatUiByLocale(responseLocale);
-      const result = await askSchoolChat(text, schoolIds, responseLocale);
+      const directedMessage = buildLanguageDirectedMessage(text, responseLocale);
+      const result = await askSchoolChat(directedMessage, schoolIds, responseLocale);
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',

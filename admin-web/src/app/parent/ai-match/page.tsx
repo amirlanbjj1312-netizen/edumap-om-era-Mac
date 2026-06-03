@@ -71,6 +71,19 @@ const detectMessageLocale = (value: string, fallback: 'ru' | 'en' | 'kk'): 'ru' 
   return fallback;
 };
 
+const buildLanguageDirectedMessage = (
+  text: string,
+  locale: 'ru' | 'en' | 'kk'
+) => {
+  const instruction =
+    locale === 'en'
+      ? 'Answer only in English.'
+      : locale === 'kk'
+        ? 'Жауапты тек қазақ тілінде бер.'
+        : 'Отвечай только на русском языке.';
+  return `${instruction}\n\n${text}`;
+};
+
 const CITY_ALIAS_TO_KEY: Record<string, 'astana' | 'almaty'> = {
   astana: 'astana',
   'астана': 'astana',
@@ -409,7 +422,7 @@ export default function ParentAiMatchPage() {
         return;
       }
       const response = await requestAiSchoolChat(token, {
-        message,
+        message: buildLanguageDirectedMessage(message, responseLocale),
         schoolIds,
         locale: responseLocale,
       });
