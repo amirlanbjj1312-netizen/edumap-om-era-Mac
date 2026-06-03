@@ -359,7 +359,7 @@ export default function ParentChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [guest] = useState(() => isGuestMode());
-  const [left, setLeft] = useState<number>(() => getAiChatLeft(getParentPlan()));
+  const [left, setLeft] = useState<number | null>(() => null);
   const previewUnlocked = false;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -415,8 +415,8 @@ export default function ParentChatPage() {
   );
 
   const syncLeft = () => {
-    const plan = getParentPlan();
-    setLeft(getAiChatLeft(plan));
+    void getParentPlan();
+    setLeft(null);
   };
 
   const clearChat = () => {
@@ -580,7 +580,7 @@ export default function ParentChatPage() {
         links: linkItems.length ? linkItems : undefined,
       };
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      setLeft(typeof usage.left === 'number' ? usage.left : 0);
+      setLeft(typeof usage.left === 'number' ? usage.left : null);
     } catch (error) {
       const fallbackText = composeAnswer(locale, body, rows);
       const userMessage: ChatMessage = {
@@ -631,7 +631,7 @@ export default function ParentChatPage() {
       <p className="muted parent-ai-chat-subtitle">{ui.subtitle}</p>
       {!guest ? (
         <p className="muted parent-ai-chat-limit">
-          {ui.left}: <strong>{left}</strong>
+          {ui.left}: <strong>{left == null ? ui.unlimited : left}</strong>
         </p>
       ) : <p className="muted parent-ai-chat-limit">Preview mode: unlocked</p>}
       {guest ? (
