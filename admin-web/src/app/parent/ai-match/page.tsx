@@ -373,7 +373,7 @@ export default function ParentAiMatchPage() {
       ? `${baseMessage}\n\n${ui.chipsApply}: ${criteriaParts.join('; ')}.`
       : baseMessage;
 
-    const responseLocale = detectMessageLocale(baseMessage, locale);
+    const responseLocale = detectMessageLocale(message, locale);
     const usage = previewUnlocked ? { ok: true, left } : consumeAiMatch(getParentPlan());
     if (!usage.ok) {
       setError(ui.limit);

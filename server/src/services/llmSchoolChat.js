@@ -73,11 +73,17 @@ const normalizeChatResponse = (raw, schools) => {
   };
 };
 
+const getTargetLanguageName = (locale = '') => {
+  if (locale === 'en') return 'English';
+  if (locale === 'kk') return 'Kazakh';
+  return 'Russian';
+};
+
 const buildMessages = (message, schools, locale = '') => [
   {
     role: 'system',
     content:
-      `You are a school assistant. Use ONLY the provided school data. Do not invent schools. Always reply in the same language as the user message (ru/kk/en).${locale ? ` If the user message is ambiguous, prefer ${locale}.` : ''}`,
+      `You are a school assistant. Use ONLY the provided school data. Do not invent schools. The JSON keys must stay in English, but the "reply" value must be written ONLY in ${getTargetLanguageName(locale)}. Never switch the reply to another language, even if the school data itself is in another language. Keep school names, addresses, and official program names as provided when needed.${locale ? ` If the user message is ambiguous, still reply ONLY in ${getTargetLanguageName(locale)}.` : ''}`,
   },
   {
     role: 'user',

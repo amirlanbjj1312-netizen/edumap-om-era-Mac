@@ -9,49 +9,64 @@ const {
   validateAiSchoolChatPayload,
 } = require('../validation');
 
-const normalizeText = (value) => {
+const detectMessageLocale = (value, fallback = 'ru') => {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  if (/[әіңғүұқөһ]/i.test(text)) return 'kk';
+  if (/[а-яё]/i.test(text)) return 'ru';
+  if (/[a-z]/i.test(text)) return 'en';
+  return fallback;
+};
+
+const normalizeText = (value, locale = '') => {
   if (!value) return '';
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'object') {
-    return String(value.ru || value.en || '').trim();
+    if (locale === 'kk') {
+      return String(value.kk || value.ru || value.en || '').trim();
+    }
+    if (locale === 'en') {
+      return String(value.en || value.ru || value.kk || '').trim();
+    }
+    return String(value.ru || value.kk || value.en || '').trim();
   }
   return String(value).trim();
 };
 
-const toChatSchoolPayload = (school) => ({
+const toChatSchoolPayload = (school, locale = '') => ({
   school_id: String(school?.school_id || '').trim(),
-  name: normalizeText(school?.basic_info?.name),
-  type: normalizeText(school?.basic_info?.type),
-  city: normalizeText(school?.basic_info?.city),
-  district: normalizeText(school?.basic_info?.district),
-  address: normalizeText(school?.basic_info?.address),
+  name: normalizeText(school?.basic_info?.name, locale),
+  type: normalizeText(school?.basic_info?.type, locale),
+  city: normalizeText(school?.basic_info?.city, locale),
+  district: normalizeText(school?.basic_info?.district, locale),
+  address: normalizeText(school?.basic_info?.address, locale),
   monthly_fee: school?.finance?.monthly_fee ?? '',
-  languages: normalizeText(school?.education?.languages),
-  programs: normalizeText(school?.education?.programs),
+  languages: normalizeText(school?.education?.languages, locale),
+  programs: normalizeText(school?.education?.programs, locale),
   curricula: [
     ...(school?.education?.curricula?.national || []),
     ...(school?.education?.curricula?.international || []),
     ...(school?.education?.curricula?.additional || []),
-    normalizeText(school?.education?.curricula?.other),
+    normalizeText(school?.education?.curricula?.other, locale),
   ]
     .filter(Boolean)
     .join(', '),
   advanced_subjects: [
-    normalizeText(school?.education?.advanced_subjects),
-    normalizeText(school?.education?.advanced_subjects_other),
+    normalizeText(school?.education?.advanced_subjects, locale),
+    normalizeText(school?.education?.advanced_subjects_other, locale),
   ]
     .filter(Boolean)
     .join(', '),
   clubs: [
-    normalizeText(school?.services?.clubs),
-    normalizeText(school?.services?.clubs_other),
+    normalizeText(school?.services?.clubs, locale),
+    normalizeText(school?.services?.clubs_other, locale),
   ]
     .filter(Boolean)
     .join(', '),
-  meals: normalizeText(school?.services?.meals),
+  meals: normalizeText(school?.services?.meals, locale),
   specialists: [
-    normalizeText(school?.services?.specialists),
-    normalizeText(school?.services?.specialists_other),
+    normalizeText(school?.services?.specialists, locale),
+    normalizeText(school?.services?.specialists_other, locale),
   ]
     .filter(Boolean)
     .join(', '),
@@ -212,6 +227,7 @@ const buildAiRouter = (config) => {
       return res.status(400).json({ error: 'Invalid request payload.' });
     }
     const { message, schoolIds, schools, locale } = validated;
+    const responseLocale = detectMessageLocale(message, locale || 'ru');
     const MAX_SCHOOLS = 12;
 
     let trimmedSchools = [];
@@ -225,7 +241,7 @@ const buildAiRouter = (config) => {
           .map((id) => byId.get(id))
           .filter(Boolean)
           .slice(0, MAX_SCHOOLS)
-          .map((profile) => toChatSchoolPayload(profile));
+          .map((profile) => toChatSchoolPayload(profile, responseLocale));
         if (!selected.length) {
           return res.status(400).json({ error: 'No valid schoolIds found.' });
         }
@@ -243,7 +259,7 @@ const buildAiRouter = (config) => {
     }
 
     try {
-      const data = await chatWithSchools(config, message, trimmedSchools, locale);
+      const data = await chatWithSchools(config, message, trimmedSchools, responseLocale);
       return res.json({ data });
     } catch (error) {
       if (error.code === 'LLM_NOT_CONFIGURED') {
