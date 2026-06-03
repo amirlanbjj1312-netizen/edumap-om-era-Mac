@@ -682,6 +682,12 @@ export default function ParentChatPage() {
           placeholder={ui.placeholder}
           disabled={guest && !previewUnlocked}
           rows={1}
+          onFocus={() => {
+            // Scroll input into view when keyboard opens on mobile
+            setTimeout(() => {
+              inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300);
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();
