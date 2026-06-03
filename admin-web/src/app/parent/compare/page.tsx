@@ -465,9 +465,9 @@ export default function ParentComparePage() {
             '—'
           );
         case 'city':
-          return localizeOption(toText(school.basic_info?.city).trim(), locale) || '—';
+          return localizeOption(toLocaleText(school.basic_info?.city, locale).trim(), locale) || '—';
         case 'district':
-          return localizeOption(toText(school.basic_info?.district).trim(), locale) || '—';
+          return localizeOption(toLocaleText(school.basic_info?.district, locale).trim(), locale) || '—';
         case 'type': {
           const type = getSchoolType(school.basic_info?.type) || toText(school.basic_info?.type);
           return (
@@ -477,7 +477,7 @@ export default function ParentComparePage() {
           );
         }
         case 'address':
-          return toText(school.basic_info?.address).trim() || '—';
+          return toLocaleText(school.basic_info?.address, locale).trim() || '—';
         case 'languages':
           return localizeUniqueList(school.education?.languages, locale).join(', ') || '—';
         case 'grades':
