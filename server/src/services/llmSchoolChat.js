@@ -26,6 +26,14 @@ const getRetryDelayMs = (error, attempt) => {
   return base + jitter;
 };
 
+const postJson = async (url, payload, config) =>
+  axios.post(url, payload, {
+    headers: {
+      Authorization: `Bearer ${config.llm.apiKey}`,
+    },
+    timeout: config.llm.timeoutMs,
+  });
+
 const extractJson = (text) => {
   if (typeof text !== 'string') return null;
   const start = text.indexOf('{');
@@ -79,6 +87,22 @@ const getTargetLanguageName = (locale = '') => {
   return 'Russian';
 };
 
+const buildTranslationMessages = (text, locale) => [
+  {
+    role: 'system',
+    content: [
+      `Translate the assistant reply into ${getTargetLanguageName(locale)}.`,
+      'Return plain text only.',
+      'Preserve school names, addresses, grade numbers, currencies, URLs, phone numbers, abbreviations, and list structure.',
+      'Do not add explanations or extra notes.',
+    ].join(' '),
+  },
+  {
+    role: 'user',
+    content: text,
+  },
+];
+
 const buildMessages = (message, schools, locale = '') => [
   {
     role: 'system',
@@ -97,6 +121,41 @@ const buildMessages = (message, schools, locale = '') => [
     ].join('\n'),
   },
 ];
+
+const translateReply = async (config, reply, locale) => {
+  if (!reply || !locale || locale === 'ru') return reply;
+  const baseUrl = config.llm.baseUrl.replace(/\/$/, '');
+  const url = `${baseUrl}/chat/completions`;
+  const payload = {
+    model: config.llm.model,
+    messages: buildTranslationMessages(reply, locale),
+    temperature: 0,
+  };
+
+  const maxAttempts = Math.max(1, config.llm.maxRetries + 1);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await postJson(url, payload, config);
+      const content = response?.data?.choices?.[0]?.message?.content || '';
+      const translated = String(content || '').trim();
+      if (!translated) {
+        throw new Error('LLM returned empty translation');
+      }
+      return translated;
+    } catch (error) {
+      lastError = error;
+      if (!shouldRetry(error) || attempt === maxAttempts) {
+        throw lastError || error;
+      }
+      const delay = getRetryDelayMs(error, attempt);
+      await sleep(delay);
+    }
+  }
+
+  return reply;
+};
 
 const chatWithSchools = async (config, message, schools, locale = '') => {
   if (!config?.llm?.apiKey) {
@@ -119,16 +178,7 @@ const chatWithSchools = async (config, message, schools, locale = '') => {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await axios.post(
-        url,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${config.llm.apiKey}`,
-          },
-          timeout: config.llm.timeoutMs,
-        }
-      );
+      const response = await postJson(url, payload, config);
       const content = response?.data?.choices?.[0]?.message?.content || '';
       const raw = extractJson(content);
       if (!raw) {
@@ -136,7 +186,11 @@ const chatWithSchools = async (config, message, schools, locale = '') => {
         error.code = 'LLM_INVALID_JSON';
         throw error;
       }
-      return normalizeChatResponse(raw, schools);
+      const normalized = normalizeChatResponse(raw, schools);
+      if (locale === 'en' || locale === 'kk') {
+        normalized.reply = await translateReply(config, normalized.reply, locale);
+      }
+      return normalized;
     } catch (error) {
       lastError = error;
       if (!shouldRetry(error) || attempt === maxAttempts) {
