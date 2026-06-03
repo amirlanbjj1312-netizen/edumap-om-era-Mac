@@ -119,7 +119,7 @@ type LeafletApi = {
     node: HTMLDivElement,
     options: { zoomControl: boolean; minZoom: number; maxZoom: number }
   ) => LeafletMap;
-  tileLayer: (url: string, options: { attribution: string }) => LeafletLayer;
+  tileLayer: (url: string, options: { attribution: string; subdomains?: string; maxZoom?: number }) => LeafletLayer;
   layerGroup: () => LeafletLayer;
   marker: (point: [number, number]) => LeafletMarker;
   circleMarker: (
