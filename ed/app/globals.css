@@ -1,0 +1,42 @@
+:root {
+  --bg: #f4f8ff;
+  --bg-ink: #0c1526;
+  --bg-soft: #ffffff;
+  --accent: #4c6fff;
+  --accent-strong: #2dd2ff;
+  --accent-deep: #1b2b6b;
+  --muted: #6a7894;
+  --border: rgba(27, 43, 107, 0.14);
+  --glow: rgba(76, 111, 255, 0.18);
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --font-body: var(--font-space);
+  --font-display: var(--font-fraunces);
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100%;
+}
+
+body {
+  color: var(--bg-ink);
+  background: var(--bg);
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
