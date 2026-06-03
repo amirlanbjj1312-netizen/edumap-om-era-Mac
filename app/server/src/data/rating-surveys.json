@@ -1,0 +1,150 @@
+{
+  "config": {
+    "cycle_days": 60,
+    "questions": [
+      {
+        "id": "quality_teachers",
+        "text": "Качество преподавания",
+        "description": "Насколько вы довольны уровнем учителей",
+        "type": "rating",
+        "options": [],
+        "required": true,
+        "order": 1,
+        "enabled": true
+      },
+      {
+        "id": "school_safety",
+        "text": "Безопасность и комфорт",
+        "description": "Насколько ребёнку безопасно и комфортно в школе",
+        "type": "rating",
+        "options": [],
+        "required": true,
+        "order": 2,
+        "enabled": true
+      },
+      {
+        "id": "communication",
+        "text": "Коммуникация со школой",
+        "description": "Насколько быстро и понятно школа отвечает родителям",
+        "type": "rating",
+        "options": [],
+        "required": true,
+        "order": 3,
+        "enabled": true
+      },
+      {
+        "id": "clubs_quality",
+        "text": "Кружки и дополнительные занятия",
+        "description": "Насколько полезны и интересны секции/кружки",
+        "type": "rating",
+        "options": [],
+        "required": true,
+        "order": 4,
+        "enabled": true
+      },
+      {
+        "id": "value_for_money",
+        "text": "Соотношение цена/качество",
+        "description": "Насколько стоимость соответствует качеству",
+        "type": "rating",
+        "options": [],
+        "required": true,
+        "order": 5,
+        "enabled": true
+      }
+    ],
+    "updated_at": "2026-03-15T16:19:26.338Z",
+    "updated_by": "system"
+  },
+  "campaigns": [
+    {
+      "id": "1773642501115-08p57x",
+      "title": "Опрос удовлетворенности",
+      "description": "",
+      "school_ids": [],
+      "target_type": "specific_parents",
+      "parent_emails": [
+        "amirlan.sm@mail.ru"
+      ],
+      "send_at": "2026-03-16T06:28:21.115Z",
+      "created_at": "2026-03-16T06:28:21.115Z",
+      "created_by": "amirlanbjj1312@gmail.com",
+      "status": "active"
+    },
+    {
+      "id": "1773601858453-sbd46m",
+      "title": "Опрос удовлетворенности",
+      "description": "",
+      "school_ids": [],
+      "target_type": "specific_parents",
+      "parent_emails": [
+        "amirlan.sm@mail.ru"
+      ],
+      "send_at": "2026-03-15T19:10:58.454Z",
+      "created_at": "2026-03-15T19:10:58.454Z",
+      "created_by": "amirlanbjj1312@gmail.com",
+      "status": "closed"
+    }
+  ],
+  "responses": [
+    {
+      "id": "1773642602599-k8iy1l",
+      "campaign_id": "1773642501115-08p57x",
+      "school_id": "school-spectrum.astana",
+      "user_id": "72ef95a4-bcc7-49bb-9e1f-d25343645de3",
+      "user_email": "amirlan.sm@mail.ru",
+      "answers": [
+        {
+          "question_id": "__school__",
+          "question_type": "school",
+          "score": 1,
+          "option_id": "school-spectrum.astana",
+          "option_label": "school-spectrum.astana",
+          "text": "school-spectrum.astana"
+        },
+        {
+          "question_id": "quality_teachers",
+          "question_type": "rating",
+          "score": 5,
+          "option_id": "",
+          "option_label": "",
+          "text": ""
+        },
+        {
+          "question_id": "school_safety",
+          "question_type": "rating",
+          "score": 5,
+          "option_id": "",
+          "option_label": "",
+          "text": ""
+        },
+        {
+          "question_id": "communication",
+          "question_type": "rating",
+          "score": 4,
+          "option_id": "",
+          "option_label": "",
+          "text": ""
+        },
+        {
+          "question_id": "clubs_quality",
+          "question_type": "rating",
+          "score": 5,
+          "option_id": "",
+          "option_label": "",
+          "text": ""
+        },
+        {
+          "question_id": "value_for_money",
+          "question_type": "rating",
+          "score": 4,
+          "option_id": "",
+          "option_label": "",
+          "text": ""
+        }
+      ],
+      "comment": "Школа кайф",
+      "created_at": "2026-03-16T06:30:02.599Z"
+    }
+  ]
+}

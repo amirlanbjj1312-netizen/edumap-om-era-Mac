@@ -1,0 +1,83 @@
+[
+  {
+    "id": "2026-03-14T11:07:21.867Z-legacy-08",
+    "email": "astana.private08@edumap.kz",
+    "password": "EdumapAstana1008",
+    "schoolId": "school-neotech.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:21 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:20.867Z-legacy-07",
+    "email": "astana.private07@edumap.kz",
+    "password": "EdumapAstana1007",
+    "schoolId": "school-economic-lyceum.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:20 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:19.867Z-legacy-06",
+    "email": "astana.private06@edumap.kz",
+    "password": "EdumapAstana1006",
+    "schoolId": "school-alpamys.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:19 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:18.867Z-legacy-05",
+    "email": "astana.private05@edumap.kz",
+    "password": "EdumapAstana1005",
+    "schoolId": "school-riviera.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:18 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:17.867Z-legacy-04",
+    "email": "astana.private04@edumap.kz",
+    "password": "EdumapAstana1004",
+    "schoolId": "school-qsi.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:17 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:16.867Z-legacy-03",
+    "email": "astana.private03@edumap.kz",
+    "password": "EdumapAstana1003",
+    "schoolId": "school-quantum-tech.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:16 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:15.867Z-legacy-02",
+    "email": "astana.private02@edumap.kz",
+    "password": "EdumapAstana1002",
+    "schoolId": "school-astana-garden.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:15 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "2026-03-14T11:07:14.867Z-legacy-01",
+    "email": "astana.private01@edumap.kz",
+    "password": "EdumapAstana1001",
+    "schoolId": "school-nurorda.astana",
+    "createdAt": "Sat Mar 14 2026 16:07:14 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  },
+  {
+    "id": "1773484208655-6syw1l",
+    "email": "binomschool@edumap.kz",
+    "password": "Edumapcumgm5525",
+    "schoolId": "school-binomschool",
+    "createdAt": "Sat Mar 14 2026 15:30:08 GMT+0500 (Kazakhstan Time)",
+    "actor": "amirlanbjj1312@gmail.com",
+    "status": "заполнен"
+  }
+]
