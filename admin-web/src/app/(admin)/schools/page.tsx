@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const SchoolMap = dynamic(() => import('@/components/SchoolMap'), { ssr: false });
 import {
   loadSchools,
   upsertSchool,
@@ -302,6 +305,7 @@ export default function SchoolsPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
   const [query, setQuery] = useState('');
+  const [activeView, setActiveView] = useState<'list' | 'map'>('list');
   const [actorEmail, setActorEmail] = useState('');
   const [actorRole, setActorRole] = useState('user');
   const [sessionToken, setSessionToken] = useState('');
@@ -870,6 +874,24 @@ export default function SchoolsPage() {
       return haystack.includes(q);
     });
   }, [actorEmail, isSuperadmin, items, query]);
+  const mapSchools = useMemo(() =>
+    filtered
+      .map((item) => ({
+        id: normalizeText(item?.school_id) || String(item?.id || ''),
+        name:
+          normalizeText(item?.basic_info?.display_name?.ru) ||
+          normalizeText(item?.basic_info?.name?.ru) ||
+          normalizeText(item?.basic_info?.name) ||
+          '—',
+        latitude: parseFloat(normalizeText(item?.basic_info?.coordinates?.latitude)) || null,
+        longitude: parseFloat(normalizeText(item?.basic_info?.coordinates?.longitude)) || null,
+        city: normalizeText(item?.basic_info?.city),
+        address: normalizeText(item?.basic_info?.address),
+        type: normalizeText(item?.basic_info?.type),
+      }))
+      .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)),
+  [filtered]);
+
   const filledSchoolIds = useMemo(
     () =>
       new Set(
@@ -958,7 +980,43 @@ export default function SchoolsPage() {
       </div>
       <p className="muted">{t('schoolsHint')}</p>
 
-      <label className="field" style={{ marginTop: 12 }}>
+      {/* View switcher */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, marginBottom: 4 }}>
+        {(['list', 'map'] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            onClick={() => setActiveView(view)}
+            style={{
+              padding: '6px 18px',
+              borderRadius: 8,
+              border: '1px solid',
+              borderColor: activeView === view ? '#2563EB' : 'var(--line)',
+              background: activeView === view ? '#DBEAFE' : 'transparent',
+              color: activeView === view ? '#1D4ED8' : 'var(--text)',
+              fontWeight: activeView === view ? 700 : 400,
+              cursor: 'pointer',
+              fontSize: 14,
+            }}
+          >
+            {view === 'list' ? '☰ Список' : '🗺 Карта'}
+          </button>
+        ))}
+      </div>
+
+      {activeView === 'map' && (
+        <div style={{ marginTop: 12, marginBottom: 16 }}>
+          <SchoolMap
+            schools={mapSchools}
+            height="560px"
+          />
+          <p style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+            Показаны только школы с заполненными координатами ({mapSchools.length} из {filtered.length})
+          </p>
+        </div>
+      )}
+
+      <label className="field" style={{ marginTop: 12, display: activeView === 'map' ? 'none' : undefined }}>
         <span>{t('schoolsSearch')}</span>
         <input
           className="input"

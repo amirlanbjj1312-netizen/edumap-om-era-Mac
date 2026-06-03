@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loadSchools } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
+import { isGuestMode } from '@/lib/guestMode';
 
 type SchoolRow = {
   school_id?: string;
@@ -525,12 +526,19 @@ export default function ParentSchoolsMapPage() {
   const [mapError, setMapError] = useState('');
   const [ready, setReady] = useState(false);
 
+  const isGuest = isGuestMode();
+
   const [cityFilter, setCityFilter] = useState('');
   const [districtFilter, setDistrictFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [privatePriceLimit, setPrivatePriceLimit] = useState<number | null>(null);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [gradeRangeFilter, setGradeRangeFilter] = useState('');
+  // Extended filters (locked for guests)
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [entranceExamFilter, setEntranceExamFilter] = useState('');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [minRating, setMinRating] = useState(0);
 
   const FILTER_TEXT: Record<string, { ru: string; en: string; kk: string }> = {
     closeMap: { ru: 'Закрыть карту', en: 'Close map', kk: 'Картаны жабу' },
@@ -547,6 +555,15 @@ export default function ParentSchoolsMapPage() {
     gradesRange: { ru: 'Количество классов', en: 'Grades', kk: 'Сыныптар' },
     allGrades: { ru: 'Любые классы', en: 'Any grades', kk: 'Кез келген сыныптар' },
     reset: { ru: 'Сбросить', en: 'Reset', kk: 'Тазарту' },
+    programs: { ru: 'Программы', en: 'Curricula', kk: 'Бағдарламалар' },
+    entranceExam: { ru: 'Вступительный экзамен', en: 'Entrance exam', kk: 'Кіру емтиханы' },
+    examAny: { ru: 'Любой', en: 'Any', kk: 'Кез келген' },
+    examYes: { ru: 'Требуется', en: 'Required', kk: 'Қажет' },
+    examNo: { ru: 'Не требуется', en: 'Not required', kk: 'Қажет емес' },
+    services: { ru: 'Услуги', en: 'Services', kk: 'Қызметтер' },
+    minRating: { ru: 'Минимальный рейтинг', en: 'Min. rating', kk: 'Ең төменгі рейтинг' },
+    guestLock: { ru: 'Только для зарегистрированных', en: 'Registered users only', kk: 'Тіркелген пайдаланушыларға ғана' },
+    signIn: { ru: 'Войти', en: 'Sign in', kk: 'Кіру' },
     noCity: { ru: 'Без города', en: 'No city', kk: 'Қаласы жоқ' },
     mapLoadError: { ru: 'Не удалось загрузить карту.', en: 'Failed to load map.', kk: 'Картаны жүктеу сәтсіз болды.' },
   };
@@ -650,14 +667,39 @@ export default function ParentSchoolsMapPage() {
         !selectedLanguages.length ||
         selectedLanguages.some((lang) => schoolLanguages.some((schoolLang) => schoolLang.includes(normalize(lang))));
 
-      return (
-        cityOk &&
-        districtOk &&
-        typeOk &&
-        privatePriceOk &&
-        languagesOk &&
-        gradesOk
-      );
+      // Extended filters
+      const programsOk = !selectedPrograms.length || (() => {
+        const allCurricula = [
+          ...toList(row.education?.curricula?.national),
+          ...toList(row.education?.curricula?.international),
+          ...toList(row.education?.curricula?.additional),
+          ...toList(row.education?.curricula?.other),
+        ].map(normalize);
+        return selectedPrograms.some((p) => allCurricula.some((c) => c.includes(normalize(p))));
+      })();
+
+      const examOk = !entranceExamFilter || (() => {
+        const examRaw = String(row.education?.entrance_exam?.required ?? '').toLowerCase();
+        if (entranceExamFilter === 'yes') return ['true','yes','да','иә'].some((v) => examRaw.includes(v));
+        if (entranceExamFilter === 'no') return ['false','no','нет','жоқ'].some((v) => examRaw.includes(v)) || !examRaw;
+        return true;
+      })();
+
+      const servicesOk = !selectedServices.length || selectedServices.every((svc) => {
+        if (svc === 'after_school') return !!row.services?.after_school;
+        if (svc === 'transport') return !!row.services?.transport;
+        if (svc === 'inclusive_education') return !!row.services?.inclusive_education;
+        if (svc === 'security') return !!(row.services?.safety as Record<string,unknown>)?.security;
+        if (svc === 'cameras') return !!(row.services?.safety as Record<string,unknown>)?.cameras;
+        if (svc === 'access_control') return !!(row.services?.safety as Record<string,unknown>)?.access_control;
+        if (svc === 'medical_office') return !!row.services?.medical_office;
+        return true;
+      });
+
+      const ratingOk = !minRating || (row.system?.rating ?? 0) >= minRating;
+
+      return cityOk && districtOk && typeOk && privatePriceOk && languagesOk && gradesOk
+        && programsOk && examOk && servicesOk && ratingOk;
     });
   }, [
     rowsWithCoords,
@@ -667,6 +709,10 @@ export default function ParentSchoolsMapPage() {
     maxPrivatePrice,
     selectedLanguages,
     gradeRangeFilter,
+    selectedPrograms,
+    entranceExamFilter,
+    selectedServices,
+    minRating,
   ]);
 
   const schools = useMemo(() => {
@@ -744,8 +790,10 @@ export default function ParentSchoolsMapPage() {
             minZoom: 4,
             maxZoom: 18,
           });
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
+          L.tileLayer('https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}', {
+            attribution: '&copy; 2GIS',
+            subdomains: '0123',
+            maxZoom: 18,
           }).addTo(mapRef.current);
         }
         setReady(true);
@@ -971,6 +1019,66 @@ export default function ParentSchoolsMapPage() {
             </select>
           </label>
 
+          {/* Extended filters — locked for guests */}
+          {isGuest ? (
+            <div style={{ margin:'12px 0', padding:'14px', borderRadius:12, background:'#F8FAFC', border:'1px solid #E2E8F0', textAlign:'center' }}>
+              <div style={{ fontSize:20, marginBottom:6 }}>🔒</div>
+              <p style={{ fontSize:13, color:'#64748B', margin:'0 0 10px' }}>{ft('guestLock')}</p>
+              <a href="/login" style={{ display:'inline-block', background:'#2563EB', color:'#fff', borderRadius:8, padding:'7px 18px', fontSize:13, fontWeight:600, textDecoration:'none' }}>
+                {ft('signIn')}
+              </a>
+            </div>
+          ) : (
+            <>
+              {/* Curricula */}
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('programs')}</p>
+                <div className="schools-filter-chip-list" style={{ maxHeight:120, overflowY:'auto' }}>
+                  {programOptions.slice(0, 10).map((prog) => (
+                    <button key={prog} type="button"
+                      className={`schools-filter-chip${selectedPrograms.includes(prog) ? ' active' : ''}`}
+                      onClick={() => setSelectedPrograms((prev) => toggleValue(prev, prog))}
+                    >
+                      {localizeOption(prog, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Entrance exam */}
+              <label className="field">
+                <span>{ft('entranceExam')}</span>
+                <select className="input" value={entranceExamFilter} onChange={(e) => setEntranceExamFilter(e.target.value)}>
+                  <option value="">{ft('examAny')}</option>
+                  <option value="yes">{ft('examYes')}</option>
+                  <option value="no">{ft('examNo')}</option>
+                </select>
+              </label>
+
+              {/* Services */}
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('services')}</p>
+                <div className="schools-filter-chip-list">
+                  {serviceOptions.map((svc) => (
+                    <button key={svc.key} type="button"
+                      className={`schools-filter-chip${selectedServices.includes(svc.key) ? ' active' : ''}`}
+                      onClick={() => setSelectedServices((prev) => toggleValue(prev, svc.key))}
+                    >
+                      {localizeOption(svc.label, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rating */}
+              <label className="field">
+                <span>{ft('minRating')}: {minRating > 0 ? `${minRating}+` : ft('examAny')}</span>
+                <input type="range" min={0} max={5} step={0.5} value={minRating}
+                  onChange={(e) => setMinRating(Number(e.target.value))} />
+              </label>
+            </>
+          )}
+
           <button
             type="button"
             className="button secondary schools-filter-reset"
@@ -981,6 +1089,10 @@ export default function ParentSchoolsMapPage() {
               setPrivatePriceLimit(null);
               setSelectedLanguages([]);
               setGradeRangeFilter('');
+              setSelectedPrograms([]);
+              setEntranceExamFilter('');
+              setSelectedServices([]);
+              setMinRating(0);
             }}
           >
             {ft('reset')}

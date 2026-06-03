@@ -34,6 +34,7 @@ const buildChatRouter = (config = buildConfig()) => {
 
   const roleWeight = {
     user: 0,
+    parent: 0,
     admin: 1,
     moderator: 2,
     superadmin: 3,

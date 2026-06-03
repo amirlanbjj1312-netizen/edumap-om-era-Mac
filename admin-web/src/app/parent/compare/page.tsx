@@ -441,6 +441,16 @@ export default function ParentComparePage() {
         toText(rightSchool.basic_info?.name))) ||
     text.notSelected;
 
+  const CATEGORY_GROUPS = useMemo(() => {
+    const l = locale;
+    return [
+      { key: 'general',   label: l==='en'?'General':l==='kk'?'Жалпы':'Основное',        color: '#6366F1', keys: ['city','district','type','address','monthly'] },
+      { key: 'education', label: l==='en'?'Education':l==='kk'?'Білім':'Образование',    color: '#0EA5E9', keys: ['languages','grades','curricula','admission','avgClassSize','staffCount'] },
+      { key: 'services',  label: l==='en'?'Services':l==='kk'?'Қызметтер':'Услуги',     color: '#10B981', keys: ['afterSchool','meals','transport','clubsCount','inclusive','security'] },
+      { key: 'rating',    label: l==='en'?'Reviews':l==='kk'?'Бағалар':'Оценки',        color: '#F59E0B', keys: ['rating','reviews'] },
+    ];
+  }, [locale]);
+
   const criteriaRows = useMemo(() => {
     const criteriaLabel = (ru: string, en: string, kk: string) => (locale === 'en' ? en : locale === 'kk' ? kk : ru);
     const valueFor = (school: SchoolRow | undefined, key: string): string => {
@@ -578,61 +588,115 @@ export default function ParentComparePage() {
     }));
   }, [locale, leftSchool, rightSchool]);
 
+  const rowMap = useMemo(() => {
+    const m = new Map<string, typeof criteriaRows[0]>();
+    criteriaRows.forEach((r) => m.set(r.key, r));
+    return m;
+  }, [criteriaRows]);
+
+  const renderValue = (val: string, otherVal: string, color: string) => {
+    const isEmpty = !val || val === '—';
+    const isDiff = val !== otherVal && !isEmpty && otherVal !== '—';
+    const isYes = /^(да|yes|иә)$/i.test(val);
+    const isNo = /^(нет|no|жоқ)$/i.test(val);
+    const isRating = /^\d+(\.\d+)?$/.test(val) && Number(val) <= 5;
+
+    if (isEmpty) return <span style={{ color: '#CBD5E1', fontSize: 13 }}>—</span>;
+    if (isYes) return (
+      <span style={{ display:'inline-flex',alignItems:'center',gap:4,background:'#DCFCE7',color:'#16A34A',borderRadius:8,padding:'2px 10px',fontSize:13,fontWeight:600 }}>
+        ✓ {val}
+      </span>
+    );
+    if (isNo) return (
+      <span style={{ display:'inline-flex',alignItems:'center',gap:4,background:'#F1F5F9',color:'#94A3B8',borderRadius:8,padding:'2px 10px',fontSize:13,fontWeight:600 }}>
+        — {val}
+      </span>
+    );
+    if (isRating) return (
+      <span style={{ display:'inline-flex',alignItems:'center',gap:4,background:'#FEF3C7',color:'#D97706',borderRadius:8,padding:'2px 10px',fontSize:13,fontWeight:700 }}>
+        ★ {val}
+      </span>
+    );
+    return (
+      <span style={{ color: isDiff ? color : '#1E293B', fontWeight: isDiff ? 600 : 400, fontSize: 14, whiteSpace:'pre-line' }}>
+        {val}
+      </span>
+    );
+  };
+
   return (
-    <div className="card compare-page-card">
-      <div className="compare-head">
-        <h2 className="section-title" style={{ marginBottom: 0 }}>{text.title}</h2>
+    <div style={{ padding: '0 0 40px' }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize:22, fontWeight:700, color:'#0F172A', margin:0 }}>{text.title}</h2>
+          <p style={{ color:'#64748B', fontSize:14, marginTop:4 }}>{text.subtitle}</p>
+        </div>
         <button
           type="button"
-          className="button secondary compare-collapse-btn"
+          className="button secondary"
           onClick={() => router.push('/parent/schools')}
+          style={{ flexShrink:0 }}
         >
           {text.collapse}
         </button>
       </div>
-      <p className="muted">{text.subtitle}</p>
 
       {!selectedRows.length ? (
-        <p className="muted" style={{ marginTop: 14 }}>{text.empty}</p>
+        <div style={{ textAlign:'center', padding:'60px 0', color:'#94A3B8', fontSize:15 }}>{text.empty}</div>
       ) : (
-        <>
-          <div className="compare-table-wrap compare-desktop-only">
-            <table className="compare-table">
-              <thead>
-                <tr>
-                  <th className="compare-col-criteria">{text.criteria}</th>
-                  <th className="compare-col-school">{leftName}</th>
-                  <th className="compare-col-school">{rightName}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {criteriaRows.map((row) => (
-                  <tr key={row.key}>
-                    <td className="compare-criteria-cell"><strong>{row.label}</strong></td>
-                    <td className="compare-value-cell">{row.left || '—'}</td>
-                    <td className="compare-value-cell">{row.right || '—'}</td>
-                  </tr>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:0 }}>
+            {/* Sticky school headers */}
+            <thead>
+              <tr>
+                <th style={{ width:'28%', padding:'14px 16px', background:'#F8FAFC', borderBottom:'2px solid #E2E8F0', textAlign:'left', color:'#64748B', fontSize:12, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', position:'sticky', top:0, zIndex:2 }}>
+                  {text.criteria}
+                </th>
+                {[leftName, rightName].map((name, i) => (
+                  <th key={i} style={{ width:'36%', padding:'14px 20px', background: i===0 ? '#EEF2FF' : '#F0FDF4', borderBottom:'2px solid', borderBottomColor: i===0 ? '#C7D2FE' : '#BBF7D0', textAlign:'left', position:'sticky', top:0, zIndex:2 }}>
+                    <span style={{ fontSize:15, fontWeight:700, color: i===0 ? '#4338CA' : '#16A34A' }}>{name}</span>
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="compare-mobile-list">
-            {criteriaRows.map((row) => (
-              <article key={row.key} className="compare-mobile-card">
-                <p className="compare-mobile-label">{row.label}</p>
-                <div className="compare-mobile-school-row">
-                  <span className="compare-mobile-school-name">{leftName}</span>
-                  <strong className="compare-mobile-school-value">{row.left || '—'}</strong>
-                </div>
-                <div className="compare-mobile-school-row">
-                  <span className="compare-mobile-school-name">{rightName}</span>
-                  <strong className="compare-mobile-school-value">{row.right || '—'}</strong>
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
+              </tr>
+            </thead>
+            <tbody>
+              {CATEGORY_GROUPS.map((group) => {
+                const groupRows = group.keys
+                  .map((k) => rowMap.get(k))
+                  .filter((r): r is typeof criteriaRows[0] =>
+                    !!r && !(r.left === '—' && r.right === '—')
+                  );
+                if (!groupRows.length) return null;
+                return (
+                  <>
+                    {/* Category separator */}
+                    <tr key={`sep-${group.key}`}>
+                      <td colSpan={3} style={{ padding:'6px 16px 4px', background:'#F8FAFC', borderTop:'1px solid #E2E8F0' }}>
+                        <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color: group.color }}>
+                          {group.label}
+                        </span>
+                      </td>
+                    </tr>
+                    {groupRows.map((row, idx) => (
+                      <tr key={row.key} style={{ background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                        <td style={{ padding:'12px 16px', borderBottom:'1px solid #F1F5F9', color:'#475569', fontSize:13, fontWeight:500 }}>
+                          {row.label}
+                        </td>
+                        <td style={{ padding:'12px 20px', borderBottom:'1px solid #F1F5F9', borderLeft:'2px solid #E0E7FF' }}>
+                          {renderValue(row.left, row.right, '#4338CA')}
+                        </td>
+                        <td style={{ padding:'12px 20px', borderBottom:'1px solid #F1F5F9', borderLeft:'2px solid #DCFCE7' }}>
+                          {renderValue(row.right, row.left, '#16A34A')}
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
