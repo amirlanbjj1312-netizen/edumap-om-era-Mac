@@ -226,7 +226,7 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 className={`topbar-menu-toggle${mobileMenuOpen ? ' active' : ''}`}
-                aria-label="Открыть меню"
+                aria-label={t('open_menu')}
                 aria-expanded={mobileMenuOpen}
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
               >
