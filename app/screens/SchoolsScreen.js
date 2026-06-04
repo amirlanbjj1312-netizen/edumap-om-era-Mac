@@ -895,11 +895,9 @@ export default function SchoolsScreen() {
     selectedMinRating !== null ||
     selectedLicenses.length > 0 ||
     selectedExam !== null ||
-    minClassSize > 0 ||
     minClubs > 0 ||
     priceRange[0] !== PRICE_MIN ||
-    priceRange[1] !== PRICE_MAX ||
-    useNearby;
+    priceRange[1] !== PRICE_MAX;
 
   const isPrivateSelected = selectedTypes.includes('Private');
 
@@ -1318,11 +1316,6 @@ export default function SchoolsScreen() {
           : selectedExam === 'Yes'
           ? Boolean(school.entranceExamRequired)
           : !school.entranceExamRequired;
-      const avgClassSize = Number(school.education?.average_class_size || school.average_class_size);
-      const matchesClassSize =
-        minClassSize > 0 && Number.isFinite(avgClassSize)
-          ? avgClassSize >= minClassSize
-          : minClassSize === 0;
       const clubsCount = splitToList(school.services?.clubs || school.clubs || '').length;
       const matchesClubs =
         minClubs > 0 ? clubsCount >= minClubs : true;
@@ -1331,14 +1324,6 @@ export default function SchoolsScreen() {
         isPrivateSelected && (priceValue || priceValue === 0)
           ? priceValue >= priceRange[0] && priceValue <= priceRange[1]
           : true;
-      const matchesNearby = useNearby
-        ? (() => {
-            if (!userLocation) return false;
-            if (!school.coordinates) return false;
-            const distance = calcDistanceKm(userLocation, school.coordinates);
-            return Number.isFinite(distance) && distance <= radiusKm;
-          })()
-        : true;
       return (
         matchesQuery &&
         matchesCity &&
@@ -1353,10 +1338,8 @@ export default function SchoolsScreen() {
         matchesRating &&
         matchesAccreditation &&
         matchesExam &&
-        matchesClassSize &&
         matchesClubs &&
-        matchesPrice &&
-        matchesNearby
+        matchesPrice
       );
     });
 
@@ -2095,81 +2078,6 @@ export default function SchoolsScreen() {
               })}
             </View>
 
-            <View className="mt-2" style={{ position: 'relative' }}>
-              <View
-                style={{ opacity: isGuest ? 0.35 : 1 }}
-                pointerEvents={isGuest ? 'none' : 'auto'}
-              >
-              <Text className="text-darkGrayText font-exoSemibold text-base">
-                {t('schools.filters.nearbyTitle')}
-              </Text>
-              <Text className="text-darkGrayText/70 font-exo text-sm mt-1">
-                {t('schools.filters.nearbyDesc')}
-              </Text>
-              <Pressable
-                className="mt-3 px-4 py-3 rounded-2xl border flex-row items-center justify-between"
-                style={{
-                  borderColor: useNearby ? '#5667FD' : 'rgba(54,67,86,0.25)',
-                  backgroundColor: useNearby ? 'rgba(86,103,253,0.1)' : '#FFFFFF',
-                }}
-                onPress={async () => {
-                  if (useNearby) {
-                    setUseNearby(false);
-                    return;
-                  }
-                  const ok = await requestLocation();
-                  if (ok) {
-                    setUseNearby(true);
-                  }
-                }}
-              >
-                <Text
-                  className="font-exoSemibold"
-                  style={{ color: useNearby ? '#364356' : 'rgba(54,67,86,0.9)' }}
-                >
-                  {useNearby
-                    ? t('schools.filters.locationEnabled')
-                    : t('schools.filters.useLocation')}
-                </Text>
-                <Text style={{ color: '#5667FD', fontSize: 16 }}>
-                  {useNearby ? '✓' : '→'}
-                </Text>
-              </Pressable>
-              {locationError ? (
-                <Text className="text-red-500 font-exo text-xs mt-1">{locationError}</Text>
-              ) : null}
-              {useNearby ? (
-                <View className="flex-row items-center justify-between mt-3">
-                  <Text className="font-exoSemibold text-base text-darkGrayText">
-                    {t('schools.filters.radiusLabel')}
-                  </Text>
-                  <View className="flex-row items-center rounded-2xl border border-bgPurple/30 px-2 py-1">
-                    <Pressable
-                      className="px-3 py-2"
-                      onPress={() => setRadiusKm((prev) => Math.max(1, prev - 1))}
-                    >
-                      <Text style={{ fontSize: 20, color: '#4F46E5' }}>−</Text>
-                    </Pressable>
-                    <Text className="font-exoSemibold text-lg text-darkGrayText px-2">
-                      {radiusKm}
-                    </Text>
-                    <Pressable
-                      className="px-3 py-2"
-                      onPress={() => setRadiusKm((prev) => Math.min(50, prev + 1))}
-                    >
-                      <Text style={{ fontSize: 20, color: '#4F46E5' }}>+</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ) : null}
-              </View>
-              {isGuest ? (
-                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
-                  {guestFiltersHint}
-                </Text>
-              ) : null}
-            </View>
-
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.typeTitle')}
             </Text>
@@ -2614,44 +2522,6 @@ export default function SchoolsScreen() {
                 </Text>
               ) : null}
             </View>
-            <View className="mt-6" style={{ position: 'relative' }}>
-              <View
-                style={{ opacity: isGuest ? 0.35 : 1 }}
-                pointerEvents={isGuest ? 'none' : 'auto'}
-              >
-              <Text className="text-darkGrayText font-exoSemibold text-base">
-                {t('schools.filters.classSizeTitle')}
-              </Text>
-              <View className="flex-row items-center justify-between mt-2">
-                <Text className="font-exoSemibold text-lg text-darkGrayText">
-                  {minClassSize}
-                </Text>
-                <View className="flex-row items-center rounded-2xl border border-bgPurple/30 px-2 py-1">
-                  <Pressable
-                    className="px-3 py-2"
-                    onPress={() => setMinClassSize((prev) => Math.max(0, prev - 1))}
-                  >
-                    <Text style={{ fontSize: 20, color: '#4F46E5' }}>−</Text>
-                  </Pressable>
-                  <Text className="font-exoSemibold text-lg text-darkGrayText px-2">
-                    {minClassSize}
-                  </Text>
-                  <Pressable
-                    className="px-3 py-2"
-                    onPress={() => setMinClassSize((prev) => Math.min(60, prev + 1))}
-                  >
-                    <Text style={{ fontSize: 20, color: '#4F46E5' }}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-              </View>
-              {isGuest ? (
-                <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
-                  {guestFiltersHint}
-                </Text>
-              ) : null}
-            </View>
-
             <View className="mt-4" style={{ position: 'relative' }}>
               <View
                 style={{ opacity: isGuest ? 0.35 : 1 }}

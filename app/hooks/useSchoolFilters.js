@@ -205,11 +205,9 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
     appliedFilters.selectedMinRating !== null ||
     appliedFilters.selectedLicenses.length > 0 ||
     appliedFilters.selectedExam !== null ||
-    appliedFilters.minClassSize > 0 ||
     appliedFilters.minClubs > 0 ||
     appliedFilters.priceRange[0] !== PRICE_MIN ||
-    appliedFilters.priceRange[1] !== PRICE_MAX ||
-    appliedFilters.useNearby;
+    appliedFilters.priceRange[1] !== PRICE_MAX;
 
   const isPrivateSelectedDraft = selectedTypes.includes('Private');
   const isPrivateSelectedApplied = appliedFilters.selectedTypes.includes('Private');
@@ -380,12 +378,8 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
       selectedMinRating: aMinRating,
       selectedLicenses: aLicenses,
       selectedExam: aExam,
-      minClassSize: aMinClass,
       minClubs: aMinClubs,
       priceRange: aPrice,
-      useNearby: aNearby,
-      radiusKm: aRadius,
-      userLocation: aLocation,
     } = appliedFilters;
     const activeAreas = aCities.flatMap((city) => aAreas[city] ?? []);
 
@@ -475,11 +469,6 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
           : aExam === 'Yes'
           ? Boolean(school.entranceExamRequired)
           : !school.entranceExamRequired;
-      const avgClassSize = Number(school.education?.average_class_size || school.average_class_size);
-      const matchesClassSize =
-        aMinClass > 0 && Number.isFinite(avgClassSize)
-          ? avgClassSize >= aMinClass
-          : aMinClass === 0;
       const clubsCount = splitToList(school.services?.clubs || school.clubs || '').length;
       const matchesClubs =
         aMinClubs > 0 ? clubsCount >= aMinClubs : true;
@@ -488,14 +477,6 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
         isPrivateSelectedApplied && (priceValue || priceValue === 0)
           ? priceValue >= aPrice[0] && priceValue <= aPrice[1]
           : true;
-      const matchesNearby = aNearby
-        ? (() => {
-            if (!aLocation) return false;
-            if (!school.coordinates) return false;
-            const distance = calcDistanceKm(aLocation, school.coordinates);
-            return Number.isFinite(distance) && distance <= aRadius;
-          })()
-        : true;
       return (
         matchesQuery &&
         matchesCity &&
@@ -510,10 +491,8 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
         matchesRating &&
         matchesAccreditation &&
         matchesExam &&
-        matchesClassSize &&
         matchesClubs &&
-        matchesPrice &&
-        matchesNearby
+        matchesPrice
       );
     });
   }, [
@@ -638,74 +617,6 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
-
-            <View className="mt-2" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
-              <Text className="text-darkGrayText font-exoSemibold text-base">
-                {t('schools.filters.nearbyTitle')}
-              </Text>
-              <Text className="text-darkGrayText/70 font-exo text-sm mt-1">
-                {t('schools.filters.nearbyDesc')}
-              </Text>
-              <Pressable
-                className="mt-3 px-4 py-3 rounded-2xl border flex-row items-center justify-between"
-                style={{
-                  borderColor: useNearby ? '#5667FD' : 'rgba(54,67,86,0.25)',
-                  backgroundColor: useNearby ? 'rgba(86,103,253,0.1)' : '#FFFFFF',
-                }}
-                onPress={async () => {
-                  if (useNearby) {
-                    setDraft((prev) => ({ ...prev, useNearby: false }));
-                    return;
-                  }
-                  const ok = await requestLocation();
-                  if (ok) {
-                    setDraft((prev) => ({ ...prev, useNearby: true }));
-                  }
-                }}
-              >
-                <Text
-                  className="font-exoSemibold"
-                  style={{ color: useNearby ? '#364356' : 'rgba(54,67,86,0.9)' }}
-                >
-                  {useNearby ? t('schools.filters.locationEnabled') : t('schools.filters.useLocation')}
-                </Text>
-                <Text style={{ color: '#5667FD', fontSize: 16 }}>
-                  {useNearby ? '✓' : '→'}
-                </Text>
-              </Pressable>
-              {locationError ? (
-                <Text className="text-red-500 font-exo text-xs mt-1">{locationError}</Text>
-              ) : null}
-              {useNearby ? (
-                <View className="flex-row items-center justify-between mt-3">
-                  <Text className="font-exoSemibold text-base text-darkGrayText">
-                    {t('schools.filters.radiusLabel')}
-                  </Text>
-                  <View className="flex-row items-center rounded-2xl border border-bgPurple/30 px-2 py-1">
-                    <Pressable
-                      className="px-3 py-2"
-                      onPress={() => setDraft((prev) => ({ ...prev, radiusKm: Math.max(1, prev.radiusKm - 1) }))}
-                    >
-                      <Text style={{ fontSize: 20, color: '#4F46E5' }}>−</Text>
-                    </Pressable>
-                    <Text className="font-exoSemibold text-lg text-darkGrayText px-2">
-                      {radiusKm}
-                    </Text>
-                    <Pressable
-                      className="px-3 py-2"
-                      onPress={() => setDraft((prev) => ({ ...prev, radiusKm: Math.min(50, prev.radiusKm + 1) }))}
-                    >
-                      <Text style={{ fontSize: 20, color: '#4F46E5' }}>+</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ) : null}
-            </View>
-            {isGuest ? (
-              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
-                {guestAdvancedFiltersHint}
-              </Text>
-            ) : null}
 
             <Text className="text-darkGrayText font-exoSemibold text-base mt-4">
               {t('schools.filters.typeTitle')}
@@ -1158,43 +1069,6 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
-            <View className="mt-6" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
-              <Text className="text-darkGrayText font-exoSemibold text-base">
-                {t('schools.filters.classSizeTitle')}
-              </Text>
-              <View className="flex-row items-center justify-between mt-2">
-                <Text className="font-exoSemibold text-lg text-darkGrayText">
-                  {minClassSize}
-                </Text>
-                <View className="flex-row items-center rounded-2xl border border-bgPurple/30 px-2 py-1">
-                  <Pressable
-                    className="px-3 py-2"
-                    onPress={() =>
-                      setDraft((prev) => ({ ...prev, minClassSize: Math.max(0, prev.minClassSize - 1) }))
-                    }
-                  >
-                    <Text style={{ fontSize: 20, color: '#4F46E5' }}>−</Text>
-                  </Pressable>
-                  <Text className="font-exoSemibold text-lg text-darkGrayText px-2">
-                    {minClassSize}
-                  </Text>
-                  <Pressable
-                    className="px-3 py-2"
-                    onPress={() =>
-                      setDraft((prev) => ({ ...prev, minClassSize: Math.min(60, prev.minClassSize + 1) }))
-                    }
-                  >
-                    <Text style={{ fontSize: 20, color: '#4F46E5' }}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-            {isGuest ? (
-              <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
-                {guestAdvancedFiltersHint}
-              </Text>
-            ) : null}
-
             <View className="mt-4" style={{ opacity: isGuest ? 0.35 : 1 }} pointerEvents={isGuest ? 'none' : 'auto'}>
               <Text className="text-darkGrayText font-exoSemibold text-base">
                 {t('schools.filters.clubsTitle')}

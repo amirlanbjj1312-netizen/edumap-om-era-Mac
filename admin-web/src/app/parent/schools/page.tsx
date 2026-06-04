@@ -1250,7 +1250,6 @@ export default function ParentSchoolsPage() {
     typeFilter,
     minRating > 0 ? 'rating' : '',
     privatePriceLimit != null ? 'price' : '',
-    pricePeriodFilter !== 'monthly' ? 'price_period' : '',
     selectedLanguages.length ? 'languages' : '',
     selectedAccreditation.length ? 'accreditation' : '',
     selectedPrograms.length ? 'programs' : '',
@@ -1259,7 +1258,6 @@ export default function ParentSchoolsPage() {
     selectedSpecialists.length ? 'specialists' : '',
     entranceExam !== 'all' ? 'entrance_exam' : '',
     selectedAdvanced.length ? 'advanced' : '',
-    gradeRangeFilter ? 'grades' : '',
     minClubs > 0 ? 'clubs' : '',
   ].filter(Boolean).length;
 
@@ -1326,20 +1324,7 @@ export default function ParentSchoolsPage() {
       {isPrivateType(typeFilter) ? (
         <>
           <label className="field">
-            <span>{ft('pricePeriod')}</span>
-            <select
-              className="input"
-              value={pricePeriodFilter}
-              onChange={(e) => setPricePeriodFilter(e.target.value as SchoolFeePeriod)}
-            >
-              <option value="monthly">{ft('perMonth')}</option>
-              <option value="yearly">{ft('perYear')}</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>
-              {ft('privatePriceTo')} {pricePeriodFilter === 'yearly' ? `(${ft('perYear').toLowerCase()})` : `(${ft('perMonth').toLowerCase()})`}: {maxPrivatePrice.toLocaleString('ru-RU')}
-            </span>
+            <span>{ft('privatePriceTo')} ({ft('perMonth').toLowerCase()}): {maxPrivatePrice.toLocaleString('ru-RU')}</span>
             <input
               type="range"
               min={privatePriceBounds.min}
@@ -1367,17 +1352,6 @@ export default function ParentSchoolsPage() {
         </div>
       </div>
       <div style={guest ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
-      <label className="field">
-        <span>{ft('gradesRange')}</span>
-        <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
-          <option value="">{ft('allGrades')}</option>
-          <option value="0">0</option>
-          <option value="1-4">1-4</option>
-          <option value="5-9">5-9</option>
-          <option value="10-12">10-12</option>
-          <option value="1-12">1-12</option>
-        </select>
-      </label>
       <div className="schools-filter-section">
         <p className="schools-filter-label">{ft('accreditation')}</p>
         <div className="schools-filter-chip-list">

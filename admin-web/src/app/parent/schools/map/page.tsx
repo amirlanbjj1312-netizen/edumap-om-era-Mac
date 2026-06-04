@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { loadSchools } from '@/lib/api';
 import { useParentLocale } from '@/lib/parentLocale';
 import { isGuestMode } from '@/lib/guestMode';
+import { countClubsInServices } from '@/lib/clubsSchedule';
+import { getComparableFeeInKzt, type SchoolFeePeriod } from '@/lib/schoolFinance';
 
 type SchoolRow = {
   school_id?: string;
@@ -15,6 +17,7 @@ type SchoolRow = {
     city?: unknown;
     district?: unknown;
     address?: unknown;
+    price?: unknown;
     license_details?: {
       number?: unknown;
     };
@@ -71,6 +74,8 @@ type SchoolRow = {
     certificates?: unknown;
   };
   finance?: {
+    fee_rules?: unknown;
+    monthly_fee_by_grade?: unknown;
     tuition_monthly?: unknown;
     monthly_fee?: unknown;
     price_monthly?: unknown;
@@ -308,23 +313,6 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const toPriceNumber = (value: unknown): number => {
-  const raw = toText(value);
-  if (!raw) return 0;
-  const digits = raw.replace(/\s+/g, '').match(/\d+(?:[.,]\d+)?/);
-  if (!digits) return 0;
-  const parsed = Number(digits[0].replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getMonthlyFee = (row: SchoolRow): number =>
-  toPriceNumber(
-    row.finance?.tuition_monthly ||
-      row.finance?.monthly_fee ||
-      row.finance?.price_monthly ||
-      row.basic_info?.name
-  );
-
 const isPrivateType = (value: string): boolean => {
   const normalized = normalizePrimaryTypeKey(value);
   if (normalized) return normalized === 'Private';
@@ -544,12 +532,18 @@ export default function ParentSchoolsMapPage() {
   const [districtFilter, setDistrictFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [privatePriceLimit, setPrivatePriceLimit] = useState<number | null>(null);
+  const [pricePeriodFilter, setPricePeriodFilter] = useState<SchoolFeePeriod>('monthly');
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [gradeRangeFilter, setGradeRangeFilter] = useState('');
   // Extended filters (locked for guests)
+  const [selectedAccreditation, setSelectedAccreditation] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [entranceExamFilter, setEntranceExamFilter] = useState('');
+  const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
+  const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([]);
+  const [entranceExamFilter, setEntranceExamFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedAdvanced, setSelectedAdvanced] = useState<string[]>([]);
+  const [minClubs, setMinClubs] = useState(0);
   const [minRating, setMinRating] = useState(0);
 
   const FILTER_TEXT: Record<string, { ru: string; en: string; kk: string }> = {
@@ -564,15 +558,26 @@ export default function ParentSchoolsMapPage() {
     anyType: { ru: 'Любой тип', en: 'Any type', kk: 'Кез келген түр' },
     languageOfInstruction: { ru: 'Язык обучения', en: 'Language of instruction', kk: 'Оқыту тілі' },
     privatePriceTo: { ru: 'Цена до (₸)', en: 'Price up to (₸)', kk: 'Баға дейін (₸)' },
+    pricePeriod: { ru: 'Период цены', en: 'Price period', kk: 'Баға кезеңі' },
+    perMonth: { ru: 'В месяц', en: 'Per month', kk: 'Айына' },
+    perYear: { ru: 'В год', en: 'Per year', kk: 'Жылына' },
     gradesRange: { ru: 'Количество классов', en: 'Grades', kk: 'Сыныптар' },
     allGrades: { ru: 'Любые классы', en: 'Any grades', kk: 'Кез келген сыныптар' },
+    accreditation: { ru: 'Аккредитация', en: 'Accreditation', kk: 'Аккредитация' },
     reset: { ru: 'Сбросить', en: 'Reset', kk: 'Тазарту' },
     programs: { ru: 'Программы', en: 'Curricula', kk: 'Бағдарламалар' },
     entranceExam: { ru: 'Вступительный экзамен', en: 'Entrance exam', kk: 'Кіру емтиханы' },
+    yes: { ru: 'Да', en: 'Yes', kk: 'Иә' },
+    no: { ru: 'Нет', en: 'No', kk: 'Жоқ' },
+    any: { ru: 'Любой', en: 'Any', kk: 'Кез келгені' },
     examAny: { ru: 'Любой', en: 'Any', kk: 'Кез келген' },
     examYes: { ru: 'Требуется', en: 'Required', kk: 'Қажет' },
     examNo: { ru: 'Не требуется', en: 'Not required', kk: 'Қажет емес' },
     services: { ru: 'Услуги', en: 'Services', kk: 'Қызметтер' },
+    meals: { ru: 'Питание', en: 'Meals', kk: 'Тамақтану' },
+    specialists: { ru: 'Специалисты', en: 'Specialists', kk: 'Мамандар' },
+    advancedSubjects: { ru: 'Углубленные предметы', en: 'Advanced subjects', kk: 'Тереңдетілген пәндер' },
+    minClubs: { ru: 'Количество кружков (мин.)', en: 'Number of clubs (min.)', kk: 'Үйірмелер саны (мин.)' },
     minRating: { ru: 'Минимальный рейтинг', en: 'Min. rating', kk: 'Ең төменгі рейтинг' },
     guestLock: { ru: 'Только для зарегистрированных', en: 'Registered users only', kk: 'Тіркелген пайдаланушыларға ғана' },
     signIn: { ru: 'Войти', en: 'Sign in', kk: 'Кіру' },
@@ -657,11 +662,11 @@ export default function ParentSchoolsMapPage() {
   const privatePriceBounds = useMemo(() => {
     const prices = rowsWithCoords
       .filter((row) => isPrivateType(toText(row.basic_info?.type)))
-      .map((row) => getMonthlyFee(row))
+      .map((row) => getComparableFeeInKzt(row, pricePeriodFilter))
       .filter((price) => Number.isFinite(price) && price > 0);
     const max = prices.length ? Math.max(...prices) : 500000;
     return { min: 0, max: Math.ceil(max / 10000) * 10000 };
-  }, [rowsWithCoords]);
+  }, [rowsWithCoords, pricePeriodFilter]);
 
   const maxPrivatePrice = useMemo(() => {
     if (privatePriceLimit == null) return privatePriceBounds.max;
@@ -673,18 +678,30 @@ export default function ParentSchoolsMapPage() {
       const city = toText(row.basic_info?.city);
       const district = normalizeDistrictName(row.basic_info?.district);
       const schoolTypeValues = getSchoolTypes(row.basic_info?.type);
-      const monthlyFee = getMonthlyFee(row);
+      const comparableFee = getComparableFeeInKzt(row, pricePeriodFilter);
 
       const cityOk = !cityFilter || city === cityFilter;
       const districtOk = !districtFilter || district === districtFilter;
       const typeOk = !typeFilter || schoolTypeValues.includes(typeFilter);
-      const privatePriceOk = !isPrivateType(typeFilter) || monthlyFee <= maxPrivatePrice || monthlyFee <= 0;
+      const privatePriceOk = !isPrivateType(typeFilter) || comparableFee <= maxPrivatePrice || comparableFee <= 0;
       const gradesOk = matchesGradeRange(row.education?.grades, gradeRangeFilter);
 
       const schoolLanguages = toList(row.education?.languages).map(normalize);
       const languagesOk =
         !selectedLanguages.length ||
         selectedLanguages.some((lang) => schoolLanguages.some((schoolLang) => schoolLang.includes(normalize(lang))));
+
+      const licenseNumber = toText(row.basic_info?.license_details?.number);
+      const hasLicense = Boolean(licenseNumber);
+      const certificates = toList(row.media?.accreditation).length || toList(row.media?.certificates).length;
+      const hasCertificates = certificates > 0;
+      const accreditationOk =
+        !selectedAccreditation.length ||
+        selectedAccreditation.every((key) => {
+          if (key === 'license') return hasLicense;
+          if (key === 'certificates') return hasCertificates;
+          return true;
+        });
 
       // Extended filters
       const programsOk = !selectedPrograms.length || (() => {
@@ -715,10 +732,37 @@ export default function ParentSchoolsMapPage() {
         return true;
       });
 
+      const mealsStatus = normalize(toText(row.services?.meals_status));
+      const mealsOk =
+        !selectedMeals.length ||
+        selectedMeals.some((meal) => {
+          if (meal === 'Бесплатное') return mealsStatus.includes('free') || mealsStatus.includes('бесплат');
+          if (meal === 'Платное') return mealsStatus.includes('paid') || mealsStatus.includes('плат');
+          if (meal === 'Без питания') return mealsStatus.includes('no meals') || mealsStatus.includes('без');
+          return true;
+        });
+
+      const specialistsSource = `${toText(row.services?.specialists)} ${toText(row.services?.specialists_other)}`.toLowerCase();
+      const specialistsOk =
+        !selectedSpecialists.length ||
+        selectedSpecialists.some((specialist) => specialistsSource.includes(normalize(specialist)));
+
+      const advancedSubjects = `${toText(row.education?.advanced_subjects)} ${toText(row.education?.advanced_subjects_other)}`.toLowerCase();
+      const advancedOk =
+        !selectedAdvanced.length ||
+        selectedAdvanced.some((subject) => advancedSubjects.includes(normalize(subject)));
+
+      const clubsCount = Math.max(
+        countClubsInServices(row.services),
+        toNumber(row.services?.clubs_count)
+      );
+      const clubsOk = clubsCount >= minClubs;
+
       const ratingOk = !minRating || (row.system?.rating ?? 0) >= minRating;
 
       return cityOk && districtOk && typeOk && privatePriceOk && languagesOk && gradesOk
-        && programsOk && examOk && servicesOk && ratingOk;
+        && accreditationOk && programsOk && examOk && servicesOk && mealsOk
+        && specialistsOk && advancedOk && clubsOk && ratingOk;
     });
   }, [
     rowsWithCoords,
@@ -726,11 +770,17 @@ export default function ParentSchoolsMapPage() {
     districtFilter,
     typeFilter,
     maxPrivatePrice,
+    pricePeriodFilter,
     selectedLanguages,
     gradeRangeFilter,
+    selectedAccreditation,
     selectedPrograms,
+    selectedMeals,
+    selectedSpecialists,
     entranceExamFilter,
     selectedServices,
+    selectedAdvanced,
+    minClubs,
     minRating,
   ]);
 
@@ -1032,17 +1082,19 @@ export default function ParentSchoolsMapPage() {
             </div>
           </div>
           {isPrivateType(typeFilter) ? (
-            <label className="field">
-              <span>{ft('privatePriceTo')}: {maxPrivatePrice.toLocaleString('ru-RU')}</span>
-              <input
-                type="range"
-                min={privatePriceBounds.min}
-                max={privatePriceBounds.max}
-                step={10000}
-                value={maxPrivatePrice}
-                onChange={(e) => setPrivatePriceLimit(Number(e.target.value))}
-              />
-            </label>
+            <>
+              <label className="field">
+                <span>{ft('privatePriceTo')} ({ft('perMonth').toLowerCase()}): {maxPrivatePrice.toLocaleString('ru-RU')}</span>
+                <input
+                  type="range"
+                  min={privatePriceBounds.min}
+                  max={privatePriceBounds.max}
+                  step={10000}
+                  value={maxPrivatePrice}
+                  onChange={(e) => setPrivatePriceLimit(Number(e.target.value))}
+                />
+              </label>
+            </>
           ) : null}
           <label className="field">
             <span>{ft('minRating')}: {minRating > 0 ? `${minRating}+` : ft('examAny')}</span>
@@ -1050,17 +1102,21 @@ export default function ParentSchoolsMapPage() {
               onChange={(e) => setMinRating(Number(e.target.value))} />
           </label>
           <div style={isGuest ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
-            <label className="field">
-              <span>{ft('gradesRange')}</span>
-              <select className="input" value={gradeRangeFilter} onChange={(e) => setGradeRangeFilter(e.target.value)}>
-                <option value="">{ft('allGrades')}</option>
-                <option value="0">0</option>
-                <option value="1-4">1-4</option>
-                <option value="5-9">5-9</option>
-                <option value="10-12">10-12</option>
-                <option value="1-12">1-12</option>
-              </select>
-            </label>
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('accreditation')}</p>
+                <div className="schools-filter-chip-list">
+                  {accreditationOptions.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      className={`schools-filter-chip${selectedAccreditation.includes(item.key) ? ' active' : ''}`}
+                      onClick={() => setSelectedAccreditation((prev) => toggleValue(prev, item.key))}
+                    >
+                      {localizeOption(item.label, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Curricula */}
               <div className="schools-filter-section">
@@ -1080,8 +1136,8 @@ export default function ParentSchoolsMapPage() {
               {/* Entrance exam */}
               <label className="field">
                 <span>{ft('entranceExam')}</span>
-                <select className="input" value={entranceExamFilter} onChange={(e) => setEntranceExamFilter(e.target.value)}>
-                  <option value="">{ft('examAny')}</option>
+                <select className="input" value={entranceExamFilter} onChange={(e) => setEntranceExamFilter(e.target.value as 'all' | 'yes' | 'no')}>
+                  <option value="all">{ft('examAny')}</option>
                   <option value="yes">{ft('examYes')}</option>
                   <option value="no">{ft('examNo')}</option>
                 </select>
@@ -1101,6 +1157,68 @@ export default function ParentSchoolsMapPage() {
                   ))}
                 </div>
               </div>
+
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('meals')}</p>
+                <div className="schools-filter-chip-list">
+                  {mealsOptions.map((meal) => (
+                    <button
+                      key={meal}
+                      type="button"
+                      className={`schools-filter-chip${selectedMeals.includes(meal) ? ' active' : ''}`}
+                      onClick={() => setSelectedMeals((prev) => toggleValue(prev, meal))}
+                    >
+                      {localizeOption(meal, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('specialists')}</p>
+                <div className="schools-filter-chip-list">
+                  {specialistOptions.map((specialist) => (
+                    <button
+                      key={specialist}
+                      type="button"
+                      className={`schools-filter-chip${selectedSpecialists.includes(specialist) ? ' active' : ''}`}
+                      onClick={() => setSelectedSpecialists((prev) => toggleValue(prev, specialist))}
+                    >
+                      {localizeOption(specialist, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="schools-filter-section">
+                <p className="schools-filter-label">{ft('advancedSubjects')}</p>
+                <div className="schools-filter-chip-list" style={{ maxHeight: 120, overflowY: 'auto' }}>
+                  {advancedOptions.map((subject) => (
+                    <button
+                      key={subject}
+                      type="button"
+                      className={`schools-filter-chip${selectedAdvanced.includes(subject) ? ' active' : ''}`}
+                      onClick={() => setSelectedAdvanced((prev) => toggleValue(prev, subject))}
+                    >
+                      {localizeOption(subject, locale)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="field">
+                <span>
+                  {ft('minClubs')}: {minClubs}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={minClubs}
+                  onChange={(e) => setMinClubs(Number(e.target.value))}
+                />
+              </label>
           </div>
           {isGuest ? (
             <p className="muted" style={{ marginTop: 12 }}>{guestAdvancedFiltersHint}</p>
@@ -1114,11 +1232,17 @@ export default function ParentSchoolsMapPage() {
               setDistrictFilter('');
               setTypeFilter('');
               setPrivatePriceLimit(null);
+              setPricePeriodFilter('monthly');
               setSelectedLanguages([]);
               setGradeRangeFilter('');
+              setSelectedAccreditation([]);
               setSelectedPrograms([]);
-              setEntranceExamFilter('');
+              setSelectedMeals([]);
+              setSelectedSpecialists([]);
+              setEntranceExamFilter('all');
               setSelectedServices([]);
+              setSelectedAdvanced([]);
+              setMinClubs(0);
               setMinRating(0);
             }}
           >
