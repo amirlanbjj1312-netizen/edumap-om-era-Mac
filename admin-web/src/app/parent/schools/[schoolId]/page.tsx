@@ -941,6 +941,7 @@ export default function ParentSchoolDetailsPage() {
     city: locale === 'en' ? 'City' : locale === 'kk' ? 'Қала' : 'Город',
     district: locale === 'en' ? 'District' : locale === 'kk' ? 'Аудан' : 'Район',
     tapLink: locale === 'en' ? 'Tap' : locale === 'kk' ? 'Басу' : 'Нажать',
+    tapMap: locale === 'en' ? 'Tap to open the map' : locale === 'kk' ? 'Картаны ашу үшін басыңыз' : 'Нажмите, чтобы раскрыть карту',
     clubs: locale === 'en' ? 'Clubs and sections' : locale === 'kk' ? 'Үйірмелер мен секциялар' : 'Кружки и секции',
     consultationCta:
       locale === 'en'
@@ -2336,29 +2337,59 @@ export default function ParentSchoolDetailsPage() {
               <FactRow icon="type" label={ui.type} value={type} />
             )}
             {isPrivateSchool ? (
-              <Link
-                href={school?.school_id ? `/parent/schools/${encodeURIComponent(String(school.school_id))}/pricing` : '#'}
-                className="school-price-link-row"
-                onClick={() => {
-                  if (trackedSchoolId) {
-                    void recordEngagementEvent({
-                      eventType: 'price_open',
-                      schoolId: trackedSchoolId,
-                      locale,
-                      source: 'school_card_price',
-                    }).catch(() => undefined);
-                  }
-                }}
+              <ExpandableFactRow
+                icon="price"
+                label={ui.price}
+                value={<span className={guest ? 'guest-price-blur' : ''}>{price}</span>}
+                open={priceExpanded}
+                onToggle={() =>
+                  setPriceExpanded((prev) => {
+                    if (!prev && trackedSchoolId) {
+                      void recordEngagementEvent({
+                        eventType: 'price_open',
+                        schoolId: trackedSchoolId,
+                        locale,
+                        source: 'school_card_price',
+                      }).catch(() => undefined);
+                    }
+                    return !prev;
+                  })
+                }
               >
-                <span className="school-price-link-icon">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M14.5 8.5c-.5-.7-1.4-1-2.5-1-1.7 0-3 1-3 2.4 0 3.1 5.5 1.8 5.5 4.6 0 1.3-1.2 2.2-2.9 2.2-1.2 0-2.2-.4-2.9-1.2M12 6v12" /></svg>
-                </span>
-                <div className="school-price-link-content">
-                  <span className="school-price-link-label">{ui.price}</span>
-                  <span className={`school-price-link-value${guest ? ' guest-price-blur' : ''}`}>{price}</span>
+                <div className={guest ? 'guest-price-blur' : ''}>
+                  {financeMetaCards.length ? (
+                    <div className="school-price-meta-grid">
+                      {financeMetaCards.map((item) => (
+                        <div key={`${item.label}-${item.value}`} className="school-price-meta-card">
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {feeRules.length ? (
+                    <div className="school-price-rules">
+                      {feeRules.map((rule, index) => (
+                        <div key={`${rule.from_grade}-${rule.to_grade}-${rule.amount}-${index}`} className="school-price-rule">
+                          <span>{ui.priceFromTo}: {formatFeeRuleGrades(rule.from_grade, rule.to_grade, locale)}</span>
+                          <strong>{`${rule.amount.toLocaleString('ru-RU')} ${rule.currency === 'KZT' ? '₸' : rule.currency === 'USD' ? '$' : rule.currency === 'GBP' ? '£' : '€'}`}</strong>
+                          {registrationFeeMode === 'per_rule' && rule.entrance_fee > 0 ? (
+                            <small>{`${ui.registrationFee}: ${rule.entrance_fee.toLocaleString('ru-RU')} ${rule.entrance_fee_currency === 'KZT' ? '₸' : rule.entrance_fee_currency === 'USD' ? '$' : rule.entrance_fee_currency === 'GBP' ? '£' : '€'}`}</small>
+                          ) : null}
+                        </div>
+                      ))}
+                      {financeDiscounts ? <ExpandableNote title={ui.discounts} text={financeDiscounts} /> : null}
+                      {financeGrants ? <ExpandableNote title={ui.grants} text={financeGrants} /> : null}
+                      {!financeDiscounts && !financeGrants && legacyDiscountsGrants ? (
+                        <ExpandableNote title={locale === 'en' ? 'Discounts / Grants' : locale === 'kk' ? 'Жеңілдіктер / Гранттар' : 'Скидки / гранты'} text={legacyDiscountsGrants} />
+                      ) : null}
+                      {financeComment ? <ExpandableNote title={ui.priceComment} text={financeComment} /> : null}
+                    </div>
+                  ) : (
+                    <p className="school-price-comment">{price}</p>
+                  )}
                 </div>
-                <svg className="school-price-link-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-              </Link>
+              </ExpandableFactRow>
             ) : null}
             <FactRow icon="city" label={ui.city} value={cityLabel} />
             {districtLabel ? <FactRow icon="district" label={ui.district} value={districtLabel} /> : null}
@@ -2545,7 +2576,7 @@ export default function ParentSchoolDetailsPage() {
                   }).catch(() => undefined);
                 }}
               >
-                Нажмите, чтобы раскрыть карту
+                {ui.tapMap}
               </Link>
             </section>
           ) : null}

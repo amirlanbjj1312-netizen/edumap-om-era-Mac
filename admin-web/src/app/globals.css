@@ -2520,6 +2520,20 @@ a {
   letter-spacing: 0.04em;
 }
 
+.market-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #fff8e6;
+  border: 1px solid #f0c96e;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #92650a;
+  white-space: nowrap;
+}
+
 .school-chip {
   display: inline-flex;
   align-items: center;
@@ -6572,9 +6586,9 @@ a {
   }
 
   .parent-school-meta {
-    margin-top: 10px;
-    gap: 6px;
-    align-items: center;
+    margin-top: 6px;
+    gap: 4px;
+    align-items: flex-start;
   }
 
   .parent-school-expand-hint {
@@ -6594,6 +6608,29 @@ a {
 
   .market-stars {
     font-size: 13px;
+  }
+
+  /* Hide the "Address:" label on mobile to save space */
+  .market-school-address-row strong {
+    display: none;
+  }
+
+  .market-school-address-row {
+    font-size: 13px;
+    color: #6a7898;
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  .market-school-price {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .market-rating-pill {
+    font-size: 11px;
+    padding: 2px 7px;
   }
 
   .school-chip {

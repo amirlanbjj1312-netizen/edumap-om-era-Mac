@@ -815,6 +815,11 @@ export default function ParentSchoolsMapPage() {
             maxZoom: 18,
           }).addTo(mapRef.current);
 
+          if (!activeFocusedSchoolId) {
+            // Default: show Astana immediately, then override with user location if granted
+            mapRef.current.setView([51.1694, 71.4459], 11);
+          }
+
           // Try geolocation to center on user's location
           if ('geolocation' in navigator && !activeFocusedSchoolId) {
             navigator.geolocation.getCurrentPosition(
@@ -825,10 +830,7 @@ export default function ParentSchoolsMapPage() {
                 }
               },
               () => {
-                // Permission denied — fallback to Astana
-                if (mapRef.current && !userLocatedRef.current) {
-                  mapRef.current.setView([51.1694, 71.4459], 11);
-                }
+                // Permission denied — keep Astana default
               },
               { timeout: 5000, maximumAge: 60000 }
             );
@@ -912,13 +914,8 @@ export default function ParentSchoolsMapPage() {
     if (activeFocusedSchoolId) {
       const focused = schools.find((item) => item.id === activeFocusedSchoolId || item.schoolId === activeFocusedSchoolId);
       if (focused) mapRef.current.setView([focused.lat, focused.lng], 12);
-    } else if (!userLocatedRef.current) {
-      if (bounds.length) {
-        mapRef.current.fitBounds(bounds, { padding: [48, 48] });
-      } else {
-        mapRef.current.setView([51.1694, 71.4459], 11);
-      }
     }
+    // For general map: don't call fitBounds — let geolocation or default Astana view stay
   }, [ready, schools, activeFocusedSchoolId, noCityText, locale]);
 
   return (

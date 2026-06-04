@@ -1848,9 +1848,14 @@ export default function ParentSchoolsPage() {
                             />
                           ) : null}
                         </div>
-                        <div className="parent-school-meta parent-school-meta-visual">
-                          <span className="market-stars">☆☆☆☆☆</span>
-                        </div>
+                        {(() => {
+                          const schoolRating = Number(row.system?.rating ?? 0);
+                          return schoolRating > 0 ? (
+                            <div className="parent-school-meta parent-school-meta-visual">
+                              <span className="market-rating-pill">★ {schoolRating.toFixed(1)}</span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="market-school-main">
                         <p className="parent-school-name">{schoolTitle}</p>
