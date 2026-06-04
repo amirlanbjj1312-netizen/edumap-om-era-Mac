@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 import { loadSchoolById, recordEngagementEvent, requestJson, submitDirectSchoolReview } from '@/lib/api';
 import { isGuestMode } from '@/lib/guestMode';
 import { useParentLocale } from '@/lib/parentLocale';
-import { buildFeeRulesFromFinance, formatSchoolFee } from '@/lib/schoolFinance';
+import { buildFeeRulesFromFinance, formatCompactSchoolFee, formatSchoolFee } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
 import { buildSchoolClubs } from '@/lib/clubViews';
 import {
@@ -1658,6 +1658,22 @@ export default function ParentSchoolDetailsPage() {
     locale,
     locale === 'en' ? 'On request' : locale === 'kk' ? 'Сұраныс бойынша' : 'По запросу'
   );
+  const compactPrice = formatCompactSchoolFee(
+    {
+      finance: {
+        fee_rules: getIn(school, 'finance.fee_rules'),
+        tuition_monthly: getIn(school, 'finance.tuition_monthly'),
+        monthly_fee: getIn(school, 'finance.monthly_fee'),
+        monthly_fee_by_grade: getIn(school, 'finance.monthly_fee_by_grade'),
+        price_monthly: getIn(school, 'finance.price_monthly'),
+      },
+      basic_info: {
+        price: getIn(school, 'basic_info.price'),
+      },
+    },
+    locale,
+    locale === 'en' ? 'On request' : locale === 'kk' ? 'Сұраныс бойынша' : 'По запросу'
+  );
   const feeRules = buildFeeRulesFromFinance({
     fee_rules: getIn(school, 'finance.fee_rules'),
     monthly_fee_by_grade: getIn(school, 'finance.monthly_fee_by_grade'),
@@ -2340,7 +2356,7 @@ export default function ParentSchoolDetailsPage() {
               <ExpandableFactRow
                 icon="price"
                 label={ui.price}
-                value={<span className={guest ? 'guest-price-blur' : ''}>{price}</span>}
+                value={<span className={guest ? 'guest-price-blur' : ''}>{compactPrice}</span>}
                 open={priceExpanded}
                 onToggle={() =>
                   setPriceExpanded((prev) => {
