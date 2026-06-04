@@ -148,6 +148,18 @@ const toText = (value: unknown): string => {
   return '';
 };
 
+const toLocaleText = (value: unknown, locale: 'ru' | 'en' | 'kk'): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (value && typeof value === 'object') {
+    const localized = value as Record<string, unknown>;
+    const picked = localized[locale] ?? localized.ru ?? localized.kk ?? localized.en;
+    if (typeof picked === 'string') return picked;
+    if (typeof picked === 'number') return String(picked);
+  }
+  return '';
+};
+
 const toList = (value: unknown): string[] => {
   if (Array.isArray(value)) {
     return value.map((item) => toText(item).trim()).filter(Boolean);
@@ -581,6 +593,7 @@ export default function ParentSchoolsMapPage() {
   const mapHostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersLayerRef = useRef<LeafletLayer | null>(null);
+  const userLocatedRef = useRef(false);
 
   const focusedSchoolId = useMemo(() => searchParams.get('focus') || '', [searchParams]);
   const isEmbed = useMemo(() => searchParams.get('embed') === '1', [searchParams]);
@@ -728,9 +741,9 @@ export default function ParentSchoolsMapPage() {
         const lng = toFloat(row.basic_info?.coordinates?.longitude);
         const schoolId = row.school_id || '';
         const schoolName =
-          toText(row.basic_info?.display_name) || toText(row.basic_info?.name) || schoolDefaultText;
+          toLocaleText(row.basic_info?.display_name, locale) || toLocaleText(row.basic_info?.name, locale) || schoolDefaultText;
         const schoolCity = localizeOption(
-          toText(row.basic_info?.city) || toText(row.basic_info?.district) || '',
+          toLocaleText(row.basic_info?.city, locale) || toLocaleText(row.basic_info?.district, locale) || '',
           locale
         );
         const points: MapSchool[] = [];
@@ -739,7 +752,7 @@ export default function ParentSchoolsMapPage() {
             id: schoolId || `${lat}-${lng}`,
             name: schoolName,
             city: schoolCity,
-            address: toText(row.basic_info?.address).trim(),
+            address: toLocaleText(row.basic_info?.address, locale).trim(),
             lat: lat as number,
             lng: lng as number,
             kind: 'main',
@@ -802,16 +815,20 @@ export default function ParentSchoolsMapPage() {
             maxZoom: 18,
           }).addTo(mapRef.current);
 
-          // Try geolocation to show user's city
+          // Try geolocation to center on user's location
           if ('geolocation' in navigator && !activeFocusedSchoolId) {
             navigator.geolocation.getCurrentPosition(
               (pos) => {
+                userLocatedRef.current = true;
                 if (mapRef.current) {
                   mapRef.current.setView([pos.coords.latitude, pos.coords.longitude], 12);
                 }
               },
               () => {
-                // Permission denied or error — keep default Kazakhstan view
+                // Permission denied — fallback to Astana
+                if (mapRef.current && !userLocatedRef.current) {
+                  mapRef.current.setView([51.1694, 71.4459], 11);
+                }
               },
               { timeout: 5000, maximumAge: 60000 }
             );
@@ -871,10 +888,11 @@ export default function ParentSchoolsMapPage() {
           )
         : L.marker([school.lat, school.lng]);
       const popupAddress = school.address || school.city || noCityText;
+      const openCardText = locale === 'en' ? 'Open school card' : locale === 'kk' ? 'Мектеп картасын ашу' : 'Открыть карточку';
       const popupAction = school.schoolId
         ? `<a class="schools-map-popup-link" href="/parent/schools/${encodeURIComponent(
             school.schoolId
-          )}">Открыть карточку</a>`
+          )}">${openCardText}</a>`
         : '';
       marker.bindPopup(
         `<div class="schools-map-popup"><strong class="schools-map-popup-title">${escapeHtml(
@@ -891,16 +909,17 @@ export default function ParentSchoolsMapPage() {
     layer.addTo(mapRef.current);
     markersLayerRef.current = layer;
 
-    if (bounds.length) {
-      mapRef.current.fitBounds(bounds, { padding: [48, 48] });
-    } else {
-      mapRef.current.setView([48.02, 66.92], 5);
-    }
     if (activeFocusedSchoolId) {
       const focused = schools.find((item) => item.id === activeFocusedSchoolId || item.schoolId === activeFocusedSchoolId);
       if (focused) mapRef.current.setView([focused.lat, focused.lng], 12);
+    } else if (!userLocatedRef.current) {
+      if (bounds.length) {
+        mapRef.current.fitBounds(bounds, { padding: [48, 48] });
+      } else {
+        mapRef.current.setView([51.1694, 71.4459], 11);
+      }
     }
-  }, [ready, schools, activeFocusedSchoolId, noCityText]);
+  }, [ready, schools, activeFocusedSchoolId, noCityText, locale]);
 
   return (
     <div className="schools-map-fullscreen-page">

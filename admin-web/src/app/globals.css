@@ -1770,6 +1770,10 @@ a {
   display: none;
 }
 
+.schools-mobile-sort-overlay {
+  display: none;
+}
+
 .schools-mobile-filter-trigger {
   width: 100%;
   justify-content: center;
@@ -3695,6 +3699,66 @@ a {
   padding: 12px;
 }
 
+.school-price-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
+  border: 1px solid #c5d6f8;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.school-price-link-row:hover {
+  background: linear-gradient(135deg, #e3eaff 0%, #d6e4fd 100%);
+  border-color: #9db8f3;
+}
+
+.school-price-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #c5d6f8;
+  color: #2d5be3;
+  flex-shrink: 0;
+}
+
+.school-price-link-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.school-price-link-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a69a0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.school-price-link-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f3a8a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.school-price-link-arrow {
+  color: #6a8fd4;
+  flex-shrink: 0;
+}
+
 .school-price-rules {
   display: grid;
   gap: 10px;
@@ -3998,6 +4062,173 @@ a {
   margin: 0 0 10px;
   color: #1d2943;
   font-size: 20px;
+}
+
+/* Pricing page */
+.school-pricing-page {
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid #dbe4f5;
+  overflow: hidden;
+}
+
+.school-pricing-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2d5be3 100%);
+  padding: 28px 20px 24px;
+  color: #fff;
+}
+
+.school-pricing-title {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.school-pricing-school-name {
+  margin: 0 0 12px;
+  font-size: 15px;
+  opacity: 0.75;
+}
+
+.school-pricing-summary {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: inline-block;
+}
+
+.school-pricing-body {
+  padding: 18px 16px 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.school-pricing-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.school-pricing-meta-card {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f0f5ff 100%);
+  border: 1px solid #d8e2f3;
+}
+
+.school-pricing-meta-card span {
+  color: #4a69a0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.school-pricing-meta-card strong {
+  color: #1f2a44;
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.school-pricing-section-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #2d4a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.school-pricing-rules {
+  display: grid;
+  gap: 8px;
+}
+
+.school-pricing-rule-card {
+  border-radius: 16px;
+  border: 1px solid #dde8f8;
+  background: #f7f9ff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.school-pricing-rule-grade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.school-pricing-rule-label {
+  font-size: 12px;
+  color: #6a85bc;
+  font-weight: 700;
+}
+
+.school-pricing-rule-value {
+  font-size: 15px;
+  color: #1f2a44;
+}
+
+.school-pricing-rule-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f3a8a;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.school-pricing-rule-period {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6a85bc;
+}
+
+.school-pricing-rule-entry {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #5a7ab5;
+  padding-top: 8px;
+  border-top: 1px solid #e3ecf8;
+  margin-top: 4px;
+}
+
+.school-pricing-notes {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .school-pricing-title {
+    font-size: 22px;
+  }
+
+  .school-pricing-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .school-pricing-rule-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .school-pricing-rule-amount {
+    font-size: 16px;
+  }
 }
 
 .school-admission-hero {
@@ -5833,6 +6064,54 @@ a {
     display: none;
   }
 
+  .schools-mobile-sort-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 30, 60, 0.38);
+    z-index: 900;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .schools-mobile-sort-sheet {
+    width: 100%;
+    background: #fff;
+    border-radius: 22px 22px 0 0;
+    padding: 20px 16px 32px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .schools-mobile-sort-title {
+    margin: 0 0 10px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #1d2943;
+  }
+
+  .schools-mobile-sort-item {
+    appearance: none;
+    border: 1px solid #dde4f1;
+    background: #f8faff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2a3d6b;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .schools-mobile-sort-item.active {
+    background: #eef3ff;
+    border-color: #8faaef;
+    color: #1f3572;
+    font-weight: 800;
+  }
+
   .booking-cards-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -5840,9 +6119,9 @@ a {
   }
 
   .parent-school-card {
-    padding: 14px 14px 12px;
+    padding: 12px 12px 10px;
     border-radius: 16px;
-    padding-right: 60px;
+    padding-right: 54px;
   }
 
   .parent-school-link {
@@ -5890,22 +6169,22 @@ a {
 
   .market-school-side-actions {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 52px;
-    min-width: 52px;
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    min-width: 44px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
   }
 
   .market-card-action-row {
     display: flex;
     flex-direction: column-reverse;
     align-items: flex-end;
-    gap: 8px;
-    width: 52px;
+    gap: 6px;
+    width: 44px;
   }
 
   .parent-school-name {
@@ -5976,21 +6255,21 @@ a {
 
   .market-card-action-row .school-favorite-btn.inline {
     position: static;
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    border-radius: 12px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 10px;
     z-index: 2;
   }
 
   .market-card-action-row .compare-card-button {
-    width: 52px;
-    min-width: 52px;
-    min-height: 58px;
-    border-radius: 14px;
-    font-size: 11px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 10px;
     line-height: 1.05;
-    padding: 6px 4px;
+    padding: 5px 3px;
     white-space: normal;
     text-align: center;
   }
@@ -6216,6 +6495,46 @@ a {
 
   .app-footer-col a {
     font-size: 16px;
+  }
+
+  /* Clubs schedule: switch to vertical day-by-day layout on mobile */
+  .club-schedule-scroll {
+    overflow-x: unset;
+  }
+
+  .club-schedule-grid {
+    min-width: unset;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .club-schedule-col {
+    border-radius: 16px;
+  }
+
+  .club-schedule-col-title {
+    font-size: 15px;
+    font-weight: 800;
+    padding: 10px 14px;
+  }
+
+  .club-schedule-col-body {
+    padding: 10px;
+  }
+
+  .club-schedule-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+
+  .club-schedule-item-name {
+    font-size: 15px;
+  }
+
+  .club-week-table-title {
+    font-size: 14px;
   }
 }
 

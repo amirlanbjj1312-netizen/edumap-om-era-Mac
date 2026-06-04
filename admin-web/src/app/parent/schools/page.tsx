@@ -1632,6 +1632,31 @@ export default function ParentSchoolsPage() {
           <span>{compareUi.aiMatch}</span>
         </Link>
       </div>
+      {sortModalOpen ? (
+        <div className="schools-mobile-sort-overlay" onClick={() => setSortModalOpen(false)}>
+          <div className="schools-mobile-sort-sheet" onClick={(e) => e.stopPropagation()}>
+            <p className="schools-mobile-sort-title">{sortUi.title}</p>
+            {[
+              { key: 'recommended', label: sortUi.recommended },
+              { key: 'priceAsc', label: sortUi.priceAsc },
+              { key: 'priceDesc', label: sortUi.priceDesc },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`schools-mobile-sort-item${sortMode === item.key ? ' active' : ''}`}
+                onClick={() => {
+                  setSortMode(item.key as typeof sortMode);
+                  setSortModalOpen(false);
+                }}
+              >
+                <span>{item.label}</span>
+                {sortMode === item.key ? <span aria-hidden="true">✓</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="schools-mobile-meta">
         <span className="schools-mobile-total">{sortedRows.length} {t('schools_word')}</span>
         {compareMode ? (
