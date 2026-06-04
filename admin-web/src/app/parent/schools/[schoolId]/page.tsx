@@ -1289,6 +1289,7 @@ export default function ParentSchoolDetailsPage() {
   const [activeMedia, setActiveMedia] = useState<MediaViewerState | null>(null);
   const [activeProgram, setActiveProgram] = useState('');
   const [typeInfoOpen, setTypeInfoOpen] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [consultationOpen, setConsultationOpen] = useState(false);
   const [consultationSaving, setConsultationSaving] = useState(false);
@@ -1776,9 +1777,6 @@ export default function ParentSchoolDetailsPage() {
   const mapSrc = school?.school_id
     ? `/parent/schools/map?focus=${encodeURIComponent(String(school.school_id))}&back=${encodeURIComponent(`/parent/schools/${encodeURIComponent(String(school.school_id))}`)}&embed=1`
     : '';
-  const fullMapHref = school?.school_id
-    ? `/parent/schools/map?focus=${encodeURIComponent(String(school.school_id))}&back=${encodeURIComponent(`/parent/schools/${encodeURIComponent(String(school.school_id))}`)}`
-    : '/parent/schools/map';
   const description = pickFirstText(school, [`basic_info.description.${locale}`, 'basic_info.description.ru', 'basic_info.description.kk', 'basic_info.description.en', 'basic_info.description'], '');
   const reviewItems = [
     { label: locale === 'en' ? 'Rating' : locale === 'kk' ? 'Рейтинг' : 'Рейтинг', value: rating },
@@ -2591,25 +2589,35 @@ export default function ParentSchoolDetailsPage() {
               <iframe
                 title="Карта школы"
                 src={mapSrc}
-                className="school-mobile-map"
+                className={`school-mobile-map${mapExpanded ? ' expanded' : ''}`}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              <Link
-                href={fullMapHref}
+              <button
+                type="button"
                 className="school-mobile-map-cta"
                 onClick={() => {
-                  if (!trackedSchoolId) return;
-                  void recordEngagementEvent({
-                    eventType: 'school_map_open',
-                    schoolId: trackedSchoolId,
-                    locale,
-                    source: 'school_card_map',
-                  }).catch(() => undefined);
+                  setMapExpanded((prev) => {
+                    if (!prev && trackedSchoolId) {
+                      void recordEngagementEvent({
+                        eventType: 'school_map_open',
+                        schoolId: trackedSchoolId,
+                        locale,
+                        source: 'school_card_map',
+                      }).catch(() => undefined);
+                    }
+                    return !prev;
+                  });
                 }}
               >
-                {ui.tapMap}
-              </Link>
+                {mapExpanded
+                  ? locale === 'en'
+                    ? 'Close map'
+                    : locale === 'kk'
+                      ? 'Картаны жабу'
+                      : 'Закрыть карту'
+                  : ui.tapMap}
+              </button>
             </section>
           ) : null}
 
