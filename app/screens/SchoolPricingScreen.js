@@ -33,6 +33,75 @@ const formatSchoolPrice = (amount, paymentLabel, locale) => {
   return `${money} / ${paymentLabel}`;
 };
 
+const toPriceNumber = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  const raw = String(value ?? '')
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!raw) return 0;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizePricePeriod = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (
+    raw.includes('month') ||
+    raw.includes('ежемесяч') ||
+    raw.includes('ай')
+  ) {
+    return 'month';
+  }
+  if (
+    raw.includes('semester') ||
+    raw.includes('семестр')
+  ) {
+    return 'semester';
+  }
+  if (
+    raw.includes('year') ||
+    raw.includes('annual') ||
+    raw.includes('ежегод') ||
+    raw.includes('год') ||
+    raw.includes('жыл')
+  ) {
+    return 'year';
+  }
+  return '';
+};
+
+const getPricePeriodLabel = (period, t) => {
+  if (period === 'month') return t('schools.payment.per_month');
+  if (period === 'semester') return t('schools.payment.per_semester');
+  if (period === 'year') return t('schools.payment.per_year');
+  return '';
+};
+
+const formatFinanceSummary = (rules, t, locale) => {
+  const validRules = Array.isArray(rules)
+    ? rules.filter((rule) => rule?.rawAmount > 0)
+    : [];
+  if (!validRules.length) return '';
+
+  const amounts = validRules.map((rule) => rule.rawAmount);
+  const min = Math.min(...amounts);
+  const max = Math.max(...amounts);
+  const currency = validRules.find((rule) => rule.currency)?.currency || 'KZT';
+  const periods = [...new Set(validRules.map((rule) => rule.period).filter(Boolean))];
+  const periodLabel = periods.length === 1 ? getPricePeriodLabel(periods[0], t) : '';
+  const suffix = periodLabel ? ` / ${periodLabel}` : '';
+
+  if (min !== max) {
+    return `${formatMoneyValue(min, currency, locale)} - ${formatMoneyValue(max, currency, locale)}${suffix}`;
+  }
+
+  return `${formatMoneyValue(min, currency, locale)}${suffix}`;
+};
+
 const formatFeeRuleGrades = (fromGrade, toGrade, locale) => {
   const from = Number(fromGrade);
   const to = Number(toGrade);
@@ -141,11 +210,6 @@ export default function SchoolPricingScreen() {
       ),
     [finance?.payment_options, locale, t]
   );
-  const displayPaymentLabel =
-    translateLabel(t, PAYMENT_LABEL_KEYS, finance?.payment_system) ||
-    normalizeDisplayValue(finance?.payment_system, locale);
-  const basePrice = formatSchoolPrice(finance?.monthly_fee, displayPaymentLabel, locale);
-
   const registrationFee = formatMoneyValue(
     finance?.registration_fee,
     finance?.registration_fee_currency,
@@ -172,12 +236,17 @@ export default function SchoolPricingScreen() {
       return finance.fee_rules
         .map((rule, index) => {
           const amount = formatMoneyValue(rule?.amount, rule?.currency, locale);
+          const rawAmount = toPriceNumber(rule?.amount);
+          const currency = String(rule?.currency || 'KZT').trim().toUpperCase() || 'KZT';
+          const period = normalizePricePeriod(
+            rule?.period || rule?.payment_period || finance?.payment_system
+          );
           const grades = formatFeeRuleGrades(rule?.from_grade, rule?.to_grade, locale);
           const comment =
             getLocalizedText(rule?.comment, locale).trim() ||
             normalizeDisplayValue(rule?.comment, locale);
           if (!amount && !grades && !comment) return null;
-          return { id: `rule-${index}`, grades, amount, comment };
+          return { id: `rule-${index}`, grades, amount, comment, rawAmount, currency, period };
         })
         .filter(Boolean);
     }
@@ -200,14 +269,21 @@ export default function SchoolPricingScreen() {
           grades: formatFeeRuleGrades(grade, grade, locale),
           amount: formatted,
           comment: '',
+          rawAmount: toPriceNumber(amount),
+          currency: 'KZT',
+          period: normalizePricePeriod(finance?.payment_system),
         };
       })
       .filter(Boolean);
   }, [finance?.fee_rules, finance?.monthly_fee_by_grade, locale]);
 
+  const pricingSummary =
+    formatFinanceSummary(financeRules, t, locale) ||
+    formatSchoolPrice(finance?.monthly_fee, t('schools.payment.per_month'), locale);
+
   const financeRows = [
-    !financeRules.length && basePrice
-      ? { label: t('schoolDetail.quick.price'), value: basePrice }
+    !financeRules.length && pricingSummary
+      ? { label: t('schoolDetail.quick.price'), value: pricingSummary }
       : null,
     registrationFee
       ? { label: t('schoolDetail.field.registrationFee'), value: registrationFee }
@@ -232,12 +308,10 @@ export default function SchoolPricingScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.schoolName}>{schoolName}</Text>
 
-        {(basePrice || paymentOptions.length) ? (
+        {(pricingSummary || paymentOptions.length) ? (
           <View style={styles.heroCard}>
             <Text style={styles.heroLabel}>{t('schoolDetail.quick.price')}</Text>
-            <Text style={styles.heroValue}>
-              {financeRules.length ? t('schoolDetail.pricing.byGrades') : basePrice}
-            </Text>
+            <Text style={styles.heroValue}>{pricingSummary}</Text>
             {paymentOptions.length ? (
               <View style={styles.optionChips}>
                 {paymentOptions.map((option) => (

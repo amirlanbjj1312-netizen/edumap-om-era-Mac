@@ -133,6 +133,75 @@ const normalizeDisplayValue = (value, locale) => {
   return String(value).trim();
 };
 
+const toPriceNumber = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  const raw = String(value ?? '')
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+    .trim();
+  if (!raw) return 0;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizePricePeriod = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (
+    raw.includes('month') ||
+    raw.includes('ежемесяч') ||
+    raw.includes('ай')
+  ) {
+    return 'month';
+  }
+  if (
+    raw.includes('semester') ||
+    raw.includes('семестр')
+  ) {
+    return 'semester';
+  }
+  if (
+    raw.includes('year') ||
+    raw.includes('annual') ||
+    raw.includes('ежегод') ||
+    raw.includes('год') ||
+    raw.includes('жыл')
+  ) {
+    return 'year';
+  }
+  return '';
+};
+
+const getPricePeriodLabel = (period, t) => {
+  if (period === 'month') return t('schools.payment.per_month');
+  if (period === 'semester') return t('schools.payment.per_semester');
+  if (period === 'year') return t('schools.payment.per_year');
+  return '';
+};
+
+const formatFinanceSummary = (rules, t, locale) => {
+  const validRules = Array.isArray(rules)
+    ? rules.filter((rule) => rule?.rawAmount > 0)
+    : [];
+  if (!validRules.length) return '';
+
+  const amounts = validRules.map((rule) => rule.rawAmount);
+  const min = Math.min(...amounts);
+  const max = Math.max(...amounts);
+  const currency = validRules.find((rule) => rule.currency)?.currency || 'KZT';
+  const periods = [...new Set(validRules.map((rule) => rule.period).filter(Boolean))];
+  const periodLabel = periods.length === 1 ? getPricePeriodLabel(periods[0], t) : '';
+  const suffix = periodLabel ? ` / ${periodLabel}` : '';
+
+  if (min !== max) {
+    return `${formatMoneyValue(min, currency, locale)} - ${formatMoneyValue(max, currency, locale)}${suffix}`;
+  }
+
+  return `${formatMoneyValue(min, currency, locale)}${suffix}`;
+};
+
 const clampRatingValue = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -724,11 +793,6 @@ export default function SchoolDetailScreen() {
     translateLabel(t, TYPE_LABEL_KEYS, basic_info.type) ||
     normalizeDisplayValue(basic_info.type) ||
     t('schoolDetail.value.unknown');
-  const displayPayment = translateLabel(
-    t,
-    PAYMENT_LABEL_KEYS,
-    finance?.payment_system
-  );
   const displayCity =
     translateLabel(t, CITY_LABEL_KEYS, basic_info.city) ||
     normalizeDisplayValue(basic_info.city) ||
@@ -744,8 +808,6 @@ export default function SchoolDetailScreen() {
   const displayAddress =
     getLocalizedText(basic_info.address, locale) ||
     t('schoolDetail.value.unknown');
-  const displayPaymentLabel =
-    displayPayment || normalizeDisplayValue(finance?.payment_system);
   const paymentOptions = useMemo(
     () =>
       Array.from(
@@ -782,6 +844,11 @@ export default function SchoolDetailScreen() {
       return finance.fee_rules
         .map((rule, index) => {
           const amount = formatMoneyValue(rule?.amount, rule?.currency, locale);
+          const rawAmount = toPriceNumber(rule?.amount);
+          const currency = String(rule?.currency || 'KZT').trim().toUpperCase() || 'KZT';
+          const period = normalizePricePeriod(
+            rule?.period || rule?.payment_period || finance?.payment_system
+          );
           const grades = formatFeeRuleGrades(rule?.from_grade, rule?.to_grade, locale);
           const comment =
             getLocalizedText(rule?.comment, locale).trim() ||
@@ -792,6 +859,9 @@ export default function SchoolDetailScreen() {
             grades,
             amount,
             comment,
+            rawAmount,
+            currency,
+            period,
           };
         })
         .filter(Boolean);
@@ -815,10 +885,16 @@ export default function SchoolDetailScreen() {
           grades: formatFeeRuleGrades(grade, grade, locale),
           amount: formatted,
           comment: '',
+          rawAmount: toPriceNumber(amount),
+          currency: 'KZT',
+          period: normalizePricePeriod(finance?.payment_system),
         };
       })
       .filter(Boolean);
   }, [finance?.fee_rules, finance?.monthly_fee_by_grade, locale]);
+  const pricingSummary =
+    formatFinanceSummary(financeRules, t, locale) ||
+    formatSchoolPrice(finance?.monthly_fee, t('schools.payment.per_month'), locale);
   const hasFinanceDetails =
     financeRules.length > 0 ||
     paymentOptions.length > 0 ||
@@ -1055,10 +1131,7 @@ export default function SchoolDetailScreen() {
       key: 'price',
       iconName: 'coins',
       label: t('schoolDetail.quick.price'),
-      value:
-        finance?.monthly_fee
-          ? formatSchoolPrice(finance.monthly_fee, displayPaymentLabel, locale)
-          : t('schoolDetail.value.unknown'),
+      value: pricingSummary || t('schoolDetail.value.unknown'),
     },
     {
       key: 'address',
@@ -1108,6 +1181,17 @@ export default function SchoolDetailScreen() {
   const handleOpenVideo = (url) => {
     if (!url) return;
     setVideoModal({ visible: true, url });
+  };
+  const handleOpenSchoolChat = () => {
+    if (isGuest) {
+      Alert.alert(
+        t('schoolDetail.consult.guestTitle'),
+        t('schoolDetail.consult.guestBody')
+      );
+      navigation.navigate('SignUp');
+      return;
+    }
+    navigation.navigate('SchoolChat');
   };
   const handleOpenTeacher = (member) => {
     setTeacherModal({
@@ -2153,7 +2237,7 @@ export default function SchoolDetailScreen() {
             <XMarkIcon color="#FFFFFF" size={13} />
           </Pressable>
           <Pressable
-            onPress={() => navigation.navigate('SchoolChat')}
+            onPress={handleOpenSchoolChat}
             style={styles.floatingChatButton}
           >
             <ChatBubbleLeftRightIcon color="#FFFFFF" size={24} />

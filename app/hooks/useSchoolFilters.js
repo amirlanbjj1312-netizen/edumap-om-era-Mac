@@ -1121,6 +1121,7 @@ export const useSchoolFilters = ({ schoolCards, singleCity = false }) => {
                 );
               })}
             </View>
+            </View>
             {isGuest ? (
               <Text className="text-darkGrayText/60 font-exo text-xs mt-3">
                 {guestAdvancedFiltersHint}

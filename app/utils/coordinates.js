@@ -14,11 +14,24 @@ export const hasValidCoordinates = (latitude, longitude) => {
   return Number.isFinite(latitude) && Number.isFinite(longitude);
 };
 
-export const splitToList = (value) =>
-  (value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length);
+export const splitToList = (value) => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => splitToList(item));
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length);
+  }
+  if (typeof value === 'object') {
+    const localized = value;
+    const picked = localized.ru ?? localized.kk ?? localized.en;
+    return splitToList(picked);
+  }
+  return [];
+};
 
 export const projectLatLngToPoint = (
   latitude,
