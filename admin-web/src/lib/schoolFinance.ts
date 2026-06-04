@@ -290,6 +290,25 @@ export const getFeeCurrencySymbol = (currency: FeeCurrency) => CURRENCY_SYMBOLS[
 const formatCurrency = (value: number, currency: FeeCurrency) =>
   `${value.toLocaleString('ru-RU')} ${CURRENCY_SYMBOLS[currency]}`;
 
+const formatCompactCurrency = (
+  value: number,
+  currency: FeeCurrency,
+  locale: Locale
+) => {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  if (value >= 1000000) {
+    const shortValue = (value / 1000000).toFixed(value >= 10000000 ? 0 : 1);
+    const unit = locale === 'en' ? 'M' : 'млн';
+    return `${shortValue} ${unit} ${symbol}`;
+  }
+  if (value >= 1000) {
+    const shortValue = Math.round(value / 1000);
+    const unit = locale === 'en' ? 'K' : locale === 'kk' ? 'мың' : 'тыс';
+    return `${shortValue} ${unit} ${symbol}`;
+  }
+  return `${value.toLocaleString('ru-RU')} ${symbol}`;
+};
+
 const formatPeriodSuffix = (period: SchoolFeePeriod, locale: Locale) => {
   if (locale === 'en') return period === 'yearly' ? '/ year' : '/ month';
   if (locale === 'kk') return period === 'yearly' ? '/ жыл' : '/ ай';
@@ -310,4 +329,20 @@ export const formatSchoolFee = (
   }
 
   return `${formatCurrency(summary.min, summary.currency)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+};
+
+export const formatCompactSchoolFee = (
+  row: Parameters<typeof getSchoolFeeSummary>[0],
+  _locale: Locale,
+  fallbackText: string
+): string => {
+  const locale = _locale;
+  const summary = getSchoolFeeSummary(row);
+  if (!summary.hasAnyFee || !summary.currency) return fallbackText;
+
+  if (summary.hasFeeRules && summary.min !== summary.max) {
+    return `${formatCompactCurrency(summary.min, summary.currency, locale)}–${formatCompactCurrency(summary.max, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+  }
+
+  return `${formatCompactCurrency(summary.min, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
 };

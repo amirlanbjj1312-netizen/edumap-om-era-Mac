@@ -2483,6 +2483,10 @@ a {
   font-size: 13px;
 }
 
+.market-school-price-compact {
+  display: none;
+}
+
 .market-school-address-list {
   margin-top: 8px;
   display: grid;
@@ -6626,6 +6630,14 @@ a {
     margin-top: 6px;
     font-size: 13px;
     line-height: 1.25;
+  }
+
+  .market-school-price-full {
+    display: none;
+  }
+
+  .market-school-price-compact {
+    display: inline;
   }
 
   .market-rating-pill {

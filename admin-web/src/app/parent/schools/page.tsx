@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useParentLocale } from '@/lib/parentLocale';
 import { clearCompareIds, getCompareIds, subscribeCompareIds, toggleCompareId } from '@/lib/parentCompare';
 import { getFavoriteIds, subscribeFavoriteIds, toggleFavoriteId } from '@/lib/parentFavorites';
-import { formatSchoolFee, getComparableFeeInKzt, type SchoolFeePeriod } from '@/lib/schoolFinance';
+import { formatCompactSchoolFee, formatSchoolFee, getComparableFeeInKzt, type SchoolFeePeriod } from '@/lib/schoolFinance';
 import { formatKzPhone } from '@/lib/phone';
 import { countClubsInServices } from '@/lib/clubsSchedule';
 import { matchesSearch } from '@/lib/textSearch';
@@ -1810,6 +1810,7 @@ export default function ParentSchoolsPage() {
                     ? 'сұраныс бойынша'
                     : 'по запросу';
               const formattedFee = formatSchoolFee(row, locale, onRequest);
+              const compactFee = formatCompactSchoolFee(row, locale, onRequest);
               const schoolId = String(row.school_id || '');
               const isFavorite = schoolId ? favoriteIds.includes(schoolId) : false;
               const mainAddress = toLocaleText(row.basic_info?.address, locale).trim();
@@ -1875,7 +1876,8 @@ export default function ParentSchoolsPage() {
                         {isPrivateSchool ? (
                           <p className="market-school-price">
                             {priceLabel}:{' '}
-                            <span className={guest ? 'guest-price-blur' : ''}>{formattedFee}</span>
+                            <span className={`market-school-price-full ${guest ? 'guest-price-blur' : ''}`}>{formattedFee}</span>
+                            <span className={`market-school-price-compact ${guest ? 'guest-price-blur' : ''}`}>{compactFee}</span>
                           </p>
                         ) : null}
                         {mainAddress ? (
