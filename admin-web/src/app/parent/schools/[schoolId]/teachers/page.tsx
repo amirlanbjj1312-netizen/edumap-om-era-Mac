@@ -121,9 +121,38 @@ export default function SchoolTeachersPage() {
   const schoolName = useMemo(() => toLocaleText(getIn(school, 'basic_info.display_name'), locale)
     || toLocaleText(getIn(school, 'basic_info.name'), locale) || '', [school, locale]);
 
+  const getLeaderName = (role: 'principal' | 'deputy_principal') => {
+    const arrKey = role === 'principal' ? 'basic_info.team.principals' : 'basic_info.team.deputy_directors';
+    const leaderKey = role === 'principal' ? 'basic_info.team.leadership.principal' : 'basic_info.team.leadership.deputy_principal';
+    const legacyKey = role === 'principal' ? 'basic_info.team.principal' : 'basic_info.team.deputy_principal';
+    const arr = getIn(school, arrKey);
+    if (Array.isArray(arr) && arr.length > 0) {
+      const fn = (arr[0] as Record<string, unknown>)?.full_name;
+      if (fn && typeof fn === 'object') {
+        const loc = fn as Record<string, unknown>;
+        const v = String(loc[locale] || loc.ru || loc.kk || loc.en || '');
+        if (v) return v;
+      }
+      const s = String((arr[0] as Record<string, unknown>)?.full_name || '');
+      if (s) return s;
+    }
+    const lead = getIn(school, leaderKey);
+    if (lead && typeof lead === 'object') {
+      const fn = (lead as Record<string, unknown>).full_name;
+      if (fn && typeof fn === 'object') {
+        const loc = fn as Record<string, unknown>;
+        const v = String(loc[locale] || loc.ru || loc.kk || loc.en || '');
+        if (v) return v;
+      }
+      const s = String((lead as Record<string, unknown>).full_name || '');
+      if (s) return s;
+    }
+    return toText(getIn(school, legacyKey));
+  };
+
   const managementRows = useMemo(() => [
-    { label: ui.principal, value: pickFirst(school, [`basic_info.team.principal.${locale}`, 'basic_info.team.principal.ru', 'basic_info.team.principal']) },
-    { label: ui.deputy, value: pickFirst(school, [`basic_info.team.deputy_principal.${locale}`, 'basic_info.team.deputy_principal.ru', 'basic_info.team.deputy_principal']) },
+    { label: ui.principal, value: getLeaderName('principal') },
+    { label: ui.deputy, value: getLeaderName('deputy_principal') },
     getIn(school, 'basic_info.team.class_curators_enabled') ? { label: ui.curators, value: ui.yes } : null,
   ].filter((r): r is { label: string; value: string } => !!r && !!r.value), [school, locale, ui]);
 

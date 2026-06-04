@@ -912,6 +912,43 @@ const formatAfterSchoolValue = (
       : `${availableLabel} до ${until}`;
 };
 
+const getTeamLeaderName = (
+  school: unknown,
+  role: 'principal' | 'deputy_principal',
+  locale: 'ru' | 'en' | 'kk'
+): string => {
+  const arrKey = role === 'principal' ? 'basic_info.team.principals' : 'basic_info.team.deputy_directors';
+  const leadershipKey = role === 'principal' ? 'basic_info.team.leadership.principal' : 'basic_info.team.leadership.deputy_principal';
+  const legacyKey = role === 'principal' ? 'basic_info.team.principal' : 'basic_info.team.deputy_principal';
+
+  const arr = getIn(school, arrKey);
+  if (Array.isArray(arr) && arr.length > 0) {
+    const first = arr[0] as Record<string, unknown>;
+    const fn = first?.full_name;
+    if (fn && typeof fn === 'object') {
+      const loc = fn as Record<string, unknown>;
+      const picked = String(loc[locale] || loc.ru || loc.kk || loc.en || '');
+      if (picked) return picked;
+    }
+    const strName = String(first?.full_name || '');
+    if (strName) return strName;
+  }
+
+  const leadership = getIn(school, leadershipKey);
+  if (leadership && typeof leadership === 'object') {
+    const fn = (leadership as Record<string, unknown>).full_name;
+    if (fn && typeof fn === 'object') {
+      const loc = fn as Record<string, unknown>;
+      const picked = String(loc[locale] || loc.ru || loc.kk || loc.en || '');
+      if (picked) return picked;
+    }
+    const strName = String((leadership as Record<string, unknown>).full_name || '');
+    if (strName) return strName;
+  }
+
+  return toText(getIn(school, legacyKey));
+};
+
 const formatFeeRuleGrades = (
   fromGrade: number,
   toGrade: number,
@@ -2024,23 +2061,11 @@ export default function ParentSchoolDetailsPage() {
   const teamRows = [
     {
       label: locale === 'en' ? 'Principal' : locale === 'kk' ? 'Директор' : 'Директор',
-      value: pickFirstText(school, [
-        `basic_info.team.principal.${locale}`,
-        'basic_info.team.principal.ru',
-        'basic_info.team.principal.kk',
-        'basic_info.team.principal.en',
-        'basic_info.team.principal',
-      ]),
+      value: getTeamLeaderName(school, 'principal', locale),
     },
     {
       label: locale === 'en' ? 'Deputy principal' : locale === 'kk' ? 'Директор орынбасары' : 'Зам. директора',
-      value: pickFirstText(school, [
-        `basic_info.team.deputy_principal.${locale}`,
-        'basic_info.team.deputy_principal.ru',
-        'basic_info.team.deputy_principal.kk',
-        'basic_info.team.deputy_principal.en',
-        'basic_info.team.deputy_principal',
-      ]),
+      value: getTeamLeaderName(school, 'deputy_principal', locale),
     },
     {
       label: locale === 'en' ? 'Class curators' : locale === 'kk' ? 'Сынып кураторлары' : 'Кураторы классов',
