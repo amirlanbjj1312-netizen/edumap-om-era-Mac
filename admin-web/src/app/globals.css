@@ -3480,11 +3480,20 @@ a {
   }
 }
 
+.school-staff-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+  margin-left: -2px;
+  margin-right: -2px;
+}
+
 .school-staff-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 210px));
-  justify-content: start;
+  display: flex;
+  flex-direction: row;
   gap: 10px;
+  padding: 2px;
+  min-width: max-content;
 }
 
 .school-staff-card {
@@ -3494,13 +3503,13 @@ a {
   text-align: left;
   padding: 10px;
   cursor: pointer;
-  width: 100%;
-  max-width: 210px;
+  width: 160px;
+  flex-shrink: 0;
 }
 
 .school-staff-photo {
   width: 100%;
-  height: 140px;
+  height: 120px;
   border-radius: 12px;
   object-fit: cover;
   border: 1px solid #d8e2f3;
@@ -3518,8 +3527,9 @@ a {
 .school-staff-name {
   margin: 8px 0 2px;
   color: #1f2a44;
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .school-teacher-modal-backdrop {

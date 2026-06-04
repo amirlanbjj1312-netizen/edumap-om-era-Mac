@@ -2408,25 +2408,6 @@ export default function ParentSchoolDetailsPage() {
                 value={row.value}
               />
             ))}
-            {hasTeamSection ? (
-              <Link
-                href={school?.school_id ? `/parent/schools/${encodeURIComponent(String(school.school_id))}/teachers` : '#'}
-                className="school-section-link-row"
-              >
-                <span className="school-section-link-icon">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </span>
-                <div className="school-section-link-content">
-                  <span className="school-section-link-label">{locale === 'en' ? 'School team' : locale === 'kk' ? 'Мектеп командасы' : 'Команда школы'}</span>
-                  <span className="school-section-link-value">
-                    {teachers.length
-                      ? (locale === 'en' ? `${teachers.length} teachers` : locale === 'kk' ? `${teachers.length} мұғалім` : `${teachers.length} педагога`)
-                      : (locale === 'en' ? 'Team info' : locale === 'kk' ? 'Команда туралы' : 'Информация о команде')}
-                  </span>
-                </div>
-                <svg className="school-section-link-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-              </Link>
-            ) : null}
           </section>
 
           <div className={guest ? 'guest-gated-panel school-guest-locked' : ''}>
@@ -2608,11 +2589,14 @@ export default function ParentSchoolDetailsPage() {
           ) : null}
 
           {SECTION_LABELS.map((section) => {
-            if (section.key === 'staff') return null;
             const items =
               section.key === 'reviews'
                 ? reviewItems
-                : section.key === 'services'
+                : section.key === 'staff'
+                  ? hasTeamSection
+                    ? [{ label: 'team', value: 'team' }]
+                    : []
+                  : section.key === 'services'
                     ? serviceCards
                     : section.key === 'basic_info'
                       ? otherContactRows
@@ -3048,26 +3032,21 @@ export default function ParentSchoolDetailsPage() {
                           </div>
                         ) : null}
                         {teachers.length ? (
-                          <>
-                            <div className="school-staff-filters">
-                              <span>{ui.allSubjects}</span>
-                              <span>{ui.anyExperience}</span>
-                              <span>{ui.allLanguages}</span>
-                            </div>
+                          <div className="school-staff-scroll">
                             <div className="school-staff-grid">
                               {teachers.map((teacher, idx) => (
                                 <button key={`${teacher.full_name}-${idx}`} type="button" className="school-staff-card" onClick={() => setActiveTeacher(teacher)}>
                                   {teacher.photo_url ? (
-                                    <Image src={teacher.photo_url} alt={teacher.full_name} width={160} height={130} className="school-staff-photo" unoptimized />
+                                    <Image src={teacher.photo_url} alt={teacher.full_name} width={160} height={120} className="school-staff-photo" unoptimized />
                                   ) : (
                                     <div className="school-staff-photo school-staff-photo-empty">{teacher.full_name.slice(0, 1)}</div>
                                   )}
                                   <p className="school-staff-name">{teacher.full_name}</p>
-                                  <p className="muted">{teacher.subjects || teacher.position || '—'}</p>
+                                  <p className="muted" style={{ fontSize: 12, margin: '2px 0 0' }}>{teacher.subjects || teacher.position || '—'}</p>
                                 </button>
                               ))}
                             </div>
-                          </>
+                          </div>
                         ) : !teamRows.length ? (
                           <p className="muted" style={{ margin: 0 }}>{ui.teachersEmpty}</p>
                         ) : null}
