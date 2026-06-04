@@ -1615,7 +1615,7 @@ export default function ParentSchoolDetailsPage() {
   );
   const addressLabel = pickFirstText(
     school,
-    ['basic_info.address', `basic_info.address.${locale}`, 'basic_info.address.ru'],
+    [`basic_info.address.${locale}`, 'basic_info.address.ru', 'basic_info.address.kk', 'basic_info.address.en', 'basic_info.address'],
     ''
   );
   const additionalLocationsRaw = Array.isArray(getIn(school, 'basic_info.additional_locations'))
@@ -1628,7 +1628,7 @@ export default function ParentSchoolDetailsPage() {
       const address =
         pickFirstText(
           item,
-          ['address', `address.${locale}`, 'address.ru'],
+          [`address.${locale}`, 'address.ru', 'address.kk', 'address.en', 'address'],
           ''
         ) || '';
       return [city, district, address].filter(Boolean).join(', ');
@@ -1725,7 +1725,7 @@ export default function ParentSchoolDetailsPage() {
   const fullMapHref = school?.school_id
     ? `/parent/schools/map?focus=${encodeURIComponent(String(school.school_id))}&back=${encodeURIComponent(`/parent/schools/${encodeURIComponent(String(school.school_id))}`)}`
     : '/parent/schools/map';
-  const description = pickFirstText(school, ['basic_info.description', 'basic_info.description.ru'], '');
+  const description = pickFirstText(school, [`basic_info.description.${locale}`, 'basic_info.description.ru', 'basic_info.description.kk', 'basic_info.description.en', 'basic_info.description'], '');
   const reviewItems = [
     { label: locale === 'en' ? 'Rating' : locale === 'kk' ? 'Рейтинг' : 'Рейтинг', value: rating },
     { label: locale === 'en' ? 'Reviews count' : locale === 'kk' ? 'Пікір саны' : 'Количество отзывов', value: reviews },

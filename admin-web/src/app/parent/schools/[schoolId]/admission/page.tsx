@@ -29,6 +29,18 @@ const toText = (value: unknown): string => {
   return '';
 };
 
+const toLocaleText = (value: unknown, locale: 'ru' | 'en' | 'kk'): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (value && typeof value === 'object') {
+    const localized = value as Record<string, unknown>;
+    const picked = localized[locale] ?? localized.ru ?? localized.kk ?? localized.en;
+    if (typeof picked === 'string') return picked;
+    if (typeof picked === 'number') return String(picked);
+  }
+  return '';
+};
+
 const getIn = (source: unknown, path: string): unknown => {
   if (!source || typeof source !== 'object') return undefined;
   const parts = path.split('.');
@@ -67,44 +79,16 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
   'Application form': { ru: 'Заявление о зачислении', en: 'Enrollment application', kk: 'Қабылдау туралы өтініш' },
   Transcript: { ru: 'Табель / выписка оценок', en: 'Transcript / grade report', kk: 'Табель / бағалар көшірмесі' },
   Recommendations: { ru: 'Рекомендации', en: 'Recommendations', kk: 'Ұсынымдар' },
-  'Medical certificate': {
-    ru: 'Медицинская справка (форма № 065/у)',
-    en: 'Medical certificate (form No. 065/u)',
-    kk: 'Медициналық анықтама (№ 065/у нысаны)',
-  },
-  'Health status certificate (forms No. 065/u and No. 026/u-3)': {
-    ru: 'Медицинская карта ребенка (форма № 026/у-3)',
-    en: 'Child medical record (form No. 026/u-3)',
-    kk: 'Баланың медициналық картасы (№ 026/у-3 нысаны)',
-  },
+  'Medical certificate': { ru: 'Медицинская справка (форма № 065/у)', en: 'Medical certificate (form No. 065/u)', kk: 'Медициналық анықтама (№ 065/у нысаны)' },
+  'Health status certificate (forms No. 065/u and No. 026/u-3)': { ru: 'Медицинская карта ребенка (форма № 026/у-3)', en: 'Child medical record (form No. 026/u-3)', kk: 'Баланың медициналық картасы (№ 026/у-3 нысаны)' },
   'Birth certificate': { ru: 'Свидетельство о рождении', en: 'Birth certificate', kk: 'Туу туралы куәлік' },
-  'Health passport': {
-    ru: 'Медицинская карта ребенка (форма № 026/у-3)',
-    en: 'Child medical record (form No. 026/u-3)',
-    kk: 'Баланың медициналық картасы (№ 026/у-3 нысаны)',
-  },
-  'Form 063': {
-    ru: 'Карта профилактических прививок (форма № 063/у)',
-    en: 'Immunization record (form No. 063/u)',
-    kk: 'Профилактикалық егулер картасы (№ 063/у нысаны)',
-  },
+  'Health passport': { ru: 'Медицинская карта ребенка (форма № 026/у-3)', en: 'Child medical record (form No. 026/u-3)', kk: 'Баланың медициналық картасы (№ 026/у-3 нысаны)' },
+  'Form 063': { ru: 'Карта профилактических прививок (форма № 063/у)', en: 'Immunization record (form No. 063/u)', kk: 'Профилактикалық егулер картасы (№ 063/у нысаны)' },
   '3x4 photos': { ru: 'Фото 3×4', en: '3×4 photos', kk: '3×4 фото' },
   'Student file': { ru: 'Личное дело учащегося', en: 'Student record file', kk: 'Оқушының жеке ісі' },
-  'Withdrawal slip from the previous school': {
-    ru: 'Открепительный талон о выбытии из предыдущей школы',
-    en: 'Withdrawal slip from the previous school',
-    kk: 'Алдыңғы мектептен шығу туралы анықтама',
-  },
-  'Original identity document': {
-    ru: 'Копия документа, удостоверяющего личность учащегося',
-    en: 'Copy of the student identity document',
-    kk: 'Оқушының жеке басын куәландыратын құжаттың көшірмесі',
-  },
-  'Parent ID': {
-    ru: 'Документ, удостоверяющий личность законного представителя',
-    en: 'Identity document of the legal representative',
-    kk: 'Заңды өкілдің жеке басын куәландыратын құжат',
-  },
+  'Withdrawal slip from the previous school': { ru: 'Открепительный талон о выбытии из предыдущей школы', en: 'Withdrawal slip from the previous school', kk: 'Алдыңғы мектептен шығу туралы анықтама' },
+  'Original identity document': { ru: 'Копия документа, удостоверяющего личность учащегося', en: 'Copy of the student identity document', kk: 'Оқушының жеке басын куәландыратын құжаттың көшірмесі' },
+  'Parent ID': { ru: 'Документ, удостоверяющий личность законного представителя', en: 'Identity document of the legal representative', kk: 'Заңды өкілдің жеке басын куәландыратын құжат' },
   'No competition': { ru: 'Без конкурса', en: 'No competition', kk: 'Конкурссіз' },
   'April-June': { ru: 'Апрель-июнь', en: 'April-June', kk: 'Сәуір-маусым' },
   'May-August': { ru: 'Май-август', en: 'May-August', kk: 'Мамыр-тамыз' },
@@ -112,33 +96,18 @@ const OPTION_I18N: Record<string, { ru: string; en: string; kk: string }> = {
 };
 
 const OPTION_ALIASES: Record<string, string> = {
-  exam: 'Exam',
-  interview: 'Interview',
-  test: 'Test',
-  essay: 'Essay',
-  portfolio: 'Portfolio',
-  video: 'Video intro',
-  trial_day: 'Trial day',
-  psychologist: 'Psychologist',
-  competition: 'Competition',
-  other: 'Other',
-  application_form: 'Application form',
-  transcript: 'Transcript',
-  recommendations: 'Recommendations',
+  exam: 'Exam', interview: 'Interview', test: 'Test', essay: 'Essay', portfolio: 'Portfolio',
+  video: 'Video intro', trial_day: 'Trial day', psychologist: 'Psychologist',
+  competition: 'Competition', other: 'Other', application_form: 'Application form',
+  transcript: 'Transcript', recommendations: 'Recommendations',
   medical_certificate: 'Medical certificate',
   health_status_certificate: 'Health status certificate (forms No. 065/u and No. 026/u-3)',
-  birth_certificate: 'Birth certificate',
-  health_passport: 'Health passport',
-  form_063: 'Form 063',
-  photo_3x4: '3x4 photos',
-  student_file: 'Student file',
+  birth_certificate: 'Birth certificate', health_passport: 'Health passport',
+  form_063: 'Form 063', photo_3x4: '3x4 photos', student_file: 'Student file',
   withdrawal_slip: 'Withdrawal slip from the previous school',
   original_identity_document: 'Original identity document',
-  parent_id: 'Parent ID',
-  'no competition': 'No competition',
-  'april-june': 'April-June',
-  'may-august': 'May-August',
-  'year-round': 'Year-round',
+  parent_id: 'Parent ID', 'no competition': 'No competition',
+  'april-june': 'April-June', 'may-august': 'May-August', 'year-round': 'Year-round',
 };
 
 const localizeOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
@@ -149,42 +118,32 @@ const localizeOption = (value: string, locale: 'ru' | 'en' | 'kk') => {
 };
 
 const renderStageContent = (value: string) => {
-  const lines = String(value || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (!lines.length) {
-    return null;
-  }
-
-  const isNumbered = lines.every((line) => /^\d+\.\s+/.test(line));
+  const lines = String(value || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  const isNumbered = lines.every((l) => /^\d+\.\s+/.test(l));
   if (isNumbered) {
     return (
-      <ol className="school-admission-stage-list school-admission-stage-list-numbered">
-        {lines.map((line, index) => (
-          <li key={`${line}-${index}`}>{line.replace(/^\d+\.\s+/, '')}</li>
+      <ol className="admission-steps-list">
+        {lines.map((l, i) => (
+          <li key={i} className="admission-step-item">
+            <span className="admission-step-num">{i + 1}</span>
+            <span>{l.replace(/^\d+\.\s+/, '')}</span>
+          </li>
         ))}
       </ol>
     );
   }
-
-  const isBulleted = lines.every((line) => /^(?:•|-)\s+/.test(line));
+  const isBulleted = lines.every((l) => /^(?:•|-)\s+/.test(l));
   if (isBulleted) {
     return (
-      <ul className="school-admission-stage-list school-admission-stage-list-bulleted">
-        {lines.map((line, index) => (
-          <li key={`${line}-${index}`}>{line.replace(/^(?:•|-)\s+/, '')}</li>
-        ))}
+      <ul className="admission-bullet-list">
+        {lines.map((l, i) => <li key={i}>{l.replace(/^(?:•|-)\s+/, '')}</li>)}
       </ul>
     );
   }
-
   return (
-    <div className="school-admission-stage-rich">
-      {lines.map((line, index) => (
-        <p key={`${line}-${index}`}>{line}</p>
-      ))}
+    <div className="admission-rich-text">
+      {lines.map((l, i) => <p key={i}>{l}</p>)}
     </div>
   );
 };
@@ -199,78 +158,36 @@ export default function ParentSchoolAdmissionPage() {
   useEffect(() => {
     let active = true;
     loadSchoolById(schoolId)
-      .then((payload) => {
-        if (!active) return;
-        setSchool((payload?.data as SchoolRow) || null);
-      })
-      .catch(() => {
-        if (!active) return;
-        setSchool(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+      .then((payload) => { if (!active) return; setSchool((payload?.data as SchoolRow) || null); })
+      .catch(() => { if (!active) return; setSchool(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const ui = {
+  const ui = useMemo(() => ({
     back: locale === 'en' ? 'Back to school' : locale === 'kk' ? 'Мектепке оралу' : 'Назад к школе',
     title: locale === 'en' ? 'Admission' : locale === 'kk' ? 'Қабылдау' : 'Поступление',
     loading: locale === 'en' ? 'Loading...' : locale === 'kk' ? 'Жүктелуде...' : 'Загрузка...',
-    empty:
-      locale === 'en'
-        ? 'School has not filled this section yet.'
-        : locale === 'kk'
-          ? 'Мектеп бұл бөлімді әлі толтырмаған.'
-          : 'Школа пока не заполнила этот раздел.',
+    empty: locale === 'en' ? 'School has not filled this section yet.' : locale === 'kk' ? 'Мектеп бұл бөлімді әлі толтырмаған.' : 'Школа пока не заполнила этот раздел.',
     exam: locale === 'en' ? 'Entrance exam' : locale === 'kk' ? 'Түсу емтиханы' : 'Вступительный экзамен',
     format: locale === 'en' ? 'Format' : locale === 'kk' ? 'Формат' : 'Формат',
-    deadline:
-      locale === 'en' ? 'Application deadline' : locale === 'kk' ? 'Құжат тапсыру мерзімі' : 'Срок подачи документов',
-    stages: locale === 'en' ? 'Admission stages' : locale === 'kk' ? 'Қабылдау кезеңдері' : 'Этапы набора',
+    deadline: locale === 'en' ? 'Application deadline' : locale === 'kk' ? 'Құжат тапсыру мерзімі' : 'Срок подачи документов',
     period: locale === 'en' ? 'Enrollment period' : locale === 'kk' ? 'Қабылдау кезеңі' : 'Период набора',
     competition: locale === 'en' ? 'Competition per seat' : locale === 'kk' ? 'Бір орынға конкурс' : 'Конкурс на место',
     yes: locale === 'en' ? 'Yes' : locale === 'kk' ? 'Иә' : 'Да',
     no: locale === 'en' ? 'No' : locale === 'kk' ? 'Жоқ' : 'Нет',
-    heroText:
-      locale === 'en'
-        ? 'Exam, deadlines and admission stages'
-        : locale === 'kk'
-          ? 'Емтихан, мерзімдер және қабылдау кезеңдері'
-          : 'Экзамен, сроки и этапы набора',
-    stageHint:
-      locale === 'en'
-        ? 'How admission works'
-        : locale === 'kk'
-          ? 'Қабылдау қалай өтеді'
-          : 'Как проходит поступление',
-    ruleTitle: locale === 'en' ? 'Admission scenarios' : locale === 'kk' ? 'Қабылдау сценарийлері' : 'Сценарии поступления',
+    heroSubtitle: locale === 'en' ? 'Exam, deadlines and admission stages' : locale === 'kk' ? 'Емтихан, мерзімдер және қабылдау кезеңдері' : 'Экзамен, сроки и этапы набора',
+    howItWorks: locale === 'en' ? 'How admission works' : locale === 'kk' ? 'Қабылдау қалай өтеді' : 'Как проходит поступление',
+    scenarios: locale === 'en' ? 'Admission scenarios' : locale === 'kk' ? 'Қабылдау сценарийлері' : 'Сценарии поступления',
     steps: locale === 'en' ? 'What to complete' : locale === 'kk' ? 'Не өту керек' : 'Что нужно пройти',
     requirements: locale === 'en' ? 'What is assessed' : locale === 'kk' ? 'Не бағаланады' : 'Что оценивают',
-    documents: locale === 'en' ? 'Documents' : locale === 'kk' ? 'Құжаттар' : 'Документы',
+    documents: locale === 'en' ? 'Required documents' : locale === 'kk' ? 'Қажет құжаттар' : 'Требуемые документы',
     note: locale === 'en' ? 'Comment' : locale === 'kk' ? 'Түсініктеме' : 'Комментарий',
     selectionTypes: locale === 'en' ? 'Selection types' : locale === 'kk' ? 'Іріктеу түрлері' : 'Типы отбора',
-    parentNeeds:
-      locale === 'en'
-        ? 'What parents need'
-        : locale === 'kk'
-          ? 'Ата-анаға не керек'
-          : 'Что нужно родителю',
-    documentsNeed:
-      locale === 'en'
-        ? 'Required documents'
-        : locale === 'kk'
-          ? 'Қажет құжаттар'
-          : 'Какие документы нужны',
-    parentComment:
-      locale === 'en'
-        ? 'Parent comment'
-        : locale === 'kk'
-          ? 'Ата-анаға түсініктеме'
-          : 'Комментарий для родителей',
-  };
+    parentNeeds: locale === 'en' ? 'For parents' : locale === 'kk' ? 'Ата-аналарға' : 'Для родителей',
+    documentsNeed: locale === 'en' ? 'Required documents' : locale === 'kk' ? 'Қажет құжаттар' : 'Какие документы нужны',
+    parentComment: locale === 'en' ? 'Note for parents' : locale === 'kk' ? 'Ата-анаға түсініктеме' : 'Комментарий для родителей',
+  }), [locale]);
 
   const currentLocale = locale as 'ru' | 'en' | 'kk';
 
@@ -280,219 +197,191 @@ export default function ParentSchoolAdmissionPage() {
     locale
   );
   const deadline = pickFirstText(school, ['education.admission_details.document_deadlines']);
-  const stages = pickFirstText(
-    school,
-    ['education.admission_details.admission_stages_detail', 'education.entrance_exam.stages']
-  );
-  const period = localizeOption(
-    pickFirstText(school, ['education.admission_details.enrollment_period']),
-    locale
-  );
-  const competition = localizeOption(
-    pickFirstText(school, ['education.admission_details.competition_per_seat']),
-    locale
-  );
-  const schoolName = pickFirstText(school, ['basic_info.display_name', 'basic_info.name'], '');
+  const stages = pickFirstText(school, ['education.admission_details.admission_stages_detail', 'education.entrance_exam.stages']);
+  const period = localizeOption(pickFirstText(school, ['education.admission_details.enrollment_period']), locale);
+  const competition = localizeOption(pickFirstText(school, ['education.admission_details.competition_per_seat']), locale);
+  const schoolName = toLocaleText(getIn(school, 'basic_info.display_name'), locale)
+    || toLocaleText(getIn(school, 'basic_info.name'), locale) || '';
   const logo = pickImage(school);
   const admissionRules = useMemo(() => normalizeAdmissionRules(school), [school]);
-  const documentsDetail = pickLocalizedText(
-    getIn(school, 'education.admission_details.documents_detail'),
-    currentLocale
-  );
-  const parentComment = pickLocalizedText(
-    getIn(school, 'education.admission_details.parent_comment'),
-    currentLocale
-  );
+  const documentsDetail = pickLocalizedText(getIn(school, 'education.admission_details.documents_detail'), currentLocale);
+  const parentComment = pickLocalizedText(getIn(school, 'education.admission_details.parent_comment'), currentLocale);
 
-  const chips = [
-    { label: ui.exam, value: examRequired ? ui.yes : ui.no },
-    { label: ui.period, value: period },
-    { label: ui.competition, value: competition || ui.no },
-  ].filter((item) => item.value);
+  const keyInfoCards = [
+    examRequired !== undefined
+      ? { label: ui.exam, value: examRequired ? ui.yes : ui.no, highlight: examRequired }
+      : null,
+    examFormat ? { label: ui.format, value: examFormat, highlight: false } : null,
+    deadline ? { label: ui.deadline, value: deadline, highlight: false } : null,
+    period ? { label: ui.period, value: period, highlight: false } : null,
+    competition ? { label: ui.competition, value: competition, highlight: false } : null,
+  ].filter(Boolean) as Array<{ label: string; value: string; highlight: boolean }>;
 
-  const statCards = [
-    { label: ui.format, value: examRequired ? examFormat : '' },
-    { label: ui.deadline, value: deadline },
-    { label: ui.period, value: period },
-    { label: ui.competition, value: competition },
-  ].filter((item) => item.value);
+  const isEmpty = !loading && !keyInfoCards.length && !stages && !admissionRules.length && !documentsDetail && !parentComment;
 
   return (
     <div className="school-mobile-page">
-      <section className="school-admission-hero">
-        <div className="school-admission-hero-main">
-          <div className="school-admission-hero-copy">
-            <p className="school-admission-eyebrow">{schoolName || ui.title}</p>
-            <h1 className="school-admission-title">{ui.title}</h1>
-            <p className="school-admission-subtitle">{ui.heroText}</p>
+      <div className="school-mobile-backrow">
+        <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-mobile-back">
+          ‹ {ui.back}
+        </Link>
+      </div>
+
+      {/* Hero */}
+      <section className="adm-hero">
+        <div className="adm-hero-inner">
+          <div className="adm-hero-copy">
+            {schoolName ? <p className="adm-hero-school">{schoolName}</p> : null}
+            <h1 className="adm-hero-title">{ui.title}</h1>
+            <p className="adm-hero-sub">{ui.heroSubtitle}</p>
           </div>
           {logo ? (
-            <div className="school-admission-logo-shell">
-              <Image src={logo} alt={schoolName || ui.title} width={112} height={112} className="school-admission-logo" unoptimized />
+            <div className="adm-hero-logo-wrap">
+              <Image src={logo} alt={schoolName || ui.title} width={96} height={96} className="adm-hero-logo" unoptimized />
             </div>
           ) : null}
         </div>
-        {chips.length ? (
-          <div className="school-admission-chip-row">
-            {chips.map((item) => (
-              <div key={`${item.label}-${item.value}`} className="school-admission-chip">
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </section>
-      <section className="school-mobile-photo-card school-admission-card">
-        {loading ? <p className="muted">{ui.loading}</p> : null}
-        {!loading && !statCards.length && !stages && !admissionRules.length ? (
-          <p className="muted">{ui.empty}</p>
-        ) : null}
-        {!loading && statCards.length ? (
-          <div className="school-admission-grid">
-            {statCards.map((item, index) => (
-              <div key={`${item.label}-${index}`} className="school-admission-stat">
-                <p>{item.label}</p>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
+
+      {loading ? <p className="muted" style={{ padding: '12px 0' }}>{ui.loading}</p> : null}
+      {isEmpty ? <p className="muted" style={{ padding: '12px 0' }}>{ui.empty}</p> : null}
+
+      {/* Key info cards */}
+      {!loading && keyInfoCards.length ? (
+        <div className="adm-info-grid">
+          {keyInfoCards.map((card) => (
+            <div key={card.label} className={`adm-info-card${card.highlight ? ' adm-info-card-yes' : ''}`}>
+              <span className="adm-info-label">{card.label}</span>
+              <strong className="adm-info-value">{card.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* How admission works */}
+      {!loading && stages ? (
+        <section className="adm-section">
+          <h2 className="adm-section-title">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            {ui.howItWorks}
+          </h2>
+          <div className="adm-section-body">
+            {renderStageContent(stages)}
           </div>
-        ) : null}
-        {!loading && stages ? (
-          <div className="school-admission-stage-box">
-            <p className="school-admission-stage-label">{ui.stageHint}</p>
-            <div className="school-admission-stage-content">{renderStageContent(stages)}</div>
-          </div>
-        ) : null}
-        {!loading && (documentsDetail || parentComment) ? (
-          <div className="school-admission-stage-box">
-            <p className="school-admission-stage-label">{ui.parentNeeds}</p>
+        </section>
+      ) : null}
+
+      {/* For parents */}
+      {!loading && (documentsDetail || parentComment) ? (
+        <section className="adm-section">
+          <h2 className="adm-section-title">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            {ui.parentNeeds}
+          </h2>
+          <div className="adm-section-body">
             {documentsDetail ? (
-              <div className="school-admission-rule-section">
-                <p>{ui.documentsNeed}</p>
-                <div className="school-admission-stage-content">
-                  {renderStageContent(documentsDetail)}
-                </div>
+              <div className="adm-subsection">
+                <p className="adm-subsection-label">{ui.documentsNeed}</p>
+                {renderStageContent(documentsDetail)}
               </div>
             ) : null}
             {parentComment ? (
-              <div className="school-admission-rule-section">
-                <p>{ui.parentComment}</p>
-                <div className="school-admission-stage-content">
-                  {renderStageContent(parentComment)}
-                </div>
+              <div className="adm-subsection">
+                <p className="adm-subsection-label">{ui.parentComment}</p>
+                {renderStageContent(parentComment)}
               </div>
             ) : null}
           </div>
-        ) : null}
-        {!loading && admissionRules.length ? (
-          <div className="school-admission-rules">
-            <p className="school-admission-stage-label">{ui.ruleTitle}</p>
-            <div className="school-admission-rule-grid">
-              {admissionRules.map((rule, index) => {
-                const steps = pickLocalizedText(rule.stages, currentLocale);
-                const requirements = pickLocalizedText(rule.requirements, currentLocale);
-                const note = pickLocalizedText(rule.comment, currentLocale);
-                const assessmentOther = pickLocalizedText(rule.assessment_other, currentLocale);
-                const documentOther = pickLocalizedText(rule.documents_other, currentLocale);
-                const format = localizeOption(
-                  pickLocalizedText(rule.format_other, currentLocale) || rule.format,
-                  locale
-                );
-                const assessmentTypes = [
-                  ...(Array.isArray(rule.assessment_types)
-                    ? rule.assessment_types.filter((item) => String(item) !== 'other')
-                    : []),
-                  ...(assessmentOther ? [assessmentOther] : []),
-                ]
-                  .map((item) => localizeOption(String(item), locale))
-                  .filter((item) => item && item !== localizeOption('other', locale))
-                  .filter(Boolean);
-                const documentTypes = [
-                  ...(Array.isArray(rule.required_documents)
-                    ? rule.required_documents.filter((item) => String(item) !== 'other')
-                    : []),
-                  ...(documentOther ? [documentOther] : []),
-                ]
-                  .map((item) => {
-                    const raw = String(item);
-                    const localized = localizeOption(raw, locale);
-                    if (raw === 'photo_3x4' && String(rule.photo_count || '').trim()) {
-                      const suffix =
-                        locale === 'en'
-                          ? `${rule.photo_count} pcs.`
-                          : locale === 'kk'
-                            ? `${rule.photo_count} дана`
-                            : `${rule.photo_count} шт.`;
-                      return `${localized} (${suffix})`;
-                    }
-                    return localized;
-                  })
-                  .filter((item) => item && item !== localizeOption('other', locale))
-                  .filter(Boolean);
-                return (
-                  <article key={String(rule.id || `rule-${index}`)} className="school-admission-rule-card">
-                    <div className="school-admission-rule-head">
-                      <h3>{formatAdmissionGradeLabel(rule, currentLocale)}</h3>
-                      <div className="school-admission-rule-meta">
-                        {format ? <span>{format}</span> : null}
-                        {rule.deadline ? <span>{rule.deadline}</span> : null}
+        </section>
+      ) : null}
+
+      {/* Admission scenarios */}
+      {!loading && admissionRules.length ? (
+        <section className="adm-section">
+          <h2 className="adm-section-title">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            {ui.scenarios}
+          </h2>
+          <div className="adm-rules-list">
+            {admissionRules.map((rule, index) => {
+              const steps = pickLocalizedText(rule.stages, currentLocale);
+              const requirements = pickLocalizedText(rule.requirements, currentLocale);
+              const note = pickLocalizedText(rule.comment, currentLocale);
+              const assessmentOther = pickLocalizedText(rule.assessment_other, currentLocale);
+              const documentOther = pickLocalizedText(rule.documents_other, currentLocale);
+              const format = localizeOption(
+                pickLocalizedText(rule.format_other, currentLocale) || rule.format,
+                locale
+              );
+              const assessmentTypes = [
+                ...(Array.isArray(rule.assessment_types) ? rule.assessment_types.filter((i) => String(i) !== 'other') : []),
+                ...(assessmentOther ? [assessmentOther] : []),
+              ].map((i) => localizeOption(String(i), locale)).filter((i) => i && i !== localizeOption('other', locale));
+
+              const documentTypes = [
+                ...(Array.isArray(rule.required_documents) ? rule.required_documents.filter((i) => String(i) !== 'other') : []),
+                ...(documentOther ? [documentOther] : []),
+              ].map((i) => {
+                const raw = String(i);
+                const localized = localizeOption(raw, locale);
+                if (raw === 'photo_3x4' && String(rule.photo_count || '').trim()) {
+                  const suffix = locale === 'en' ? `${rule.photo_count} pcs.` : locale === 'kk' ? `${rule.photo_count} дана` : `${rule.photo_count} шт.`;
+                  return `${localized} (${suffix})`;
+                }
+                return localized;
+              }).filter((i) => i && i !== localizeOption('other', locale));
+
+              return (
+                <article key={String(rule.id || `rule-${index}`)} className="adm-rule-card">
+                  <div className="adm-rule-header">
+                    <h3 className="adm-rule-grade">{formatAdmissionGradeLabel(rule, currentLocale)}</h3>
+                    <div className="adm-rule-badges">
+                      {format ? <span className="adm-rule-badge">{format}</span> : null}
+                      {rule.deadline ? <span className="adm-rule-badge adm-rule-badge-date">{rule.deadline}</span> : null}
+                    </div>
+                  </div>
+                  {assessmentTypes.length ? (
+                    <div className="adm-rule-block">
+                      <p className="adm-rule-block-label">{ui.selectionTypes}</p>
+                      <div className="adm-tag-row">
+                        {assessmentTypes.map((item) => (
+                          <span key={item} className="adm-tag">{item}</span>
+                        ))}
                       </div>
                     </div>
-                    {assessmentTypes.length ? (
-                      <div className="school-admission-rule-section">
-                        <p className="school-admission-section-title">{ui.selectionTypes}</p>
-                        <div className="school-admission-tag-row">
-                          {assessmentTypes.map((item) => (
-                            <span key={item} className="school-admission-inline-tag">
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {steps ? (
-                      <div className="school-admission-rule-section">
-                        <p className="school-admission-section-title">{ui.steps}</p>
-                        <div>{steps}</div>
-                      </div>
-                    ) : null}
-                    {requirements ? (
-                      <div className="school-admission-rule-section">
-                        <p className="school-admission-section-title">{ui.requirements}</p>
-                        <div>{requirements}</div>
-                      </div>
-                    ) : null}
-                    {documentTypes.length ? (
-                      <div className="school-admission-rule-section">
-                        <p className="school-admission-section-title">{ui.documents}</p>
-                        <ul className="school-admission-plain-list">
-                          {documentTypes.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    {note ? (
-                      <div className="school-admission-rule-section">
-                        <p className="school-admission-section-title">{ui.note}</p>
-                        <div>{note}</div>
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
+                  ) : null}
+                  {steps ? (
+                    <div className="adm-rule-block">
+                      <p className="adm-rule-block-label">{ui.steps}</p>
+                      <div className="adm-rule-text">{renderStageContent(steps)}</div>
+                    </div>
+                  ) : null}
+                  {requirements ? (
+                    <div className="adm-rule-block">
+                      <p className="adm-rule-block-label">{ui.requirements}</p>
+                      <div className="adm-rule-text">{renderStageContent(requirements)}</div>
+                    </div>
+                  ) : null}
+                  {documentTypes.length ? (
+                    <div className="adm-rule-block">
+                      <p className="adm-rule-block-label">{ui.documents}</p>
+                      <ul className="adm-doc-list">
+                        {documentTypes.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {note ? (
+                    <div className="adm-rule-block adm-rule-note">
+                      <p className="adm-rule-block-label">{ui.note}</p>
+                      <div className="adm-rule-text">{renderStageContent(note)}</div>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
-        ) : null}
-        {!loading ? (
-          <div className="school-admission-actions">
-            <Link href={`/parent/schools/${encodeURIComponent(schoolId)}`} className="school-consult-btn">
-              {ui.back}
-            </Link>
-          </div>
-        ) : null}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }
