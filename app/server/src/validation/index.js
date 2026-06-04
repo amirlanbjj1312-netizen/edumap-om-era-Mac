@@ -71,7 +71,7 @@ const PAYMENT_SYSTEMS = new Set([
   'Ақылы',
   'Қамтылған',
 ]);
-const FEE_RULE_CURRENCIES = new Set(['KZT', 'USD', 'EUR']);
+const FEE_RULE_CURRENCIES = new Set(['KZT', 'USD', 'EUR', 'GBP']);
 const FEE_RULE_PERIODS = new Set(['monthly', 'yearly']);
 const SUBSCRIPTION_STATUSES = new Set([
   '',
