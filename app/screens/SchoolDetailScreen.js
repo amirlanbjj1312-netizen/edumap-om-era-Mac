@@ -524,8 +524,6 @@ export default function SchoolDetailScreen() {
     reviews: false,
   });
   const [isMapExpanded, setMapExpanded] = useState(false);
-  const [mapSearchQuery, setMapSearchQuery] = useState('');
-  const [mapFocusedMarker, setMapFocusedMarker] = useState(null);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [isSubmittingConsult, setSubmittingConsult] = useState(false);
   const [consultForm, setConsultForm] = useState(() => ({
@@ -1053,12 +1051,6 @@ export default function SchoolDetailScreen() {
   }, [allMarkers, profile]);
 
   useEffect(() => {
-    if (currentMarker) {
-      setMapFocusedMarker(currentMarker);
-    }
-  }, [currentMarker]);
-
-  useEffect(() => {
     if (profile?.reviews?.items?.length) {
       setLocalReviews(profile.reviews.items);
     } else {
@@ -1066,31 +1058,6 @@ export default function SchoolDetailScreen() {
     }
   }, [profile]);
 
-  const normalizedMapQuery = mapSearchQuery.trim().toLowerCase();
-
-  const mapFilteredMarkers = useMemo(() => {
-    if (!normalizedMapQuery) {
-      return allMarkers;
-    }
-    return allMarkers.filter((marker) => {
-      const searchable = [marker.name, marker.address]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return searchable.includes(normalizedMapQuery);
-    });
-  }, [normalizedMapQuery, allMarkers]);
-
-  const mapHasQuery = normalizedMapQuery.length > 0;
-  const mapSuggestions = mapHasQuery ? mapFilteredMarkers.slice(0, 5) : [];
-  const mapNoMatches = mapHasQuery && mapFilteredMarkers.length === 0;
-
-  const mapFocusPoint =
-    mapFocusedMarker ||
-    mapFilteredMarkers[0] ||
-    currentMarker ||
-    allMarkers[0] ||
-    null;
   const logoUri = media.logo || media.logo_local_uri;
   const hasLogo = Boolean(logoUri);
   const addressText = getLocalizedText(basic_info.address, locale).trim();
@@ -1155,19 +1122,6 @@ export default function SchoolDetailScreen() {
 
   const toggle = (key) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const handleMapSearchChange = (value) => {
-    setMapSearchQuery(value);
-    if (!value.trim() && currentMarker) {
-      setMapFocusedMarker(currentMarker);
-    }
-  };
-
-  const handleMapSuggestionPress = (marker) => {
-    setMapSearchQuery(marker.name || '');
-    setMapFocusedMarker(marker);
-    Keyboard.dismiss();
-  };
 
   const handleOpenPhoto = (uri, index = 0) => {
     if (!uri) return;
@@ -1260,15 +1214,6 @@ export default function SchoolDetailScreen() {
       ...prev,
       index: (prev.index - 1 + photos.length) % photos.length,
     }));
-  };
-
-  const handleMapSearchSubmit = () => {
-    if (!mapFilteredMarkers.length) {
-      Keyboard.dismiss();
-      return;
-    }
-    setMapFocusedMarker(mapFilteredMarkers[0]);
-    Keyboard.dismiss();
   };
 
   const updateConsultField = (key, value) => {
@@ -2392,10 +2337,10 @@ export default function SchoolDetailScreen() {
           <SafeAreaView style={styles.fullMapSafeArea}>
             <View style={styles.fullMapContainer}>
               <TiledMapView
-                markers={normalizedMapQuery ? mapFilteredMarkers : (currentMarker ? [currentMarker] : mapFilteredMarkers)}
+                markers={[currentMarker]}
                 style={styles.fullMap}
-                focusPoint={mapFocusPoint}
-                highlightMarkerId={mapFocusPoint?.id}
+                focusPoint={currentMarker}
+                highlightMarkerId={currentMarker.id}
               />
               <View style={styles.fullMapTopOverlay} pointerEvents="box-none">
                 <View style={styles.fullMapSearchContainer}>
@@ -2405,59 +2350,7 @@ export default function SchoolDetailScreen() {
                   >
                     <XMarkIcon color="#4F46E5" size={20} />
                   </Pressable>
-                <TextInput
-                  style={styles.fullMapSearchInput}
-                  placeholder={t('schoolDetail.map.searchPlaceholder')}
-                  placeholderTextColor="rgba(71,85,105,0.8)"
-                  value={mapSearchQuery}
-                  onChangeText={handleMapSearchChange}
-                  autoCorrect={false}
-                  returnKeyType="search"
-                  onSubmitEditing={handleMapSearchSubmit}
-                />
-                  {mapSearchQuery.length ? (
-                    <Pressable
-                      style={styles.fullMapClearButton}
-                      onPress={() => handleMapSearchChange('')}
-                      hitSlop={8}
-                    >
-                      <XMarkIcon color="#94A3B8" size={18} />
-                    </Pressable>
-                  ) : null}
                 </View>
-
-                {mapHasQuery && mapSuggestions.length ? (
-                  <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    style={styles.fullMapSuggestionsPanel}
-                    contentContainerStyle={styles.fullMapSuggestionsContent}
-                  >
-                    {mapSuggestions.map((marker) => (
-                      <Pressable
-                        key={marker.id}
-                        style={styles.fullMapSuggestionRow}
-                        onPress={() => handleMapSuggestionPress(marker)}
-                      >
-                        <Text style={styles.fullMapSuggestionTitle}>
-                          {marker.name}
-                        </Text>
-                        {marker.address ? (
-                          <Text style={styles.fullMapSuggestionSubtitle}>
-                            {marker.address}
-                          </Text>
-                        ) : null}
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                ) : null}
-
-                {mapNoMatches ? (
-                  <View style={styles.fullMapNoResultsPill}>
-                    <Text style={styles.fullMapNoResultsText}>
-                      {`${t('schoolDetail.map.noResults')} "${mapSearchQuery.trim()}"`}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
             </View>
           </SafeAreaView>
