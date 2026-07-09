@@ -290,6 +290,22 @@ export const getFeeCurrencySymbol = (currency: FeeCurrency) => CURRENCY_SYMBOLS[
 const formatCurrency = (value: number, currency: FeeCurrency) =>
   `${value.toLocaleString('ru-RU')} ${CURRENCY_SYMBOLS[currency]}`;
 
+const toKzt = (value: number, currency: FeeCurrency) => {
+  const rate = KZT_PER_CURRENCY[currency] || 0;
+  if (!rate || !Number.isFinite(value)) return 0;
+  return Math.round(value * rate);
+};
+
+const formatApproxKzt = (value: number, currency: FeeCurrency, locale: Locale, compact = false) => {
+  if (currency === 'KZT') return '';
+  const amountKzt = toKzt(value, currency);
+  if (!amountKzt) return '';
+  const formatted = compact
+    ? formatCompactCurrency(amountKzt, 'KZT', locale)
+    : formatCurrency(amountKzt, 'KZT');
+  return ` (~${formatted})`;
+};
+
 const formatCompactCurrency = (
   value: number,
   currency: FeeCurrency,
@@ -325,10 +341,10 @@ export const formatSchoolFee = (
   if (!summary.hasAnyFee || !summary.currency) return fallbackText;
 
   if (summary.hasFeeRules && summary.min !== summary.max) {
-    return `${formatCurrency(summary.min, summary.currency)} - ${formatCurrency(summary.max, summary.currency)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+    return `${formatCurrency(summary.min, summary.currency)}${formatApproxKzt(summary.min, summary.currency, locale)} - ${formatCurrency(summary.max, summary.currency)}${formatApproxKzt(summary.max, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
   }
 
-  return `${formatCurrency(summary.min, summary.currency)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+  return `${formatCurrency(summary.min, summary.currency)}${formatApproxKzt(summary.min, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
 };
 
 export const formatCompactSchoolFee = (
@@ -341,8 +357,8 @@ export const formatCompactSchoolFee = (
   if (!summary.hasAnyFee || !summary.currency) return fallbackText;
 
   if (summary.hasFeeRules && summary.min !== summary.max) {
-    return `${formatCompactCurrency(summary.min, summary.currency, locale)}–${formatCompactCurrency(summary.max, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+    return `${formatCompactCurrency(summary.min, summary.currency, locale)}${formatApproxKzt(summary.min, summary.currency, locale, true)}–${formatCompactCurrency(summary.max, summary.currency, locale)}${formatApproxKzt(summary.max, summary.currency, locale, true)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
   }
 
-  return `${formatCompactCurrency(summary.min, summary.currency, locale)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
+  return `${formatCompactCurrency(summary.min, summary.currency, locale)}${formatApproxKzt(summary.min, summary.currency, locale, true)}${summary.period ? ` ${formatPeriodSuffix(summary.period, locale)}` : ''}`;
 };

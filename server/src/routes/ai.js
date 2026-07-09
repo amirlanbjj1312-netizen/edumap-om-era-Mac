@@ -33,6 +33,80 @@ const normalizeText = (value, locale = '') => {
   return String(value).trim();
 };
 
+const FEE_RATES_KZT = {
+  KZT: 1,
+  USD: 500,
+  EUR: 540,
+  GBP: 630,
+};
+
+const FEE_SYMBOLS = {
+  KZT: '₸',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
+const toPriceNumber = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return 0;
+  const digits = raw.replace(/\s+/g, '').match(/\d+(?:[.,]\d+)?/);
+  if (!digits) return 0;
+  const parsed = Number(digits[0].replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toFeeCurrency = (value) => {
+  const raw = String(value || '').trim().toUpperCase();
+  if (raw === 'USD' || raw === 'EUR' || raw === 'GBP' || raw === 'KZT') return raw;
+  return 'KZT';
+};
+
+const formatFeeValue = (amount, currency) => {
+  if (!amount || !Number.isFinite(amount)) return '';
+  const code = toFeeCurrency(currency);
+  const symbol = FEE_SYMBOLS[code] || code;
+  const approxKzt =
+    code !== 'KZT' && FEE_RATES_KZT[code]
+      ? ` (~${Math.round(amount * FEE_RATES_KZT[code]).toLocaleString('ru-RU')} ₸)`
+      : '';
+  return `${Math.round(amount).toLocaleString('ru-RU')} ${symbol}${approxKzt}`;
+};
+
+const getAiFeeSummary = (school) => {
+  const rules = Array.isArray(school?.finance?.fee_rules) ? school.finance.fee_rules : [];
+  const validRules = rules
+    .map((rule) => ({
+      amount: toPriceNumber(rule?.amount),
+      currency: toFeeCurrency(rule?.currency),
+    }))
+    .filter((rule) => rule.amount > 0);
+
+  if (validRules.length) {
+    const amounts = validRules.map((rule) => rule.amount);
+    const min = Math.min(...amounts);
+    const max = Math.max(...amounts);
+    const currency = validRules[0].currency || 'KZT';
+    if (min !== max) {
+      return `${formatFeeValue(min, currency)} - ${formatFeeValue(max, currency)}`;
+    }
+    return formatFeeValue(min, currency);
+  }
+
+  const fallbackAmount = toPriceNumber(
+    school?.finance?.monthly_fee ||
+      school?.finance?.tuition_monthly ||
+      school?.finance?.price_monthly ||
+      school?.basic_info?.price
+  );
+  if (!fallbackAmount) return '';
+  const fallbackCurrency =
+    toFeeCurrency(school?.finance?.currency) ||
+    toFeeCurrency(school?.finance?.price_currency) ||
+    'KZT';
+  return formatFeeValue(fallbackAmount, fallbackCurrency);
+};
+
 const toChatSchoolPayload = (school, locale = '') => ({
   school_id: String(school?.school_id || '').trim(),
   name: normalizeText(school?.basic_info?.name, locale),
@@ -40,7 +114,8 @@ const toChatSchoolPayload = (school, locale = '') => ({
   city: normalizeText(school?.basic_info?.city, locale),
   district: normalizeText(school?.basic_info?.district, locale),
   address: normalizeText(school?.basic_info?.address, locale),
-  monthly_fee: school?.finance?.monthly_fee ?? '',
+  monthly_fee: getAiFeeSummary(school),
+  tuition_summary: getAiFeeSummary(school),
   languages: normalizeText(school?.education?.languages, locale),
   programs: normalizeText(school?.education?.programs, locale),
   curricula: [

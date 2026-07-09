@@ -389,6 +389,7 @@ const formatMoneyValue = (amount, currency = 'KZT', locale) => {
     ? Math.round(numeric).toLocaleString(locale === 'en' ? 'en-US' : 'ru-RU')
     : raw;
   const normalizedCurrency = String(currency || 'KZT').trim().toUpperCase();
+  const kztRates = { KZT: 1, USD: 500, EUR: 540, GBP: 630 };
   const currencyLabel =
     normalizedCurrency === 'KZT'
       ? '₸'
@@ -396,8 +397,14 @@ const formatMoneyValue = (amount, currency = 'KZT', locale) => {
         ? '$'
         : normalizedCurrency === 'EUR'
           ? '€'
+          : normalizedCurrency === 'GBP'
+            ? '£'
           : normalizedCurrency;
-  return `${formattedAmount} ${currencyLabel}`.trim();
+  const approxKzt =
+    normalizedCurrency !== 'KZT' && Number.isFinite(numeric)
+      ? ` (~${Math.round(numeric * (kztRates[normalizedCurrency] || 0)).toLocaleString(locale === 'en' ? 'en-US' : 'ru-RU')} ₸)`
+      : '';
+  return `${formattedAmount} ${currencyLabel}${approxKzt}`.trim();
 };
 
 const formatFeeRuleGrades = (fromGrade, toGrade, locale) => {
